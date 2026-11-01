@@ -20,5 +20,6 @@
 pub mod config;
 pub mod embeddings;
 pub mod ops;
+pub mod rope;
 pub mod safetensors;
 pub mod tensor;
