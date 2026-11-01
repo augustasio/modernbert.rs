@@ -36,8 +36,9 @@ Only where they clearly earn their place. Current justified set:
   tables and the canonical ordering rules are large and fiddly, so writing them here
   would be transcription rather than insight.
 - `memchr`, `serde_json` where parsing JSON by hand would be noise rather than insight.
-- `fancy-regex` and HF `tokenizers` as **dev-dependencies only**, as test oracles. They
-  must never appear in a non-test build path.
+- `fancy-regex` and HF `tokenizers` as **dev-dependencies only**, as test oracles, and
+  `flate2` to read the gzipped AG News golden file. These must never appear in a non-test
+  build path.
 
 Anything else gets discussed before it lands. In particular: no tensor framework, no
 `ndarray`, no autodiff. The point is that the forward pass is ours.

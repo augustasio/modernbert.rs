@@ -251,14 +251,20 @@ systematic scale error that absolute difference on small activations would miss)
 Thresholds in fp32: activations <= 1e-4, logits <= 1e-3 after accumulation, cosine
 >= 1 - 1e-6.
 
-**The fixture set must contain long inputs, and this is easy to get wrong.** ModernBERT's
-local attention window is 128 total, 64 each side, inclusive, so 129 keys per query. Every
-AG News example is 40 to 60 tokens, which means every query attends to the entire sequence
-and **local attention is numerically identical to global attention on the real dataset**.
-The main ModernBERT-specific trap would go completely untested, and the bug would surface
-only when someone fed it a long document. The fixtures therefore include synthetic long
-inputs of 300+ and 600+ tokens, built by concatenating articles, purely to make the window
-engage.
+**The fixture set must contain long inputs.** ModernBERT's local attention window is 128
+total, 64 each side, inclusive, so 129 keys per query.
+
+Measured, once the prompts existed: AG News *texts* are 19 to 248 tokens with a median of
+52, but the *prompt* around them runs 119 to 348 tokens with a median of 152, and **96.8%
+of the 7,600 prompts exceed 129 tokens**. So the real workload does engage the sliding
+window, which an earlier draft of this plan got wrong by reasoning from the text length
+instead of the prompt length.
+
+The window still only bites gently at that size: a query in the middle of a 152-token
+sequence sees 129 of the 152 keys, so a wrong mask shifts the result by little and may
+hide inside the tolerance. The fixtures therefore still include synthetic inputs of 300+
+and 600+ tokens, where a query sees a fifth of the sequence and a mask bug cannot hide.
+The reason is signal strength, not coverage.
 
 Eight fixtures: shortest real, longest real, 300+ tokens, 600+ tokens, non-ASCII,
 digit-and-punctuation heavy, multi-space (to exercise the whitespace added tokens), and
