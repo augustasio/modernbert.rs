@@ -95,3 +95,39 @@ The intervals cover sampling variation over test examples. They do not cover var
 prompt templates, verbalizer choices or content-free strings. Each of these is fixed by
 design, and a different choice would give a different number. Raw logits are deterministic
 on this machine, so there is no run-to-run noise to report.
+
+## Rungs 1 to 3: agreement with rung 0
+
+`ladder.compare_with_rung0` computes these for every later rung, from that rung's own
+saved logits (`results/rungN_logits.npy`). Output goes to `results/rungN.json`.
+
+**Prediction agreement** is the number of the 7,600 examples where the rung's raw argmax
+equals rung 0's raw argmax. It has a Wilson interval, like accuracy. Agreement is always
+measured on raw logits, never on calibrated ones.
+
+**Rule of three.** If a rung disagrees on zero examples, the Wilson interval still has a
+width, but a simpler bound is easier to read: with zero events in n trials, 3/n is an
+approximate 95% upper bound on the true event rate. For n = 7,600, that is 3.9e-4. It says
+the rung's true disagreement rate is very probably below 1 in 2,500. It does not say the
+rate is zero.
+
+**Disagreements** are listed one by one, with the gold label and both rungs' four logits.
+They are not filtered or explained.
+
+**Absolute logit difference.** For all 7,600 x 4 verbalizer logits we take
+|logit_rung − logit_rung0| and report the median, the 99th percentile and the maximum. Two
+rungs can agree on every prediction while their logits drift apart; this catches that.
+Small differences (around 1e-5) are expected even for a correct rung: computing the head
+for one row instead of all rows changes how BLAS blocks the matmul, which changes the
+floating-point summation order.
+
+**Accuracy** for each rung uses the same functions as rung 0 (`stats.bootstrap`,
+`stats.point_and_interval`, `stats.wilson_interval`), with the same seed and number of
+resamples. If a rung's predictions equal rung 0's, its intervals are identical to rung 0's.
+
+**Calibration per rung.** Each rung fits `calibration.fit` from its own logits on the
+three content-free prompts, never from rung 0's parameters, and reports the largest
+absolute and relative difference of its `p_cf` from rung 0's. The relative difference
+matters most for Tech, whose `p_cf` is about 7e-4: a small absolute shift there is a large
+relative one. We also report how many calibrated predictions match rung 0's calibrated
+predictions. This is extra information, not the correctness criterion.

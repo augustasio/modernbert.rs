@@ -7,6 +7,8 @@ numpy
 # rung 3
 onnx
 onnxruntime
+# torch.onnx.export's default (dynamo) exporter needs this; torch does not install it
+onnxscript
 # tooling
 ruff
 pytest

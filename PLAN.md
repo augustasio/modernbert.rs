@@ -83,7 +83,7 @@ Each rung changes one variable against the rung above it.
 | # | Rung | Isolates |
 |---|---|---|
 | 0 | HF transformers, stock pipeline, fp32 | baseline, and the correctness oracle for everything else |
-| 1 | + MLM head at the mask position only, eval/no-grad hygiene | wasted work in the stock pipeline |
+| 1 | + MLM head at the mask position only, four verbalizer ids only | wasted work in the stock pipeline |
 | 2 | + `torch.compile` (inductor, CPU) | free compiler wins |
 | 3 | ONNX Runtime | a different runtime over the same graph |
 | 4 | candle, default backend | language and framework, with no BLAS help |
@@ -546,3 +546,7 @@ Changes to the plan made after seeing data, with the reason.
   Every variant is still measured against a ruler run in the same cycles, which is the
   property the interleaving existed for, and variants are compared with each other
   through their ratios to the ruler.
+- **Rung 1 is one change, not two.** The ladder listed eval and no-grad hygiene with the
+  mask-only head, but rung 0 already runs in `eval()` under `torch.inference_mode()`, as HF
+  pipelines do. So rung 1 changes only the head, which keeps it one variable. Measuring
+  the cost of autograd would be its own rung.
