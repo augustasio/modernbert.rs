@@ -1,0 +1,23 @@
+/target
+**/*.rs.bk
+Cargo.lock.orig
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ruff_cache/
+.pytest_cache/
+
+# Model weights and datasets: fetched, never committed
+/weights/
+/data/
+*.safetensors
+
+# Reference activations and benchmark output
+/python/reference/*.safetensors
+/results/raw/
+
+# macOS
+.DS_Store

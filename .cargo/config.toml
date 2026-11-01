@@ -1,0 +1,4 @@
+# Applied to every crate so each rung is compiled identically. A rung compiled with
+# different flags is not comparable to the others.
+[build]
+rustflags = ["-C", "target-cpu=native"]

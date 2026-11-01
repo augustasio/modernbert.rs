@@ -1,0 +1,29 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/mb-tokenizer",
+    "crates/mb-model",
+    "crates/mb-harness",
+]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+
+[workspace.dependencies]
+# Tokenizer: real Unicode general-category classification. `char::is_alphabetic()`
+# is not `\p{L}` and must never stand in for it.
+unicode-properties = "0.1"
+serde_json = "1.0"
+
+# Test oracles only. These must never appear outside dev-dependencies.
+fancy-regex = "0.17"
+
+# Optimize for the machine being benchmarked. Set in .cargo/config.toml so it applies
+# uniformly to every crate, keeping the rungs comparable.
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+debug = 1

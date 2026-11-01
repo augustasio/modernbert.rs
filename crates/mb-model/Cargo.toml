@@ -1,0 +1,11 @@
+[package]
+name = "mb-model"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "ModernBERT forward pass, written from scratch"
+
+[dependencies]
+mb-tokenizer = { path = "../mb-tokenizer" }
+serde_json = { workspace = true }

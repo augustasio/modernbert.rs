@@ -1,0 +1,12 @@
+torch
+transformers>=4.48
+tokenizers
+safetensors
+datasets
+numpy
+# rung 3
+onnx
+onnxruntime
+# tooling
+ruff
+pytest

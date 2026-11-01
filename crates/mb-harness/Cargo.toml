@@ -1,0 +1,10 @@
+[package]
+name = "mb-harness"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Benchmark harness: interleaved scheduling, thermal logging, memory and energy"
+
+[dependencies]
+serde_json = { workspace = true }
