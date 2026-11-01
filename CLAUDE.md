@@ -52,7 +52,8 @@ breaking a test.
    contaminate model timings. The harness hashes the inputs and asserts this.
 2. **One variable per rung.** If a change touches two things, it is two rungs.
 3. **A measurement without its thermal state is not a measurement.** Never report a
-   timing that was not captured alongside `CPU_Speed_Limit`.
+   timing that was not captured alongside `ProcessInfo.thermalState`. (`CPU_Speed_Limit`
+   does not exist on Apple silicon; `pmset -g therm` records nothing here.)
 4. **Never report a mean latency.** Percentiles or nothing.
 5. **Correctness is asserted in the benchmarked run**, not only in a separate test run. A
    variant that got fast by computing something else must fail loudly.

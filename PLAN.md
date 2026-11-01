@@ -182,16 +182,19 @@ other, so the matrix gets traversed twice.
 The machine throttles. The fix is not to fight it but to make the comparison immune to it.
 
 1. **Interleave instead of running to completion.** Never variant A for ten minutes then
-   variant B. Round-robin in roughly 10-second slices, 30 cycles, order randomized within
-   each cycle, so thermal drift hits every variant about equally instead of punishing
-   whichever ran last. This is the most important single change.
+   variant B. Alternate in roughly 10-second slices, 30 cycles, order randomized within
+   each cycle, so thermal drift hits both about equally instead of punishing whichever
+   ran last. This is the most important single change. Memory allows two variants
+   resident at once, so each process pairs one variant with the ruler; see the changelog.
 2. **A ruler variant.** Re-measure rung 0 in every cycle and report every other rung as a
    ratio to the concurrently measured ruler. Ratios survive throttling in a way absolute
    milliseconds do not. Absolute numbers are still reported; the conclusions rest on the
    ratios.
-3. **Log thermal state with every sample.** `pmset -g therm` gives `CPU_Speed_Limit`,
-   `powermetrics` gives frequency and thermal pressure. A sample without its thermal state
-   is not reproducible. Flag or discard samples taken under a speed limit.
+3. **Log thermal state with every sample.** On Apple silicon the unprivileged signal is
+   `ProcessInfo.thermalState` (nominal, fair, serious, critical); `pmset -g therm` records
+   nothing here. `powermetrics` gives frequency and power, but only as root. A sample
+   without its thermal state is not reproducible. Flag samples taken above nominal, and
+   report results with and without them. See the changelog.
 4. **Burst and sustained, always both.** Burst is a 30-second run after two minutes idle.
    Sustained is the last 60 seconds of a ten-minute continuous run. One number is a lie on
    a fanless machine.
@@ -529,3 +532,17 @@ Changes to the plan made after seeing data, with the reason.
 - **Calibrated accuracy added.** Rung 0 never predicts Tech because of a class prior the
   model has before it reads the article. Calibrated accuracy is now reported beside raw
   accuracy for every rung. Rung 0's raw logits stay the oracle.
+- **Thermal state, not `CPU_Speed_Limit`.** `pmset -g therm` records no levels on Apple
+  silicon, so `CPU_Speed_Limit` does not exist here. The unprivileged signal that does
+  exist is macOS's own `ProcessInfo.thermalState`: nominal, fair, serious or critical. It is
+  coarse, so the ruler variant measured in every cycle stays the main defence against
+  throttling, and the thermal state is recorded with every sample to flag and discard.
+- **Energy and CPU frequency need root.** `powermetrics` refuses to run without it. They
+  are measured only if the benchmark can call `powermetrics` with elevated rights; if not,
+  they are reported as not measured rather than estimated.
+- **Two variants resident, not all of them.** Each variant holds the model, about 1.6 GB,
+  so all of them at once would need about 11 GB on a 16 GB machine. Each benchmark process
+  therefore holds the ruler and one variant and interleaves the two in randomized slices.
+  Every variant is still measured against a ruler run in the same cycles, which is the
+  property the interleaving existed for, and variants are compared with each other
+  through their ratios to the ruler.
