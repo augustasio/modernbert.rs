@@ -10,12 +10,29 @@
 //! nothing. bf16 is the top 16 bits of an f32, so the upcast is exact: shift
 //! left by 16 and reinterpret. No rounding, no precision choice to get wrong.
 //!
+//! **Three ways to read, and the cheap ones exist for a reason.** This
+//! checkpoint is 791 MB on disk and 1.58 GB once it is f32, so a careless
+//! test suite can ask for many gigabytes at once: `cargo test` runs its test
+//! functions in parallel across every core, and a helper that loads the whole
+//! file per test multiplies that by ten. It did, on a 16 GB machine, and the
+//! machine died. So:
+//!
+//! * [`Header`] reads names, shapes and dtypes and no values at all. Every
+//!   structural check wants this.
+//! * [`Checkpoint::load_one`] reads one tensor's bytes by seeking to its
+//!   range. Use it to check a single tensor.
+//! * [`Checkpoint::from_file`] reads everything, and only the forward pass
+//!   needs that. A test that calls it should load once for the whole binary,
+//!   not once per test function.
+//!
 //! The file is read into owned memory rather than mapped. That is a
 //! measurement decision, not a performance one: mapped pages count toward RSS
 //! only once touched and can be evicted, so a mapping variant looks
 //! artificially lean beside one that reads. mmap gets measured separately.
 
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 
 use serde_json::Value;
@@ -25,6 +42,12 @@ use serde_json::Value;
 #[derive(Debug)]
 pub struct TensorError(String);
 
+impl TensorError {
+    pub fn new(message: impl Into<String>) -> Self {
+        TensorError(message.into())
+    }
+}
+
 impl std::fmt::Display for TensorError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
@@ -32,6 +55,23 @@ impl std::fmt::Display for TensorError {
 }
 
 impl std::error::Error for TensorError {}
+
+/// What the header says about one tensor: everything but its values.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TensorInfo {
+    pub dtype: String,
+    pub shape: Vec<usize>,
+    /// Byte range within the payload, which starts after the header.
+    pub start: usize,
+    pub end: usize,
+}
+
+impl TensorInfo {
+    /// How many values the shape describes.
+    pub fn count(&self) -> usize {
+        self.shape.iter().product()
+    }
+}
 
 /// One tensor's values, upcast to f32, with the shape the file gave.
 pub struct RawTensor {
@@ -49,12 +89,122 @@ impl RawTensor {
     }
 }
 
-/// Every tensor in the file, by name.
+/// The header alone: names, shapes, dtypes and byte ranges, no values.
+///
+/// Reading this costs the first 18 KB of the file, so a structural test is
+/// effectively free. Prefer it over [`Checkpoint`] whenever the values are
+/// not actually needed.
+pub struct Header {
+    tensors: HashMap<String, TensorInfo>,
+    /// Where the payload begins, for [`Checkpoint::load_one`].
+    payload_start: u64,
+}
+
+impl Header {
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, TensorError> {
+        let path = path.as_ref();
+        let mut file = File::open(path)
+            .map_err(|e| TensorError(format!("cannot open {}: {e}", path.display())))?;
+
+        let mut length = [0u8; 8];
+        file.read_exact(&mut length).map_err(|e| {
+            TensorError(format!(
+                "{}: cannot read the 8-byte header length: {e}",
+                path.display()
+            ))
+        })?;
+        let header_len = u64::from_le_bytes(length) as usize;
+
+        let mut json = vec![0u8; header_len];
+        file.read_exact(&mut json).map_err(|e| {
+            TensorError(format!(
+                "{}: the header claims {header_len} bytes but reading them failed: {e}",
+                path.display()
+            ))
+        })?;
+
+        Ok(Header {
+            tensors: parse_entries(&json)?,
+            payload_start: 8 + header_len as u64,
+        })
+    }
+
+    pub fn get(&self, name: &str) -> Option<&TensorInfo> {
+        self.tensors.get(name)
+    }
+
+    pub fn names(&self) -> impl Iterator<Item = &str> {
+        self.tensors.keys().map(String::as_str)
+    }
+
+    pub fn len(&self) -> usize {
+        self.tensors.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.tensors.is_empty()
+    }
+
+    /// Total number of values across every tensor.
+    pub fn parameter_count(&self) -> usize {
+        self.tensors.values().map(TensorInfo::count).sum()
+    }
+
+    /// Fetch a tensor's description and check its shape, naming both when it
+    /// is wrong.
+    pub fn require(&self, name: &str, shape: &[usize]) -> Result<&TensorInfo, TensorError> {
+        let info = self.tensors.get(name).ok_or_else(|| {
+            TensorError(format!(
+                "the checkpoint has no tensor {name:?}. Note that the encoder tensors are \
+                 prefixed `model.` while the head tensors are not."
+            ))
+        })?;
+        if info.shape != shape {
+            return Err(TensorError(format!(
+                "{name}: shape is {:?}, expected {shape:?}",
+                info.shape
+            )));
+        }
+        Ok(info)
+    }
+}
+
+/// Every tensor in the file, with its values.
 pub struct Checkpoint {
     tensors: HashMap<String, RawTensor>,
 }
 
 impl Checkpoint {
+    /// Read one tensor's values, seeking straight to its byte range.
+    ///
+    /// This touches the header plus that tensor, so checking `decoder.bias`
+    /// costs 100 KB rather than 791 MB.
+    pub fn load_one(path: impl AsRef<Path>, name: &str) -> Result<RawTensor, TensorError> {
+        let path = path.as_ref();
+        let header = Header::from_file(path)?;
+        let info = header
+            .get(name)
+            .ok_or_else(|| TensorError(format!("the checkpoint has no tensor {name:?}")))?;
+
+        let mut file = File::open(path)
+            .map_err(|e| TensorError(format!("cannot open {}: {e}", path.display())))?;
+        file.seek(SeekFrom::Start(header.payload_start + info.start as u64))
+            .map_err(|e| TensorError(format!("{name}: cannot seek to its values: {e}")))?;
+
+        let mut raw = vec![0u8; info.end - info.start];
+        file.read_exact(&mut raw)
+            .map_err(|e| TensorError(format!("{name}: cannot read its values: {e}")))?;
+
+        let data = decode(&info.dtype, &raw, info.count())
+            .map_err(|e| TensorError(format!("{name} (shape {:?}): {e}", info.shape)))?;
+        Ok(RawTensor {
+            shape: info.shape.clone(),
+            data,
+        })
+    }
+
+    /// Read the whole file. 1.58 GB of f32 for this checkpoint, so a test
+    /// that calls this should share one instance across the binary.
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, TensorError> {
         let path = path.as_ref();
         let bytes = std::fs::read(path)
@@ -78,72 +228,31 @@ impl Checkpoint {
             )));
         }
 
-        let header: Value = serde_json::from_slice(&bytes[8..header_end])
-            .map_err(|e| TensorError(format!("the header is not valid JSON: {e}")))?;
-        let entries = header
-            .as_object()
-            .ok_or_else(|| TensorError("the header is not a JSON object".into()))?;
+        let entries = parse_entries(&bytes[8..header_end])?;
 
         // Offsets in the header are relative to the end of the header, not
         // the start of the file.
         let payload = &bytes[header_end..];
 
         let mut tensors = HashMap::with_capacity(entries.len());
-        for (name, entry) in entries {
-            // Written by the producer, not a tensor.
-            if name == "__metadata__" {
-                continue;
-            }
-
-            let dtype = entry
-                .get("dtype")
-                .and_then(Value::as_str)
-                .ok_or_else(|| TensorError(format!("{name}: no dtype")))?;
-
-            let shape: Vec<usize> = entry
-                .get("shape")
-                .and_then(Value::as_array)
-                .ok_or_else(|| TensorError(format!("{name}: no shape")))?
-                .iter()
-                .map(|n| n.as_u64().map(|v| v as usize))
-                .collect::<Option<_>>()
-                .ok_or_else(|| TensorError(format!("{name}: a shape entry is not a number")))?;
-
-            let offsets = entry
-                .get("data_offsets")
-                .and_then(Value::as_array)
-                .ok_or_else(|| TensorError(format!("{name}: no data_offsets")))?;
-            if offsets.len() != 2 {
+        for (name, info) in entries {
+            if info.end > payload.len() {
                 return Err(TensorError(format!(
-                    "{name}: data_offsets has {} entries, expected 2",
-                    offsets.len()
-                )));
-            }
-            let start = offsets[0].as_u64().unwrap_or(0) as usize;
-            let end = offsets[1].as_u64().unwrap_or(0) as usize;
-            if end < start || end > payload.len() {
-                return Err(TensorError(format!(
-                    "{name}: byte range {start}..{end} is outside the {} byte payload",
+                    "{name}: byte range {}..{} is outside the {} byte payload",
+                    info.start,
+                    info.end,
                     payload.len()
                 )));
             }
-
-            let count: usize = shape.iter().product();
-            let raw = &payload[start..end];
-            let data = match dtype {
-                "BF16" => upcast_bf16(raw, count)
-                    .map_err(|e| TensorError(format!("{name} (shape {shape:?}): {e}")))?,
-                "F32" => upcast_f32(raw, count)
-                    .map_err(|e| TensorError(format!("{name} (shape {shape:?}): {e}")))?,
-                other => {
-                    return Err(TensorError(format!(
-                        "{name}: dtype {other} is not supported; this checkpoint should be \
-                         entirely BF16"
-                    )))
-                }
-            };
-
-            tensors.insert(name.clone(), RawTensor { shape, data });
+            let data = decode(&info.dtype, &payload[info.start..info.end], info.count())
+                .map_err(|e| TensorError(format!("{name} (shape {:?}): {e}", info.shape)))?;
+            tensors.insert(
+                name,
+                RawTensor {
+                    shape: info.shape,
+                    data,
+                },
+            );
         }
 
         Ok(Checkpoint { tensors })
@@ -183,6 +292,77 @@ impl Checkpoint {
     }
 }
 
+/// Read the header JSON into one [`TensorInfo`] per tensor.
+fn parse_entries(json: &[u8]) -> Result<HashMap<String, TensorInfo>, TensorError> {
+    let header: Value = serde_json::from_slice(json)
+        .map_err(|e| TensorError(format!("the header is not valid JSON: {e}")))?;
+    let entries = header
+        .as_object()
+        .ok_or_else(|| TensorError("the header is not a JSON object".into()))?;
+
+    let mut out = HashMap::with_capacity(entries.len());
+    for (name, entry) in entries {
+        // Written by the producer, not a tensor.
+        if name == "__metadata__" {
+            continue;
+        }
+
+        let dtype = entry
+            .get("dtype")
+            .and_then(Value::as_str)
+            .ok_or_else(|| TensorError(format!("{name}: no dtype")))?
+            .to_string();
+
+        let shape: Vec<usize> = entry
+            .get("shape")
+            .and_then(Value::as_array)
+            .ok_or_else(|| TensorError(format!("{name}: no shape")))?
+            .iter()
+            .map(|n| n.as_u64().map(|v| v as usize))
+            .collect::<Option<_>>()
+            .ok_or_else(|| TensorError(format!("{name}: a shape entry is not a number")))?;
+
+        let offsets = entry
+            .get("data_offsets")
+            .and_then(Value::as_array)
+            .ok_or_else(|| TensorError(format!("{name}: no data_offsets")))?;
+        if offsets.len() != 2 {
+            return Err(TensorError(format!(
+                "{name}: data_offsets has {} entries, expected 2",
+                offsets.len()
+            )));
+        }
+        let start = offsets[0].as_u64().unwrap_or(0) as usize;
+        let end = offsets[1].as_u64().unwrap_or(0) as usize;
+        if end < start {
+            return Err(TensorError(format!(
+                "{name}: data_offsets {start}..{end} runs backwards"
+            )));
+        }
+
+        out.insert(
+            name.clone(),
+            TensorInfo {
+                dtype,
+                shape,
+                start,
+                end,
+            },
+        );
+    }
+    Ok(out)
+}
+
+fn decode(dtype: &str, raw: &[u8], count: usize) -> Result<Vec<f32>, String> {
+    match dtype {
+        "BF16" => upcast_bf16(raw, count),
+        "F32" => read_f32(raw, count),
+        other => Err(format!(
+            "dtype {other} is not supported; this checkpoint should be entirely BF16"
+        )),
+    }
+}
+
 /// bf16 is the top 16 bits of an f32, so widening is a shift. Exact, with no
 /// rounding mode to choose.
 fn upcast_bf16(raw: &[u8], count: usize) -> Result<Vec<f32>, String> {
@@ -201,7 +381,7 @@ fn upcast_bf16(raw: &[u8], count: usize) -> Result<Vec<f32>, String> {
     Ok(out)
 }
 
-fn upcast_f32(raw: &[u8], count: usize) -> Result<Vec<f32>, String> {
+fn read_f32(raw: &[u8], count: usize) -> Result<Vec<f32>, String> {
     if raw.len() != count * 4 {
         return Err(format!(
             "{count} f32 values need {} bytes, the range holds {}",

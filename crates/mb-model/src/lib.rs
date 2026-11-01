@@ -18,6 +18,7 @@
 //! silently violated.
 
 pub mod config;
+pub mod embeddings;
 pub mod ops;
 pub mod safetensors;
 pub mod tensor;

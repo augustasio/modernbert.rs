@@ -60,6 +60,18 @@ breaking a test.
    rung that claims to be from-scratch, that rung is a lie.
 7. **fp32 means the same upcast everywhere.** The checkpoint is bf16; every variant
    upcasts identically or the numerical comparison is meaningless.
+8. **No test loads the whole checkpoint per test function.** It is 791 MB on disk and
+   1.58 GB as f32, and `cargo test` runs test functions in parallel across all ten cores,
+   so a per-test load asks for roughly 20 GB on a 16 GB machine. It did, and the machine
+   went down. Structural checks use `safetensors::Header`, which reads no values at all;
+   a single tensor uses `Checkpoint::load_one`, which seeks to its range. Only the
+   forward pass calls `Checkpoint::from_file`, and a test that needs it shares one
+   instance across the binary.
+9. **This is a 16 GB fanless laptop, and the work has to fit on it.** Before running
+   several heavy things at once, add up what they want: the Python side holds the model
+   in fp32 (about 1.6 GB plus runtime), a release build with `lto = "fat"` and
+   `codegen-units = 1` is memory-hungry on its own, and parallel agents multiply both.
+   Swap is capped at 3 GB, so there is no slack to absorb a mistake.
 
 ## Verification
 
