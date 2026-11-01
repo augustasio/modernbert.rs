@@ -18,6 +18,7 @@
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
+use mb_model::attention::Masks;
 use mb_model::model::ModernBert;
 use mb_model::safetensors::Checkpoint;
 use mb_model::tensor::Matrix;
@@ -105,24 +106,44 @@ fn gap(ours: &Matrix, reference: &Matrix) -> Gap {
     }
 }
 
-/// The bounds every checkpoint must stay inside.
+/// The bounds, set from measurements on all eight fixtures (3 to 963 tokens),
+/// each about 3x over the worst case seen.
 ///
-/// Measured on the three short fixtures: the worst relative-to-peak gap is
-/// 8.8e-6, at `final_norm` on the 183-token fixture, and every cosine prints
-/// as 1.000000000. That leaves the 1e-5 bound only 1.1x of headroom, so it is
-/// provisional until the long fixtures have been measured too.
+/// **Each layer alone** (`each_layer_alone_matches_when_fed_the_reference_input`):
+/// 224 checks, worst 3.1e-6 of the peak, at layer 1 on the 963-token fixture.
+/// This is the tight bound and the bug detector. A deliberately broken window
+/// fails it; see the commit that set it.
+const MAX_ALONE_RELATIVE: f32 = 1e-5;
+
+/// **The full stack**, with drift carried up from every layer below. Worst
+/// 7.95e-5 of the peak, on the 306-token fixture after layer 19. Layer 19
+/// builds a residual value of about -20,800 there and amplifies the small
+/// drift it receives; fed PyTorch's own input, the same layer matches to
+/// 7e-8. So this bound measures accumulation, not correctness.
 ///
-/// Absolute gaps look alarming in the late layers, up to 0.17 at layer 26,
-/// but the residual stream there peaks near 28,000, so that is 6e-6 of the
-/// peak. This is why the bound is relative and not absolute.
-const MAX_RELATIVE_TO_PEAK: f32 = 1e-5;
+/// Absolute gaps look alarming in the late layers, up to 2.2 at layer 19, but
+/// the residual stream peaks near 28,000, so the bound is relative to the
+/// peak and not absolute.
+const MAX_STACK_RELATIVE: f32 = 3e-4;
+
+/// `final_norm` gets its own bound, because relative-to-peak means something
+/// different after a LayerNorm. A few residual dimensions are huge, they
+/// dominate the standard deviation the norm divides by, and so the normed
+/// output's peak is small while the error carried in from the layers below is
+/// not. Its worst case is 3.45e-5 on the 963-token fixture, with a cosine of
+/// 1.000000000 and verbalizer logits off by only 2.1e-5. The logit check
+/// below is the real test of this checkpoint; this bound only catches a gross
+/// error.
+const MAX_FINAL_NORM_RELATIVE: f32 = 1e-4;
+
 const MIN_COSINE: f32 = 1.0 - 1e-6;
 /// The verbalizer logits are the accumulated end of the stack, so they get
 /// the same 1e-3 the head test uses. PyTorch's own eager and sdpa backends
 /// differ by 6.4e-5 there.
 const MAX_LOGIT_ABS: f32 = 1e-3;
 
-fn check_fixture(f: &Fixture, verbalizers: &[u32]) {
+/// Run one fixture and return what was out of bounds. Empty means it passed.
+fn check_fixture(f: &Fixture, verbalizers: &[u32]) -> Vec<String> {
     let m = model();
     let mut failures = Vec::new();
 
@@ -134,11 +155,16 @@ fn check_fixture(f: &Fixture, verbalizers: &[u32]) {
                 "fixture {} ({:<14}) {name:16} max abs {:.3e}  rel-to-peak {:.3e}  cosine {:.9}",
                 f.index, f.name, g.max_abs, g.relative_to_peak, g.cosine
             );
-            if g.relative_to_peak > MAX_RELATIVE_TO_PEAK || g.cosine < MIN_COSINE {
+            let bound = if name == "final_norm" {
+                MAX_FINAL_NORM_RELATIVE
+            } else {
+                MAX_STACK_RELATIVE
+            };
+            if g.relative_to_peak > bound || g.cosine < MIN_COSINE {
                 failures.push(format!(
-                    "{name}: rel-to-peak {:.3e} (bound {MAX_RELATIVE_TO_PEAK:.0e}), cosine \
+                    "fixture {} ({}) {name}: rel-to-peak {:.3e} (bound {bound:.0e}), cosine \
                      {:.9}",
-                    g.relative_to_peak, g.cosine
+                    f.index, f.name, g.relative_to_peak, g.cosine
                 ));
             }
         })
@@ -157,7 +183,10 @@ fn check_fixture(f: &Fixture, verbalizers: &[u32]) {
         f.index, f.name
     );
     if worst > MAX_LOGIT_ABS {
-        failures.push(format!("logits.verbalizers: max abs {worst:.3e}"));
+        failures.push(format!(
+            "fixture {} ({}) logits.verbalizers: max abs {worst:.3e}",
+            f.index, f.name
+        ));
     }
 
     let pick = |v: &[f32]| {
@@ -169,16 +198,22 @@ fn check_fixture(f: &Fixture, verbalizers: &[u32]) {
     };
     if pick(&ours) != pick(&reference) {
         failures.push(format!(
-            "the predicted class differs: ours {ours:?}, reference {reference:?}"
+            "fixture {} ({}): the predicted class differs: ours {ours:?}, reference \
+             {reference:?}",
+            f.index, f.name
         ));
     }
 
+    failures
+}
+
+/// Fail with every out-of-bounds checkpoint from every fixture, not just the
+/// first fixture to fail. The first entry is the earliest point in the stack,
+/// which is where to start looking.
+fn assert_no_failures(failures: Vec<String>) {
     assert!(
         failures.is_empty(),
-        "fixture {} ({}): {} checkpoints out of bounds. The first one is where the bug \
-         is:\n  {}",
-        f.index,
-        f.name,
+        "{} checkpoints out of bounds:\n  {}",
         failures.len(),
         failures.join("\n  ")
     );
@@ -191,13 +226,15 @@ fn check_fixture(f: &Fixture, verbalizers: &[u32]) {
 #[test]
 fn every_layer_matches_on_the_short_fixtures() {
     let (fixtures, verbalizers) = fixtures();
+    let mut failures = Vec::new();
     for name in ["near_empty", "shortest_real", "multi_space"] {
         let f = fixtures
             .iter()
             .find(|f| f.name == name)
             .unwrap_or_else(|| panic!("no fixture {name}"));
-        check_fixture(f, &verbalizers);
+        failures.extend(check_fixture(f, &verbalizers));
     }
+    assert_no_failures(failures);
 }
 
 /// The remaining five, up to 963 tokens. Slow on rung 6's naive matmul,
@@ -206,10 +243,72 @@ fn every_layer_matches_on_the_short_fixtures() {
 #[ignore = "minutes on the naive matmul; run with -- --ignored"]
 fn every_layer_matches_on_the_long_fixtures() {
     let (fixtures, verbalizers) = fixtures();
+    let mut failures = Vec::new();
     for f in fixtures
         .iter()
         .filter(|f| !["near_empty", "shortest_real", "multi_space"].contains(&f.name.as_str()))
     {
-        check_fixture(f, &verbalizers);
+        failures.extend(check_fixture(f, &verbalizers));
     }
+    assert_no_failures(failures);
+}
+
+/// Each layer alone, fed PyTorch's own input from the layer below.
+///
+/// The full-stack test measures the gap after 28 layers of accumulation, so a
+/// large gap there could come from any layer below it, amplified on the way
+/// up. Here layer i gets the reference `layer.{i-1}.out` as its input, so a
+/// gap belongs to layer i alone. Set `MB_FIXTURE` to a fixture name to run
+/// one fixture.
+#[test]
+#[ignore = "minutes on the naive matmul; run with -- --ignored"]
+fn each_layer_alone_matches_when_fed_the_reference_input() {
+    let (fixtures, _) = fixtures();
+    let only = std::env::var("MB_FIXTURE").ok();
+    let m = model();
+    let mut failures = Vec::new();
+
+    for f in fixtures
+        .iter()
+        .filter(|f| only.as_deref().is_none_or(|n| n == f.name))
+    {
+        let masks = Masks::new(m.config(), f.token_ids.len(), None);
+        for i in 0..m.config().num_hidden_layers {
+            let input = if i == 0 {
+                "embeddings.norm".to_string()
+            } else {
+                format!("layer.{}.out", i - 1)
+            };
+            let mut h = reference(f.index, &input);
+            m.layer(i, &mut h, &masks);
+            let want = reference(f.index, &format!("layer.{i}.out"));
+            let g = gap(&h, &want);
+
+            // Where the largest difference sits, and how big the value is
+            // there: an error on a huge residual value means something
+            // different from one on an ordinary value.
+            let mut at = 0;
+            let mut worst = 0.0f32;
+            for (k, (a, b)) in h.data.iter().zip(&want.data).enumerate() {
+                let d = (a - b).abs();
+                if d > worst {
+                    worst = d;
+                    at = k;
+                }
+            }
+            let (token, dim) = (at / want.cols, at % want.cols);
+            println!(
+                "fixture {} ({:<18}) layer {i:2} alone  max abs {:.3e}  rel-to-peak {:.3e}  \
+                 at token {token} dim {dim} (reference value {:.3})",
+                f.index, f.name, g.max_abs, g.relative_to_peak, want.data[at]
+            );
+            if g.relative_to_peak > MAX_ALONE_RELATIVE {
+                failures.push(format!(
+                    "fixture {} ({}) layer {i} alone: rel-to-peak {:.3e}",
+                    f.index, f.name, g.relative_to_peak
+                ));
+            }
+        }
+    }
+    assert_no_failures(failures);
 }

@@ -169,32 +169,42 @@ impl ModernBert {
         // Built once and shared by every layer. No padding: one sequence.
         let masks = Masks::new(c, ids.len(), None);
 
-        for (i, layer) in self.layers.iter().enumerate() {
-            let rope = if layer.is_global {
-                &self.rope_global
-            } else {
-                &self.rope_local
-            };
-
-            // Residual adds go onto the un-normed h.
-            let attn_in = match &layer.attn_norm {
-                Some(w) => layer_norm(&h, w, c.norm_eps),
-                None => h.clone(),
-            };
-            let attn_out = layer.attn.forward(&attn_in, rope, &masks, layer.is_global);
-            add_in_place(&mut h, &attn_out);
-
-            let mlp_out = layer
-                .mlp
-                .forward(&layer_norm(&h, &layer.mlp_norm, c.norm_eps));
-            add_in_place(&mut h, &mlp_out);
-
+        for i in 0..self.layers.len() {
+            self.layer(i, &mut h, &masks);
             observe(&format!("layer.{i}.out"), &h);
         }
 
         let h = layer_norm(&h, &self.final_norm, c.norm_eps);
         observe("final_norm", &h);
         Ok(h)
+    }
+
+    /// Run encoder layer `index` on `h` in place.
+    ///
+    /// Public so a test can feed one layer PyTorch's own input and compare
+    /// only that layer's output. Then an error from an earlier layer cannot
+    /// accumulate into a later one, and a gap that appears is that layer's.
+    pub fn layer(&self, index: usize, h: &mut Matrix, masks: &Masks) {
+        let c = &self.config;
+        let layer = &self.layers[index];
+        let rope = if layer.is_global {
+            &self.rope_global
+        } else {
+            &self.rope_local
+        };
+
+        // Residual adds go onto the un-normed h.
+        let attn_in = match &layer.attn_norm {
+            Some(w) => layer_norm(h, w, c.norm_eps),
+            None => h.clone(),
+        };
+        let attn_out = layer.attn.forward(&attn_in, rope, masks, layer.is_global);
+        add_in_place(h, &attn_out);
+
+        let mlp_out = layer
+            .mlp
+            .forward(&layer_norm(h, &layer.mlp_norm, c.norm_eps));
+        add_in_place(h, &mlp_out);
     }
 
     /// The logits for `token_ids` at `position`, which for AG News is the
