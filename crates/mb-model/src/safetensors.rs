@@ -203,6 +203,40 @@ impl Checkpoint {
         })
     }
 
+    /// Read only the named tensors, seeking to each one's range.
+    ///
+    /// Between [`Self::load_one`] and [`Self::from_file`]: use it when a
+    /// handful of tensors are needed and the rest are not. Loading just the
+    /// embedding table and its norm costs 206 MB rather than 1.58 GB.
+    pub fn load_subset(path: impl AsRef<Path>, names: &[&str]) -> Result<Self, TensorError> {
+        let path = path.as_ref();
+        let header = Header::from_file(path)?;
+        let mut file = File::open(path)
+            .map_err(|e| TensorError(format!("cannot open {}: {e}", path.display())))?;
+
+        let mut tensors = HashMap::with_capacity(names.len());
+        for &name in names {
+            let info = header
+                .get(name)
+                .ok_or_else(|| TensorError(format!("the checkpoint has no tensor {name:?}")))?;
+            file.seek(SeekFrom::Start(header.payload_start + info.start as u64))
+                .map_err(|e| TensorError(format!("{name}: cannot seek to its values: {e}")))?;
+            let mut raw = vec![0u8; info.end - info.start];
+            file.read_exact(&mut raw)
+                .map_err(|e| TensorError(format!("{name}: cannot read its values: {e}")))?;
+            let data = decode(&info.dtype, &raw, info.count())
+                .map_err(|e| TensorError(format!("{name} (shape {:?}): {e}", info.shape)))?;
+            tensors.insert(
+                name.to_string(),
+                RawTensor {
+                    shape: info.shape.clone(),
+                    data,
+                },
+            );
+        }
+        Ok(Checkpoint { tensors })
+    }
+
     /// Read the whole file. 1.58 GB of f32 for this checkpoint, so a test
     /// that calls this should share one instance across the binary.
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, TensorError> {
