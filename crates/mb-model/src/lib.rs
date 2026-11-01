@@ -19,6 +19,7 @@
 
 pub mod config;
 pub mod embeddings;
+pub mod head;
 pub mod mlp;
 pub mod ops;
 pub mod rope;
