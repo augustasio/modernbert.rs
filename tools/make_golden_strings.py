@@ -73,10 +73,10 @@ CASES: list[tuple[str, str]] = [
     ("SEP written by hand", "hello [SEP]"),
     # --- NFC normalization ---
     ("precomposed e acute", "café"),
-    ("decomposed e acute, must match the precomposed one", "café"),
+    ("decomposed e acute, must match the precomposed one", "cafe\u0301"),
     ("precomposed a diaeresis", "naïve"),
-    ("decomposed a diaeresis", "naïve"),
-    ("a combining mark with no base", "́"),
+    ("decomposed a diaeresis", "nai\u0308ve"),
+    ("a combining mark with no base", "\u0301"),
     ("hangul, which NFC composes", "가"),
     # --- contractions, case-sensitive in the GPT-2 pattern ---
     ("lowercase contraction", "don't"),
@@ -116,12 +116,12 @@ CASES: list[tuple[str, str]] = [
     ("hangul syllables", "한국어"),
     ("mixed scripts", "中文 and English"),
     ("emoji", "\U0001f389"),
-    ("emoji with joiners", "\U0001f468‍\U0001f469‍\U0001f467‍\U0001f466"),
+    ("emoji with joiners", "\U0001f468\u200d\U0001f469\u200d\U0001f467\u200d\U0001f466"),
     ("regional indicators", "\U0001f1ec\U0001f1e7"),
-    ("non-breaking space", "a b"),
-    ("ideographic space", "a　b"),
-    ("thin space", "a b"),
-    ("zero width space, not whitespace", "a​b"),
+    ("non-breaking space", "a\u00a0b"),
+    ("ideographic space", "a\u3000b"),
+    ("thin space", "a\u2009b"),
+    ("zero width space, not whitespace", "a\u200bb"),
     ("a vulgar fraction", "½"),
     ("a roman numeral", "Ⅻ"),
     ("arabic-indic digits", "٣٤٥"),
@@ -134,20 +134,22 @@ CASES: list[tuple[str, str]] = [
     # --- the real prompt, including its four trailing spaces ---
     (
         "the AG News template at inference",
-        "** Instructions **    \n"
-        "Given a short news report, determine which news category it belongs to.\n"
-        "** Content **\n"
-        "What is the category of the following news report?\n"
-        "News Report: Wall St. Bears Claw Back Into the Black (Reuters) Reuters - "
-        "Short-sellers, Wall Street's dwindling band of ultra-cynics, are seeing "
-        "green again.\n"
-        "** Options **\n"
-        "- Business: It is about business or financial news.\n"
-        "- World: It's about world news.\n"
-        "- Sports: It's about sports.\n"
-        "- Tech: It's about Science or Technology, or related companies.\n"
-        "** Answer **\n"
-        "Answer: [unused0] [MASK]",
+        (
+            "** Instructions **    \n"
+            "Given a short news report, determine which news category it belongs to.\n"
+            "** Content **\n"
+            "What is the category of the following news report?\n"
+            "News Report: Wall St. Bears Claw Back Into the Black (Reuters) Reuters - "
+            "Short-sellers, Wall Street's dwindling band of ultra-cynics, are seeing "
+            "green again.\n"
+            "** Options **\n"
+            "- Business: It is about business or financial news.\n"
+            "- World: It's about world news.\n"
+            "- Sports: It's about sports.\n"
+            "- Tech: It's about Science or Technology, or related companies.\n"
+            "** Answer **\n"
+            "Answer: [unused0] [MASK]"
+        ),
     ),
 ]
 

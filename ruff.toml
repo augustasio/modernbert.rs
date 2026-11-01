@@ -1,0 +1,34 @@
+# 100 columns, matching rustfmt's default, so the Python and Rust sides of the repo wrap
+# the same way.
+line-length = 100
+
+# One config for every Python file in the repository, so `python/` and `tools/` wrap and
+# lint the same way.
+#
+# The scripts in `python/` import `agnews` as a flat local module, so ruff needs to be told
+# that directory is a source root or it sorts `agnews` in with the third-party imports.
+src = ["python", "tools"]
+
+[lint]
+extend-select = [
+    "I",    # import sorting
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "SIM",  # simplifications
+    "PL",   # pylint
+    "RUF",
+]
+ignore = [
+    "PLR0912",  # too many branches: the dumper is deliberately a flat list of steps
+    "PLR0915",  # too many statements: likewise
+    "PLR2004",  # magic values: the point of this project is specific constants
+    # The non-ASCII fixture exists precisely to feed the tokenizer Greek eta, dotless i,
+    # no-break space and en dash. Ruff is right that they are confusable with ASCII; that
+    # is what makes them worth testing, so the warning has to go rather than the data.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+]
+
+[lint.isort]
+known-first-party = ["agnews"]
