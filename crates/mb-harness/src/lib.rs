@@ -4,10 +4,18 @@
 //! is fanless and throttles: a naive "run A, then run B" comparison measures thermal
 //! state as much as it measures code.
 //!
-//! The protocol: round-robin variants in ~10-second slices with the order randomized
-//! within each cycle, re-measure a ruler variant every cycle and report other variants
-//! as ratios to it, and capture `CPU_Speed_Limit` alongside every sample. Burst and
-//! sustained numbers are reported separately. Memory is a second pass, in fresh
-//! processes, because allocator high-water marks never shrink.
+//! The protocol: each run pairs one variant with the ruler, alternates them in slices of
+//! the same examples with the order randomized per cycle, records the thermal state
+//! around every slice, and checks every logit against rung 0 in the timed run itself.
+//! Workers speak the protocol in `PROTOCOL.md`. The harness records raw samples only;
+//! the statistics live in `python/`.
 //!
-//! See `PLAN.md` for the full protocol and the tier-4 integrity gates this enforces.
+//! See `PLAN.md` for the full protocol and its changelog.
+
+pub mod bench;
+pub mod integrity;
+pub mod npy;
+pub mod rng;
+pub mod schedule;
+pub mod thermal;
+pub mod worker;
