@@ -1,0 +1,14 @@
+{
+  "label": "smoke: rung 7 against itself, mechanics only",
+  "ruler": { "name": "rung7-a", "command": ["target/eval/worker"] },
+  "variant": { "name": "rung7-b", "command": ["target/eval/worker"] },
+  "threads": 4,
+  "cycles": 2,
+  "examples_per_slice": 3,
+  "warmup_examples": 1,
+  "seed": 1,
+  "weights": "weights/ModernBERT-Large-Instruct",
+  "prompt_ids": "data/agnews_test_prompt_ids.tsv",
+  "reference_logits": "results/rung0_logits.npy",
+  "thermal_helper": "target/tools/thermal_state"
+}
