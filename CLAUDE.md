@@ -32,6 +32,9 @@ Only where they clearly earn their place. Current justified set:
   `\p{L}` and `\p{N}` reject, because its ranges swallow the unassigned gaps inside letter
   blocks. A corpus test cannot see this, because real text holds no unassigned code
   points. Any replacement must pass the exhaustive sweep in `tests/split_oracle.rs`.
+- `unicode-normalization` for NFC, which `tokenizer.json` asks for. The decomposition
+  tables and the canonical ordering rules are large and fiddly, so writing them here
+  would be transcription rather than insight.
 - `memchr`, `serde_json` where parsing JSON by hand would be noise rather than insight.
 - `fancy-regex` and HF `tokenizers` as **dev-dependencies only**, as test oracles. They
   must never appear in a non-test build path.

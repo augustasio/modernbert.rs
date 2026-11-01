@@ -19,3 +19,5 @@
 pub mod split;
 
 pub mod load;
+
+pub mod encode;

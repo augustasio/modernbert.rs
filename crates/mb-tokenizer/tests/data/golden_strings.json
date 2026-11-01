@@ -1,0 +1,1924 @@
+{
+ "model": "answerdotai/ModernBERT-Large-Instruct",
+ "tokenizers_version": "0.23.3",
+ "generated_by": "tools/make_golden_strings.py",
+ "cases": [
+  {
+   "label": "empty",
+   "text": "",
+   "ids": [
+    50281,
+    50282
+   ],
+   "ids_no_specials": [],
+   "decoded": ""
+  },
+  {
+   "label": "one space",
+   "text": " ",
+   "ids": [
+    50281,
+    209,
+    50282
+   ],
+   "ids_no_specials": [
+    209
+   ],
+   "decoded": " "
+  },
+  {
+   "label": "one letter",
+   "text": "a",
+   "ids": [
+    50281,
+    247,
+    50282
+   ],
+   "ids_no_specials": [
+    247
+   ],
+   "decoded": " a"
+  },
+  {
+   "label": "bare letter gets a prefix space",
+   "text": "A",
+   "ids": [
+    50281,
+    329,
+    50282
+   ],
+   "ids_no_specials": [
+    329
+   ],
+   "decoded": " A"
+  },
+  {
+   "label": "letter already has a space",
+   "text": " A",
+   "ids": [
+    50281,
+    329,
+    50282
+   ],
+   "ids_no_specials": [
+    329
+   ],
+   "decoded": " A"
+  },
+  {
+   "label": "bare word",
+   "text": "Hello",
+   "ids": [
+    50281,
+    24387,
+    50282
+   ],
+   "ids_no_specials": [
+    24387
+   ],
+   "decoded": " Hello"
+  },
+  {
+   "label": "word with a space",
+   "text": " Hello",
+   "ids": [
+    50281,
+    24387,
+    50282
+   ],
+   "ids_no_specials": [
+    24387
+   ],
+   "decoded": " Hello"
+  },
+  {
+   "label": "two words",
+   "text": "Hello world",
+   "ids": [
+    50281,
+    24387,
+    1533,
+    50282
+   ],
+   "ids_no_specials": [
+    24387,
+    1533
+   ],
+   "decoded": " Hello world"
+  },
+  {
+   "label": "two spaces then a letter",
+   "text": "  A",
+   "ids": [
+    50281,
+    50276,
+    329,
+    50282
+   ],
+   "ids_no_specials": [
+    50276,
+    329
+   ],
+   "decoded": "   A"
+  },
+  {
+   "label": "three spaces then a letter",
+   "text": "   A",
+   "ids": [
+    50281,
+    50275,
+    329,
+    50282
+   ],
+   "ids_no_specials": [
+    50275,
+    329
+   ],
+   "decoded": "    A"
+  },
+  {
+   "label": "four spaces then a letter",
+   "text": "    x",
+   "ids": [
+    50281,
+    50274,
+    1269,
+    50282
+   ],
+   "ids_no_specials": [
+    50274,
+    1269
+   ],
+   "decoded": "     x"
+  },
+  {
+   "label": "eight spaces",
+   "text": "        ",
+   "ids": [
+    50281,
+    50270,
+    50282
+   ],
+   "ids_no_specials": [
+    50270
+   ],
+   "decoded": "        "
+  },
+  {
+   "label": "24 spaces, the longest run token",
+   "text": "                        ",
+   "ids": [
+    50281,
+    50254,
+    50282
+   ],
+   "ids_no_specials": [
+    50254
+   ],
+   "decoded": "                        "
+  },
+  {
+   "label": "25 spaces, one over the longest",
+   "text": "                         ",
+   "ids": [
+    50281,
+    50254,
+    209,
+    50282
+   ],
+   "ids_no_specials": [
+    50254,
+    209
+   ],
+   "decoded": "                         "
+  },
+  {
+   "label": "26 spaces",
+   "text": "                          ",
+   "ids": [
+    50281,
+    50254,
+    50276,
+    50282
+   ],
+   "ids_no_specials": [
+    50254,
+    50276
+   ],
+   "decoded": "                          "
+  },
+  {
+   "label": "a run between letters",
+   "text": "a  b",
+   "ids": [
+    50281,
+    247,
+    50276,
+    270,
+    50282
+   ],
+   "ids_no_specials": [
+    247,
+    50276,
+    270
+   ],
+   "decoded": " a   b"
+  },
+  {
+   "label": "a long run between letters",
+   "text": "a          b",
+   "ids": [
+    50281,
+    247,
+    50268,
+    270,
+    50282
+   ],
+   "ids_no_specials": [
+    247,
+    50268,
+    270
+   ],
+   "decoded": " a           b"
+  },
+  {
+   "label": "one tab",
+   "text": "\t",
+   "ids": [
+    50281,
+    28910,
+    50282
+   ],
+   "ids_no_specials": [
+    28910
+   ],
+   "decoded": " \t"
+  },
+  {
+   "label": "tab then a capital",
+   "text": "\tA",
+   "ids": [
+    50281,
+    209,
+    186,
+    34,
+    50282
+   ],
+   "ids_no_specials": [
+    209,
+    186,
+    34
+   ],
+   "decoded": " \tA"
+  },
+  {
+   "label": "one newline",
+   "text": "\n",
+   "ids": [
+    50281,
+    2490,
+    50282
+   ],
+   "ids_no_specials": [
+    2490
+   ],
+   "decoded": " \n"
+  },
+  {
+   "label": "CRLF",
+   "text": "\r\n",
+   "ids": [
+    50281,
+    209,
+    2379,
+    50282
+   ],
+   "ids_no_specials": [
+    209,
+    2379
+   ],
+   "decoded": " \r\n"
+  },
+  {
+   "label": "two newlines between letters",
+   "text": "a\n\nb",
+   "ids": [
+    50281,
+    247,
+    187,
+    187,
+    67,
+    50282
+   ],
+   "ids_no_specials": [
+    247,
+    187,
+    187,
+    67
+   ],
+   "decoded": " a\n\nb"
+  },
+  {
+   "label": "mixed whitespace between letters",
+   "text": "a \n b",
+   "ids": [
+    50281,
+    247,
+    2490,
+    270,
+    50282
+   ],
+   "ids_no_specials": [
+    247,
+    2490,
+    270
+   ],
+   "decoded": " a \n b"
+  },
+  {
+   "label": "trailing newline",
+   "text": "hello\n",
+   "ids": [
+    50281,
+    23120,
+    187,
+    50282
+   ],
+   "ids_no_specials": [
+    23120,
+    187
+   ],
+   "decoded": " hello\n"
+  },
+  {
+   "label": "leading newline",
+   "text": "\nhello",
+   "ids": [
+    50281,
+    209,
+    187,
+    25521,
+    50282
+   ],
+   "ids_no_specials": [
+    209,
+    187,
+    25521
+   ],
+   "decoded": " \nhello"
+  },
+  {
+   "label": "mask with spaces around it",
+   "text": "x [MASK] y",
+   "ids": [
+    50281,
+    1269,
+    50284,
+    340,
+    50282
+   ],
+   "ids_no_specials": [
+    1269,
+    50284,
+    340
+   ],
+   "decoded": " x[MASK] y"
+  },
+  {
+   "label": "mask with no spaces",
+   "text": "x[MASK]y",
+   "ids": [
+    50281,
+    1269,
+    50284,
+    340,
+    50282
+   ],
+   "ids_no_specials": [
+    1269,
+    50284,
+    340
+   ],
+   "decoded": " x[MASK] y"
+  },
+  {
+   "label": "mask after two spaces, which get eaten",
+   "text": "x  [MASK]",
+   "ids": [
+    50281,
+    1269,
+    50284,
+    50282
+   ],
+   "ids_no_specials": [
+    1269,
+    50284
+   ],
+   "decoded": " x[MASK]"
+  },
+  {
+   "label": "mask at the start",
+   "text": "[MASK] y",
+   "ids": [
+    50281,
+    50284,
+    340,
+    50282
+   ],
+   "ids_no_specials": [
+    50284,
+    340
+   ],
+   "decoded": "[MASK] y"
+  },
+  {
+   "label": "mask alone",
+   "text": "[MASK]",
+   "ids": [
+    50281,
+    50284,
+    50282
+   ],
+   "ids_no_specials": [
+    50284
+   ],
+   "decoded": "[MASK]"
+  },
+  {
+   "label": "the real answer tail",
+   "text": "Answer: [unused0] [MASK]",
+   "ids": [
+    50281,
+    37741,
+    27,
+    209,
+    50285,
+    50284,
+    50282
+   ],
+   "ids_no_specials": [
+    37741,
+    27,
+    209,
+    50285,
+    50284
+   ],
+   "decoded": " Answer: [unused0][MASK]"
+  },
+  {
+   "label": "an email placeholder",
+   "text": "mail me at |||EMAIL_ADDRESS||| ok",
+   "ids": [
+    50281,
+    8888,
+    479,
+    387,
+    209,
+    50277,
+    8718,
+    50282
+   ],
+   "ids_no_specials": [
+    8888,
+    479,
+    387,
+    209,
+    50277,
+    8718
+   ],
+   "decoded": " mail me at |||EMAIL_ADDRESS||| ok"
+  },
+  {
+   "label": "an ip placeholder",
+   "text": "host |||IP_ADDRESS||| up",
+   "ids": [
+    50281,
+    3167,
+    209,
+    0,
+    598,
+    50282
+   ],
+   "ids_no_specials": [
+    3167,
+    209,
+    0,
+    598
+   ],
+   "decoded": " host |||IP_ADDRESS||| up"
+  },
+  {
+   "label": "unused0 alone",
+   "text": "[unused0]",
+   "ids": [
+    50281,
+    50285,
+    50282
+   ],
+   "ids_no_specials": [
+    50285
+   ],
+   "decoded": "[unused0]"
+  },
+  {
+   "label": "endoftext",
+   "text": "a <|endoftext|> b",
+   "ids": [
+    50281,
+    247,
+    209,
+    50279,
+    270,
+    50282
+   ],
+   "ids_no_specials": [
+    247,
+    209,
+    50279,
+    270
+   ],
+   "decoded": " a <|endoftext|> b"
+  },
+  {
+   "label": "CLS written by hand",
+   "text": "[CLS] hello",
+   "ids": [
+    50281,
+    50281,
+    23120,
+    50282
+   ],
+   "ids_no_specials": [
+    50281,
+    23120
+   ],
+   "decoded": "[CLS] hello"
+  },
+  {
+   "label": "SEP written by hand",
+   "text": "hello [SEP]",
+   "ids": [
+    50281,
+    23120,
+    209,
+    50282,
+    50282
+   ],
+   "ids_no_specials": [
+    23120,
+    209,
+    50282
+   ],
+   "decoded": " hello [SEP]"
+  },
+  {
+   "label": "precomposed e acute",
+   "text": "café",
+   "ids": [
+    50281,
+    36241,
+    50282
+   ],
+   "ids_no_specials": [
+    36241
+   ],
+   "decoded": " café"
+  },
+  {
+   "label": "decomposed e acute, must match the precomposed one",
+   "text": "café",
+   "ids": [
+    50281,
+    36241,
+    50282
+   ],
+   "ids_no_specials": [
+    36241
+   ],
+   "decoded": " café"
+  },
+  {
+   "label": "precomposed a diaeresis",
+   "text": "naïve",
+   "ids": [
+    50281,
+    36060,
+    50282
+   ],
+   "ids_no_specials": [
+    36060
+   ],
+   "decoded": " naïve"
+  },
+  {
+   "label": "decomposed a diaeresis",
+   "text": "naïve",
+   "ids": [
+    50281,
+    36060,
+    50282
+   ],
+   "ids_no_specials": [
+    36060
+   ],
+   "decoded": " naïve"
+  },
+  {
+   "label": "a combining mark with no base",
+   "text": "́",
+   "ids": [
+    50281,
+    209,
+    136,
+    212,
+    50282
+   ],
+   "ids_no_specials": [
+    209,
+    136,
+    212
+   ],
+   "decoded": " ́"
+  },
+  {
+   "label": "hangul, which NFC composes",
+   "text": "가",
+   "ids": [
+    50281,
+    42984,
+    211,
+    50282
+   ],
+   "ids_no_specials": [
+    42984,
+    211
+   ],
+   "decoded": " 가"
+  },
+  {
+   "label": "lowercase contraction",
+   "text": "don't",
+   "ids": [
+    50281,
+    1053,
+    626,
+    50282
+   ],
+   "ids_no_specials": [
+    1053,
+    626
+   ],
+   "decoded": " don't"
+  },
+  {
+   "label": "uppercase contraction",
+   "text": "DON'T",
+   "ids": [
+    50281,
+    24694,
+    8,
+    53,
+    50282
+   ],
+   "ids_no_specials": [
+    24694,
+    8,
+    53
+   ],
+   "decoded": " DON'T"
+  },
+  {
+   "label": "mixed case contraction",
+   "text": "Don'T",
+   "ids": [
+    50281,
+    5037,
+    8,
+    53,
+    50282
+   ],
+   "ids_no_specials": [
+    5037,
+    8,
+    53
+   ],
+   "decoded": " Don'T"
+  },
+  {
+   "label": "every contraction",
+   "text": "it's it't we're we've I'm we'll I'd",
+   "ids": [
+    50281,
+    352,
+    434,
+    352,
+    626,
+    359,
+    1472,
+    359,
+    1849,
+    309,
+    1353,
+    359,
+    1833,
+    309,
+    1871,
+    50282
+   ],
+   "ids_no_specials": [
+    352,
+    434,
+    352,
+    626,
+    359,
+    1472,
+    359,
+    1849,
+    309,
+    1353,
+    359,
+    1833,
+    309,
+    1871
+   ],
+   "decoded": " it's it't we're we've I'm we'll I'd"
+  },
+  {
+   "label": "a bare contraction",
+   "text": "'s",
+   "ids": [
+    50281,
+    686,
+    84,
+    50282
+   ],
+   "ids_no_specials": [
+    686,
+    84
+   ],
+   "decoded": " 's"
+  },
+  {
+   "label": "an apostrophe that is not a contraction",
+   "text": "x'y",
+   "ids": [
+    50281,
+    1269,
+    8,
+    90,
+    50282
+   ],
+   "ids_no_specials": [
+    1269,
+    8,
+    90
+   ],
+   "decoded": " x'y"
+  },
+  {
+   "label": "a run of apostrophes",
+   "text": "''''",
+   "ids": [
+    50281,
+    686,
+    35033,
+    50282
+   ],
+   "ids_no_specials": [
+    686,
+    35033
+   ],
+   "decoded": " ''''"
+  },
+  {
+   "label": "one digit",
+   "text": "1",
+   "ids": [
+    50281,
+    337,
+    50282
+   ],
+   "ids_no_specials": [
+    337
+   ],
+   "decoded": " 1"
+  },
+  {
+   "label": "ten digits",
+   "text": "1234567890",
+   "ids": [
+    50281,
+    1249,
+    16767,
+    25025,
+    2270,
+    50282
+   ],
+   "ids_no_specials": [
+    1249,
+    16767,
+    25025,
+    2270
+   ],
+   "decoded": " 1234567890"
+  },
+  {
+   "label": "digits with a space",
+   "text": " 1234",
+   "ids": [
+    50281,
+    1249,
+    1706,
+    50282
+   ],
+   "ids_no_specials": [
+    1249,
+    1706
+   ],
+   "decoded": " 1234"
+  },
+  {
+   "label": "a decimal",
+   "text": "12.34",
+   "ids": [
+    50281,
+    1249,
+    15,
+    1706,
+    50282
+   ],
+   "ids_no_specials": [
+    1249,
+    15,
+    1706
+   ],
+   "decoded": " 12.34"
+  },
+  {
+   "label": "grouped digits",
+   "text": "1,234,567",
+   "ids": [
+    50281,
+    337,
+    13,
+    20210,
+    13,
+    39697,
+    50282
+   ],
+   "ids_no_specials": [
+    337,
+    13,
+    20210,
+    13,
+    39697
+   ],
+   "decoded": " 1,234,567"
+  },
+  {
+   "label": "letters and digits",
+   "text": "a1b2c3",
+   "ids": [
+    50281,
+    247,
+    18,
+    67,
+    19,
+    68,
+    20,
+    50282
+   ],
+   "ids_no_specials": [
+    247,
+    18,
+    67,
+    19,
+    68,
+    20
+   ],
+   "decoded": " a1b2c3"
+  },
+  {
+   "label": "a year in a sentence",
+   "text": "In 2024 the model shipped.",
+   "ids": [
+    50281,
+    496,
+    1384,
+    1348,
+    253,
+    1566,
+    24610,
+    15,
+    50282
+   ],
+   "ids_no_specials": [
+    496,
+    1384,
+    1348,
+    253,
+    1566,
+    24610,
+    15
+   ],
+   "decoded": " In 2024 the model shipped."
+  },
+  {
+   "label": "one dot",
+   "text": ".",
+   "ids": [
+    50281,
+    964,
+    50282
+   ],
+   "ids_no_specials": [
+    964
+   ],
+   "decoded": " ."
+  },
+  {
+   "label": "space then dot",
+   "text": " .",
+   "ids": [
+    50281,
+    964,
+    50282
+   ],
+   "ids_no_specials": [
+    964
+   ],
+   "decoded": " ."
+  },
+  {
+   "label": "dots",
+   "text": "...",
+   "ids": [
+    50281,
+    3346,
+    50282
+   ],
+   "ids_no_specials": [
+    3346
+   ],
+   "decoded": " ..."
+  },
+  {
+   "label": "punctuation run",
+   "text": "!?!?",
+   "ids": [
+    50281,
+    2195,
+    22418,
+    32,
+    50282
+   ],
+   "ids_no_specials": [
+    2195,
+    22418,
+    32
+   ],
+   "decoded": " !?!?"
+  },
+  {
+   "label": "an arrow",
+   "text": " -> ",
+   "ids": [
+    50281,
+    5204,
+    209,
+    50282
+   ],
+   "ids_no_specials": [
+    5204,
+    209
+   ],
+   "decoded": " -> "
+  },
+  {
+   "label": "brackets",
+   "text": "(a)",
+   "ids": [
+    50281,
+    313,
+    66,
+    10,
+    50282
+   ],
+   "ids_no_specials": [
+    313,
+    66,
+    10
+   ],
+   "decoded": " (a)"
+  },
+  {
+   "label": "currency",
+   "text": "$100",
+   "ids": [
+    50281,
+    370,
+    2313,
+    50282
+   ],
+   "ids_no_specials": [
+    370,
+    2313
+   ],
+   "decoded": " $100"
+  },
+  {
+   "label": "a slash",
+   "text": "a/b",
+   "ids": [
+    50281,
+    247,
+    16,
+    67,
+    50282
+   ],
+   "ids_no_specials": [
+    247,
+    16,
+    67
+   ],
+   "decoded": " a/b"
+  },
+  {
+   "label": "a url",
+   "text": "https://example.com/path?a=1&b=2#frag",
+   "ids": [
+    50281,
+    5987,
+    1358,
+    11667,
+    15,
+    681,
+    16,
+    3967,
+    32,
+    66,
+    30,
+    18,
+    7,
+    67,
+    30,
+    19,
+    4,
+    42494,
+    50282
+   ],
+   "ids_no_specials": [
+    5987,
+    1358,
+    11667,
+    15,
+    681,
+    16,
+    3967,
+    32,
+    66,
+    30,
+    18,
+    7,
+    67,
+    30,
+    19,
+    4,
+    42494
+   ],
+   "decoded": " https://example.com/path?a=1&b=2#frag"
+  },
+  {
+   "label": "rust code",
+   "text": "fn main() { let x: Vec<u32> = vec![1, 2]; }",
+   "ids": [
+    50281,
+    21486,
+    2022,
+    1082,
+    551,
+    1339,
+    1269,
+    27,
+    43876,
+    29,
+    86,
+    1237,
+    31,
+    426,
+    21004,
+    3138,
+    18,
+    13,
+    374,
+    2194,
+    748,
+    50282
+   ],
+   "ids_no_specials": [
+    21486,
+    2022,
+    1082,
+    551,
+    1339,
+    1269,
+    27,
+    43876,
+    29,
+    86,
+    1237,
+    31,
+    426,
+    21004,
+    3138,
+    18,
+    13,
+    374,
+    2194,
+    748
+   ],
+   "decoded": " fn main() { let x: Vec<u32> = vec![1, 2]; }"
+  },
+  {
+   "label": "json",
+   "text": "{\"key\": \"value\", \"n\": [1, 2, 3]}",
+   "ids": [
+    50281,
+    17579,
+    2364,
+    1381,
+    346,
+    2877,
+    995,
+    346,
+    79,
+    1381,
+    544,
+    18,
+    13,
+    374,
+    13,
+    495,
+    18095,
+    50282
+   ],
+   "ids_no_specials": [
+    17579,
+    2364,
+    1381,
+    346,
+    2877,
+    995,
+    346,
+    79,
+    1381,
+    544,
+    18,
+    13,
+    374,
+    13,
+    495,
+    18095
+   ],
+   "decoded": " {\"key\": \"value\", \"n\": [1, 2, 3]}"
+  },
+  {
+   "label": "cyrillic",
+   "text": "Привет мир",
+   "ids": [
+    50281,
+    21146,
+    1697,
+    16423,
+    7508,
+    8277,
+    20650,
+    50282
+   ],
+   "ids_no_specials": [
+    21146,
+    1697,
+    16423,
+    7508,
+    8277,
+    20650
+   ],
+   "decoded": " Привет мир"
+  },
+  {
+   "label": "greek",
+   "text": "γειά σου",
+   "ids": [
+    50281,
+    13850,
+    11910,
+    8348,
+    9529,
+    8520,
+    50282
+   ],
+   "ids_no_specials": [
+    13850,
+    11910,
+    8348,
+    9529,
+    8520
+   ],
+   "decoded": " γειά σου"
+  },
+  {
+   "label": "hebrew",
+   "text": "שלום",
+   "ids": [
+    50281,
+    33839,
+    20770,
+    12859,
+    240,
+    50282
+   ],
+   "ids_no_specials": [
+    33839,
+    20770,
+    12859,
+    240
+   ],
+   "decoded": " שלום"
+  },
+  {
+   "label": "arabic",
+   "text": "مرحبا",
+   "ids": [
+    50281,
+    13504,
+    6900,
+    21931,
+    13621,
+    3142,
+    50282
+   ],
+   "ids_no_specials": [
+    13504,
+    6900,
+    21931,
+    13621,
+    3142
+   ],
+   "decoded": " مرحبا"
+  },
+  {
+   "label": "CJK",
+   "text": "日本語",
+   "ids": [
+    50281,
+    209,
+    49868,
+    19119,
+    241,
+    50282
+   ],
+   "ids_no_specials": [
+    209,
+    49868,
+    19119,
+    241
+   ],
+   "decoded": " 日本語"
+  },
+  {
+   "label": "hiragana",
+   "text": "こんにちは",
+   "ids": [
+    50281,
+    209,
+    10446,
+    13639,
+    5444,
+    23826,
+    6418,
+    50282
+   ],
+   "ids_no_specials": [
+    209,
+    10446,
+    13639,
+    5444,
+    23826,
+    6418
+   ],
+   "decoded": " こんにちは"
+  },
+  {
+   "label": "hangul syllables",
+   "text": "한국어",
+   "ids": [
+    50281,
+    209,
+    39742,
+    166,
+    115,
+    244,
+    39907,
+    50282
+   ],
+   "ids_no_specials": [
+    209,
+    39742,
+    166,
+    115,
+    244,
+    39907
+   ],
+   "decoded": " 한국어"
+  },
+  {
+   "label": "mixed scripts",
+   "text": "中文 and English",
+   "ids": [
+    50281,
+    209,
+    13609,
+    20855,
+    285,
+    4383,
+    50282
+   ],
+   "ids_no_specials": [
+    209,
+    13609,
+    20855,
+    285,
+    4383
+   ],
+   "decoded": " 中文 and English"
+  },
+  {
+   "label": "emoji",
+   "text": "🎉",
+   "ids": [
+    50281,
+    22692,
+    225,
+    220,
+    50282
+   ],
+   "ids_no_specials": [
+    22692,
+    225,
+    220
+   ],
+   "decoded": " 🎉"
+  },
+  {
+   "label": "emoji with joiners",
+   "text": "👨‍👩‍👧‍👦",
+   "ids": [
+    50281,
+    22692,
+    228,
+    103,
+    325,
+    224,
+    14931,
+    228,
+    104,
+    325,
+    224,
+    14931,
+    228,
+    102,
+    325,
+    224,
+    14931,
+    228,
+    101,
+    50282
+   ],
+   "ids_no_specials": [
+    22692,
+    228,
+    103,
+    325,
+    224,
+    14931,
+    228,
+    104,
+    325,
+    224,
+    14931,
+    228,
+    102,
+    325,
+    224,
+    14931,
+    228,
+    101
+   ],
+   "decoded": " 👨‍👩‍👧‍👦"
+  },
+  {
+   "label": "regional indicators",
+   "text": "🇬🇧",
+   "ids": [
+    50281,
+    22692,
+    218,
+    107,
+    14931,
+    218,
+    102,
+    50282
+   ],
+   "ids_no_specials": [
+    22692,
+    218,
+    107,
+    14931,
+    218,
+    102
+   ],
+   "decoded": " 🇬🇧"
+  },
+  {
+   "label": "non-breaking space",
+   "text": "a b",
+   "ids": [
+    50281,
+    247,
+    575,
+    67,
+    50282
+   ],
+   "ids_no_specials": [
+    247,
+    575,
+    67
+   ],
+   "decoded": " a b"
+  },
+  {
+   "label": "ideographic space",
+   "text": "a　b",
+   "ids": [
+    50281,
+    247,
+    19409,
+    67,
+    50282
+   ],
+   "ids_no_specials": [
+    247,
+    19409,
+    67
+   ],
+   "decoded": " a　b"
+  },
+  {
+   "label": "thin space",
+   "text": "a b",
+   "ids": [
+    50281,
+    247,
+    1186,
+    67,
+    50282
+   ],
+   "ids_no_specials": [
+    247,
+    1186,
+    67
+   ],
+   "decoded": " a b"
+  },
+  {
+   "label": "zero width space, not whitespace",
+   "text": "a​b",
+   "ids": [
+    50281,
+    247,
+    12882,
+    67,
+    50282
+   ],
+   "ids_no_specials": [
+    247,
+    12882,
+    67
+   ],
+   "decoded": " a​b"
+  },
+  {
+   "label": "a vulgar fraction",
+   "text": "½",
+   "ids": [
+    50281,
+    24142,
+    50282
+   ],
+   "ids_no_specials": [
+    24142
+   ],
+   "decoded": " ½"
+  },
+  {
+   "label": "a roman numeral",
+   "text": "Ⅻ",
+   "ids": [
+    50281,
+    3384,
+    216,
+    106,
+    50282
+   ],
+   "ids_no_specials": [
+    3384,
+    216,
+    106
+   ],
+   "decoded": " Ⅻ"
+  },
+  {
+   "label": "arabic-indic digits",
+   "text": "٣٤٥",
+   "ids": [
+    50281,
+    209,
+    149,
+    98,
+    149,
+    99,
+    149,
+    100,
+    50282
+   ],
+   "ids_no_specials": [
+    209,
+    149,
+    98,
+    149,
+    99,
+    149,
+    100
+   ],
+   "decoded": " ٣٤٥"
+  },
+  {
+   "label": "verbalizer Business",
+   "text": " Business",
+   "ids": [
+    50281,
+    10518,
+    50282
+   ],
+   "ids_no_specials": [
+    10518
+   ],
+   "decoded": " Business"
+  },
+  {
+   "label": "verbalizer World",
+   "text": " World",
+   "ids": [
+    50281,
+    3645,
+    50282
+   ],
+   "ids_no_specials": [
+    3645
+   ],
+   "decoded": " World"
+  },
+  {
+   "label": "verbalizer Sports",
+   "text": " Sports",
+   "ids": [
+    50281,
+    15000,
+    50282
+   ],
+   "ids_no_specials": [
+    15000
+   ],
+   "decoded": " Sports"
+  },
+  {
+   "label": "verbalizer Tech",
+   "text": " Tech",
+   "ids": [
+    50281,
+    18447,
+    50282
+   ],
+   "ids_no_specials": [
+    18447
+   ],
+   "decoded": " Tech"
+  },
+  {
+   "label": "the label that is not one token",
+   "text": " Sci/Tech",
+   "ids": [
+    50281,
+    22962,
+    16,
+    30663,
+    50282
+   ],
+   "ids_no_specials": [
+    22962,
+    16,
+    30663
+   ],
+   "decoded": " Sci/Tech"
+  },
+  {
+   "label": "the AG News template at inference",
+   "text": "** Instructions **    \nGiven a short news report, determine which news category it belongs to.\n** Content **\nWhat is the category of the following news report?\nNews Report: Wall St. Bears Claw Back Into the Black (Reuters) Reuters - Short-sellers, Wall Street's dwindling band of ultra-cynics, are seeing green again.\n** Options **\n- Business: It is about business or financial news.\n- World: It's about world news.\n- Sports: It's about sports.\n- Tech: It's about Science or Technology, or related companies.\n** Answer **\nAnswer: [unused0] [MASK]",
+   "ids": [
+    50281,
+    1401,
+    5376,
+    6477,
+    1401,
+    50274,
+    209,
+    187,
+    15768,
+    247,
+    2159,
+    3668,
+    1304,
+    13,
+    3653,
+    534,
+    3668,
+    7140,
+    352,
+    14125,
+    281,
+    15,
+    187,
+    424,
+    17215,
+    1401,
+    187,
+    1276,
+    310,
+    253,
+    7140,
+    273,
+    253,
+    1563,
+    3668,
+    1304,
+    32,
+    187,
+    19537,
+    10840,
+    27,
+    8799,
+    659,
+    15,
+    34105,
+    1639,
+    1403,
+    8247,
+    40688,
+    253,
+    5418,
+    313,
+    32680,
+    10,
+    24197,
+    428,
+    14196,
+    14,
+    84,
+    20945,
+    13,
+    8799,
+    5720,
+    434,
+    277,
+    16668,
+    1981,
+    3961,
+    273,
+    17452,
+    14,
+    951,
+    79,
+    982,
+    13,
+    403,
+    6523,
+    4759,
+    969,
+    15,
+    187,
+    424,
+    27921,
+    1401,
+    187,
+    14,
+    10518,
+    27,
+    733,
+    310,
+    670,
+    2136,
+    390,
+    4832,
+    3668,
+    15,
+    187,
+    14,
+    3645,
+    27,
+    733,
+    434,
+    670,
+    1533,
+    3668,
+    15,
+    187,
+    14,
+    15000,
+    27,
+    733,
+    434,
+    670,
+    9001,
+    15,
+    187,
+    14,
+    18447,
+    27,
+    733,
+    434,
+    670,
+    6875,
+    390,
+    10784,
+    13,
+    390,
+    2905,
+    4413,
+    15,
+    187,
+    424,
+    37741,
+    1401,
+    187,
+    32869,
+    27,
+    209,
+    50285,
+    50284,
+    50282
+   ],
+   "ids_no_specials": [
+    1401,
+    5376,
+    6477,
+    1401,
+    50274,
+    209,
+    187,
+    15768,
+    247,
+    2159,
+    3668,
+    1304,
+    13,
+    3653,
+    534,
+    3668,
+    7140,
+    352,
+    14125,
+    281,
+    15,
+    187,
+    424,
+    17215,
+    1401,
+    187,
+    1276,
+    310,
+    253,
+    7140,
+    273,
+    253,
+    1563,
+    3668,
+    1304,
+    32,
+    187,
+    19537,
+    10840,
+    27,
+    8799,
+    659,
+    15,
+    34105,
+    1639,
+    1403,
+    8247,
+    40688,
+    253,
+    5418,
+    313,
+    32680,
+    10,
+    24197,
+    428,
+    14196,
+    14,
+    84,
+    20945,
+    13,
+    8799,
+    5720,
+    434,
+    277,
+    16668,
+    1981,
+    3961,
+    273,
+    17452,
+    14,
+    951,
+    79,
+    982,
+    13,
+    403,
+    6523,
+    4759,
+    969,
+    15,
+    187,
+    424,
+    27921,
+    1401,
+    187,
+    14,
+    10518,
+    27,
+    733,
+    310,
+    670,
+    2136,
+    390,
+    4832,
+    3668,
+    15,
+    187,
+    14,
+    3645,
+    27,
+    733,
+    434,
+    670,
+    1533,
+    3668,
+    15,
+    187,
+    14,
+    15000,
+    27,
+    733,
+    434,
+    670,
+    9001,
+    15,
+    187,
+    14,
+    18447,
+    27,
+    733,
+    434,
+    670,
+    6875,
+    390,
+    10784,
+    13,
+    390,
+    2905,
+    4413,
+    15,
+    187,
+    424,
+    37741,
+    1401,
+    187,
+    32869,
+    27,
+    209,
+    50285,
+    50284
+   ],
+   "decoded": " ** Instructions **     \nGiven a short news report, determine which news category it belongs to.\n** Content **\nWhat is the category of the following news report?\nNews Report: Wall St. Bears Claw Back Into the Black (Reuters) Reuters - Short-sellers, Wall Street's dwindling band of ultra-cynics, are seeing green again.\n** Options **\n- Business: It is about business or financial news.\n- World: It's about world news.\n- Sports: It's about sports.\n- Tech: It's about Science or Technology, or related companies.\n** Answer **\nAnswer: [unused0][MASK]"
+  }
+ ]
+}

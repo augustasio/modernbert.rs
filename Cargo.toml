@@ -15,6 +15,9 @@ license = "MIT"
 # Tokenizer: Unicode general-category tables. `char::is_alphabetic()`
 # is not `\p{L}` and must never stand in for it.
 unicode-general-category = "1.0"
+# NFC normalization. The tables are large and the canonical ordering rules are
+# fiddly; writing this by hand would be transcription, not insight.
+unicode-normalization = "0.1"
 serde_json = "1.0"
 
 # Test oracles only. These must never appear outside dev-dependencies.

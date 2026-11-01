@@ -29,6 +29,12 @@ use serde_json::Value;
 #[derive(Debug)]
 pub struct LoadError(String);
 
+impl LoadError {
+    pub fn new(message: impl Into<String>) -> Self {
+        LoadError(message.into())
+    }
+}
+
 impl fmt::Display for LoadError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
