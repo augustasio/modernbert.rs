@@ -17,6 +17,8 @@
 //! trap there gets a comment at the line where it would otherwise be
 //! silently violated.
 
+#[cfg(feature = "accelerate")]
+pub mod accelerate;
 pub mod attention;
 pub mod config;
 pub mod embeddings;

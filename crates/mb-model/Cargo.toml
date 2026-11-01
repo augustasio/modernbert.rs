@@ -9,3 +9,8 @@ description = "ModernBERT forward pass, written from scratch"
 [dependencies]
 mb-tokenizer = { path = "../mb-tokenizer" }
 serde_json = { workspace = true }
+
+[features]
+# Rung 7: route ops::linear through Apple Accelerate's cblas_sgemm. Off by
+# default, so the default build is rung 6, the naive loop.
+accelerate = []

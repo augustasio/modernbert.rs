@@ -482,10 +482,14 @@ fn the_selective_path_agrees_on_the_real_weights() {
     let selective = h.logits_for_tokens(&final_norm, w, f.mask_position, &ids);
 
     for (slot, &id) in ids.iter().enumerate() {
-        assert_eq!(
-            selective[slot], full[id as usize],
+        // Bit-identical on the naive backend; within a few rounding steps
+        // under Accelerate, which sums a 4-column product in a different
+        // order from a 50,368-column one.
+        assert!(
+            mb_model::ops::same_up_to_summation_order(selective[slot], full[id as usize]),
             "verbalizer id {id}: the selective path gave {} and the full projection {}",
-            selective[slot], full[id as usize]
+            selective[slot],
+            full[id as usize]
         );
     }
 }

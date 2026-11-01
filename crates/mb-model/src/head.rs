@@ -449,11 +449,12 @@ mod tests {
 
         assert_eq!(selected.len(), ids.len());
         for (slot, &id) in ids.iter().enumerate() {
-            assert_eq!(
-                selected[slot], full[id as usize],
+            assert!(
+                crate::ops::same_up_to_summation_order(selected[slot], full[id as usize]),
                 "id {id} in slot {slot}: the selective path gave {} and the full \
                  projection {}",
-                selected[slot], full[id as usize]
+                selected[slot],
+                full[id as usize]
             );
         }
     }
@@ -461,7 +462,7 @@ mod tests {
     /// Rung 1 against rung 0: one position computed alone equals that row of
     /// every position computed together.
     ///
-    /// Exact equality again, and it holds because `head.dense`, the GELU and
+    /// Exact equality on the naive backend, and it holds because `head.dense`, the GELU and
     /// `head.norm` are all per-row: selecting the row before the head changes
     /// nothing about the arithmetic that row gets.
     #[test]
@@ -473,11 +474,12 @@ mod tests {
 
         for position in 0..hidden.rows {
             let at = head.logits_at(&hidden, &decoder_weight, position);
-            assert_eq!(
-                at.as_slice(),
-                everywhere.row(position),
-                "row {position} differs between the two paths"
-            );
+            for (a, b) in at.iter().zip(everywhere.row(position)) {
+                assert!(
+                    crate::ops::same_up_to_summation_order(*a, *b),
+                    "row {position} differs between the two paths: {a} against {b}"
+                );
+            }
         }
     }
 
@@ -795,7 +797,12 @@ mod tests {
         let full = head.logits_at(&hidden, &decoder_weight, 1);
         assert_eq!(full.len(), vocab_size);
         for (slot, &id) in verbalizers.iter().enumerate() {
-            assert_eq!(selected[slot], full[id as usize], "verbalizer id {id}");
+            assert!(
+                crate::ops::same_up_to_summation_order(selected[slot], full[id as usize]),
+                "verbalizer id {id}: {} against {}",
+                selected[slot],
+                full[id as usize]
+            );
         }
     }
 }

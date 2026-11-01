@@ -66,10 +66,53 @@ pub fn layer_norm(input: &Matrix, weight: &[f32], eps: f32) -> Matrix {
 /// both operands row-major in their inner loop, which is why there is no
 /// transpose anywhere.
 ///
-/// This is the naive version, and it is rung 6 of the ladder on purpose.
-/// Rung 7 replaces it with `cblas_sgemm` through Accelerate, and the gap
-/// between the two is the measurement the whole project is built around.
+/// Which matmul this build uses: rung 6's naive loop by default, rung 7's
+/// Accelerate `cblas_sgemm` with `--features accelerate`. Every component
+/// calls this one function, so the switch covers the whole model at once.
 pub fn linear(input: &Matrix, weight: &Matrix) -> Matrix {
+    #[cfg(feature = "accelerate")]
+    {
+        crate::accelerate::linear(input, weight)
+    }
+    #[cfg(not(feature = "accelerate"))]
+    {
+        linear_naive(input, weight)
+    }
+}
+
+/// The matmul backend this build was compiled with. The benchmark harness
+/// records it with every run, because a silently missing Accelerate link
+/// would turn the rung 6 to rung 7 comparison into a comparison of nothing.
+pub fn backend() -> &'static str {
+    if cfg!(feature = "accelerate") {
+        "accelerate"
+    } else {
+        "naive"
+    }
+}
+
+/// Whether two results of the same product agree as closely as this backend
+/// can promise.
+///
+/// The naive loop always sums in the same order, so the same dot product
+/// computed two ways is bit-identical, and this demands exactly that. A BLAS
+/// library chooses its summation order from the matrix shape, so a 4-column
+/// product and a 50,368-column one round differently, by about one f32 step.
+/// Under Accelerate this allows 16 steps relative to the larger value, which
+/// is far above the 1 measured and far below any real error.
+pub fn same_up_to_summation_order(a: f32, b: f32) -> bool {
+    if backend() == "naive" {
+        a == b
+    } else {
+        (a - b).abs() <= 16.0 * f32::EPSILON * a.abs().max(b.abs()).max(1.0)
+    }
+}
+
+/// The naive version, and it is rung 6 of the ladder on purpose. Rung 7
+/// replaces it with `cblas_sgemm` through Accelerate, and the gap between the
+/// two is the measurement the whole project is built around. Always compiled,
+/// so the two can be compared inside one test binary.
+pub fn linear_naive(input: &Matrix, weight: &Matrix) -> Matrix {
     assert_eq!(
         input.cols, weight.cols,
         "cannot multiply a {}x{} input by a {}x{} weight",
