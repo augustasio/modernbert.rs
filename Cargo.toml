@@ -12,9 +12,9 @@ rust-version = "1.85"
 license = "MIT"
 
 [workspace.dependencies]
-# Tokenizer: real Unicode general-category classification. `char::is_alphabetic()`
+# Tokenizer: Unicode general-category tables. `char::is_alphabetic()`
 # is not `\p{L}` and must never stand in for it.
-unicode-properties = "0.1"
+unicode-general-category = "1.0"
 serde_json = "1.0"
 
 # Test oracles only. These must never appear outside dev-dependencies.

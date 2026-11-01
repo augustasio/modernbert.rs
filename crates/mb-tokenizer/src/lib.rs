@@ -15,3 +15,5 @@
 //!
 //! See `docs/research/tokenizer-json.md` for the verified configuration this is
 //! written against.
+
+pub mod split;

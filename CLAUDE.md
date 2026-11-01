@@ -26,8 +26,12 @@ someone integrating a library.
 
 Only where they clearly earn their place. Current justified set:
 
-- `unicode-properties` in the tokenizer, for real general-category classification.
-  `char::is_alphabetic()` is **not** regex `\p{L}` and must never be used as a substitute.
+- `unicode-general-category` in the tokenizer, for exact general-category tables.
+  `char::is_alphabetic()` is **not** regex `\p{L}` and must never stand in for it. Nor is
+  `unicode-properties` exact: it reports a letter or number for 17,480 code points that
+  `\p{L}` and `\p{N}` reject, because its ranges swallow the unassigned gaps inside letter
+  blocks. A corpus test cannot see this, because real text holds no unassigned code
+  points. Any replacement must pass the exhaustive sweep in `tests/split_oracle.rs`.
 - `memchr`, `serde_json` where parsing JSON by hand would be noise rather than insight.
 - `fancy-regex` and HF `tokenizers` as **dev-dependencies only**, as test oracles. They
   must never appear in a non-test build path.

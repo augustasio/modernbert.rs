@@ -7,7 +7,7 @@ license.workspace = true
 description = "Byte-level BPE tokenizer for ModernBERT, written from scratch"
 
 [dependencies]
-unicode-properties = { workspace = true }
+unicode-general-category = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
