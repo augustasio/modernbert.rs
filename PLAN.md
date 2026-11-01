@@ -369,6 +369,24 @@ changelog at the end of this file, with the reason.
   as too noisy, not averaged into a number.
 - Throughput in examples per second follows the same replication at each batch size.
 
+### The A/A floor
+
+Every benchmark session starts with an **A/A run**: the ruler against an identical copy
+of itself, with the full protocol and at least 5 replicates. Its speedup should be 1, and
+its interval is the smallest difference the session can detect. A variant whose interval
+overlaps the A/A interval is reported as "no detectable difference", whatever its point
+estimate.
+
+This is needed because macOS gives no way to pin a process to a core. One of two
+identical workers can land on efficiency cores and run slower, and that bias would hide
+inside every comparison. Replicates in separate processes average it out; the A/A run
+measures what is left.
+
+The analysis uses a two-stage bootstrap: resample replicates, then cycles inside each.
+Examples within a cycle share a thermal state and replicates share nothing, so resampling
+single examples would give intervals that are too narrow. The speedup is the geometric
+mean of paired per-example ratios, because ratios multiply.
+
 ### Memory
 
 Peak RSS and the other memory figures are nearly deterministic, so report the range over
@@ -550,3 +568,8 @@ Changes to the plan made after seeing data, with the reason.
   mask-only head, but rung 0 already runs in `eval()` under `torch.inference_mode()`, as HF
   pipelines do. So rung 1 changes only the head, which keeps it one variable. Measuring
   the cost of autograd would be its own rung.
+- **The A/A floor added.** The first smoke run, rung 7 against an identical copy of
+  itself, gave a speedup of 0.956 with an interval of [0.933, 0.980], which excludes 1.
+  It was one replicate of 6 examples on a machine running another job, so it proves
+  nothing, but it shows why a same-against-same run must set the detection floor of
+  every session. See "The A/A floor" in Statistics.
