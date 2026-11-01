@@ -270,6 +270,16 @@ Eight fixtures: shortest real, longest real, 300+ tokens, 600+ tokens, non-ASCII
 digit-and-punctuation heavy, multi-space (to exercise the whitespace added tokens), and
 one near-empty.
 
+**Two per-layer tests, because they answer different questions.** The full-stack test
+runs all 28 layers and compares each output, so its gap includes drift carried up from
+every layer below. A layer that builds a very large residual value amplifies that drift:
+on one fixture the gap steps up about 40x at layer 19, where a value of about -20,800
+forms. The isolated test feeds each layer PyTorch's own input from the layer below and
+compares only that layer's output, so a gap there belongs to that layer alone. The
+isolated test carries the tight bound and is the bug detector. The full-stack test
+carries a bound for accumulated drift, set from measurement, and the final test of the
+stack is the logits and the prediction.
+
 ### Tier 3: behavioural equivalence on the full set
 
 - Prediction agreement against rung 0 asserted at exactly 100% over all 7,600, printing
@@ -304,6 +314,68 @@ correct.
 The results JSON is committed. CI diffs against the previous commit and flags anything
 over 10%, on time and on peak RSS alike, so the optimization rungs stay honest as the code
 moves underneath them.
+
+## Statistics
+
+Every reported number carries an interval. A bare number cannot be compared with
+another bare number, and this project is a list of comparisons.
+
+This section is the analysis plan. It is written before the benchmark harness exists, so
+the choices below are not tuned to the results. A change made after seeing data goes in the
+changelog at the end of this file, with the reason.
+
+### Accuracy
+
+- 95% percentile bootstrap interval over the 7,600 test examples, 10,000 resamples, fixed
+  seed. The Wilson interval is reported beside it as a cross-check. At n = 7,600 and an
+  accuracy near 0.72, the half-width is about 1.0 percentage point.
+- Per-class recall and macro-F1, each with a bootstrap interval. Overall accuracy hides a
+  class that is never predicted; rung 0 never predicts Tech.
+- **Raw and calibrated, both, for every rung.** Calibration is contextual calibration (Zhao
+  et al. 2021, "Calibrate Before Use"). It is fitted only on content-free inputs, never on
+  test labels, so nothing leaks from the test set. It is a fixed transform of the four
+  verbalizer logits, applied identically to every rung's own logits. So it is part of the
+  evaluation protocol, not a rung, and it does not touch the one-variable-per-rung rule.
+- Two numbers on the same examples are compared **paired**: a paired bootstrap interval on
+  the difference, and an exact McNemar test on the discordant pairs. An unpaired test
+  would throw away most of the information.
+
+### Agreement between rungs
+
+- Prediction agreement with rung 0, with a Wilson interval. Zero disagreements on 7,600
+  examples does not mean the disagreement rate is zero. It means the rate is below 3 in
+  7,600, about 0.04%, at 95% confidence (the rule of three). Report it that way.
+- The logit difference against rung 0 as a distribution over all 7,600 examples: median,
+  p99 and maximum. The maximum alone is one example.
+- Agreement is always measured on raw logits. Calibration is applied after.
+
+### Latency and throughput
+
+- **The unit of replication is the process, not the iteration.** Iterations inside one
+  process share warm caches, allocator state and thermal state, so they are not
+  independent, and treating them as independent gives intervals that are too narrow. Each
+  configuration runs in at least 5 separate processes.
+- Inside each process: the interleaved round-robin protocol above, a recorded number of
+  warm-up iterations discarded, then p50, p90 and p99 from the rest.
+- Across processes: the median of the per-process figures, with a bootstrap interval over
+  the processes.
+- Speedups are ratios against the ruler variant measured in the same cycle, with a
+  bootstrap interval over the paired cycles. A ratio of two independent intervals is
+  wider and less honest.
+- A configuration whose coefficient of variation across processes exceeds 5% is reported
+  as too noisy, not averaged into a number.
+- Throughput in examples per second follows the same replication at each batch size.
+
+### Memory
+
+Peak RSS and the other memory figures are nearly deterministic, so report the range over
+the 5 fresh processes rather than an interval.
+
+### Many comparisons
+
+The ladder makes many comparisons: rungs, thread counts, batch sizes. Effect sizes with
+intervals are the main result. Where a p-value is reported, it is Holm-corrected within a
+named family of comparisons, and the family is stated.
 
 ## Tokenizer
 
@@ -441,3 +513,19 @@ docs/research/         verified findings from the research pass, with sources
   own rung, if it is worth it.
 - **GitHub.** Local git now; push to `augustasio/modernbert.rs` once the tokenizer matches
   HF exactly, so the first public commit is not a skeleton.
+
+## Changelog
+
+Changes to the plan made after seeing data, with the reason.
+
+- **Fixture justification.** An earlier draft said AG News examples are too short to engage
+  the 129-key window. That reasoned from text length. The prompts have a median of 152
+  tokens and 96.8% exceed 129, so the window is engaged. The long fixtures stay, for signal
+  strength.
+- **Per-layer bounds.** The first full-stack bound, 1e-5 relative to peak, was set before
+  measuring. Two fixtures exceeded it after layer 19. The isolated per-layer test showed
+  every layer correct on its own, at 7e-8 for layer 19, so the excess is amplified drift and
+  not a bug. The tests now separate the two, as described in Tier 2.
+- **Calibrated accuracy added.** Rung 0 never predicts Tech because of a class prior the
+  model has before it reads the article. Calibrated accuracy is now reported beside raw
+  accuracy for every rung. Rung 0's raw logits stay the oracle.
