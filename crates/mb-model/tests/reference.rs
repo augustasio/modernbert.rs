@@ -34,6 +34,7 @@ use std::sync::OnceLock;
 
 use mb_model::config::Config;
 use mb_model::embeddings::Embeddings;
+use mb_model::head::MlmHead;
 use mb_model::safetensors::Checkpoint;
 use mb_model::tensor::Matrix;
 use serde_json::Value;
@@ -325,4 +326,166 @@ fn the_norm_is_layer_norm_and_not_rms_norm() {
     // And the reference, which we match, is the mean-subtracting kind.
     let reference = reference_2d(f.index, "embeddings.norm");
     assert_eq!(reference.rows, raw.rows);
+}
+
+// ============================================================================
+// The MLM head
+// ============================================================================
+//
+// The head can be checked today, without any of the 28 layers, by feeding it
+// the reference `final_norm` and comparing its logits. That is the whole
+// point of dumping per checkpoint: a component is testable as soon as its
+// input is on disk, whatever else is unfinished.
+
+/// Load one reference checkpoint as a flat vector, for the 1-D dumps
+/// (`logits.mask` is `[50368]` and `logits.verbalizers` is `[4]`).
+fn reference_1d(fixture: usize, checkpoint: &str) -> Vec<f32> {
+    let key = format!("fixture{fixture}.{checkpoint}");
+    let t = Checkpoint::load_one(reference_path(), &key).unwrap_or_else(|e| panic!("{key}: {e}"));
+    assert_eq!(t.shape.len(), 1, "{key}: expected 1-D, got {:?}", t.shape);
+    t.data
+}
+
+/// The head's weights, loaded once for the binary. About 5 MB, against the
+/// 206 MB embedding table that doubles as the decoder weight.
+fn head() -> &'static MlmHead {
+    static HEAD: OnceLock<MlmHead> = OnceLock::new();
+    HEAD.get_or_init(|| {
+        let dir = repo_root().join("weights/ModernBERT-Large-Instruct");
+        let config = Config::from_file(dir.join("config.json")).expect("config must load");
+        let checkpoint = Checkpoint::load_subset(
+            dir.join("model.safetensors"),
+            &["head.dense.weight", "head.norm.weight", "decoder.bias"],
+        )
+        .expect("the head tensors must load");
+        MlmHead::load(
+            &checkpoint,
+            config.hidden_size,
+            config.vocab_size,
+            config.norm_eps,
+        )
+        .expect("the head must build")
+    })
+}
+
+/// The verbalizer ids the dump used, which the head is asked for.
+fn verbalizer_ids() -> Vec<u32> {
+    let path = repo_root().join("python/reference/fixtures.json");
+    let text = std::fs::read_to_string(&path).expect("fixtures.json");
+    let json: Value = serde_json::from_str(&text).expect("valid JSON");
+    json["verbalizer_ids"]
+        .as_array()
+        .expect("verbalizer_ids")
+        .iter()
+        .map(|n| n.as_u64().expect("an id") as u32)
+        .collect()
+}
+
+/// Feed the reference `final_norm` and compare the full vocabulary logits at
+/// the mask position.
+///
+/// Held to 1e-3 rather than 1e-4. Logits are the accumulated end of the whole
+/// stack, and the dump records that two of PyTorch's own attention backends
+/// land 6.4e-05 apart here, so a tighter bound would be asserting more
+/// agreement than PyTorch has with itself. The margin is printed either way.
+#[test]
+fn the_head_matches_at_the_mask() {
+    let h = head();
+    let w = embeddings().weight();
+
+    for f in fixtures() {
+        let final_norm = reference_2d(f.index, "final_norm");
+        let ours = h.logits_at(&final_norm, w, f.mask_position);
+        let reference = reference_1d(f.index, "logits.mask");
+
+        assert_eq!(
+            ours.len(),
+            reference.len(),
+            "fixture {} ({}): logit count",
+            f.index,
+            f.name
+        );
+
+        let ours_m = Matrix::from_vec(1, ours.len(), ours);
+        let reference_m = Matrix::from_vec(1, reference.len(), reference);
+        assert_matches(
+            &format!("fixture {} ({}) logits.mask", f.index, f.name),
+            &ours_m,
+            &reference_m,
+            1e-3,
+        );
+    }
+}
+
+/// The four verbalizer logits, which is what inference actually reads.
+///
+/// This is the number the whole AG News protocol rests on, so it is checked
+/// against the dump directly rather than inferred from the full projection.
+#[test]
+fn the_verbalizer_logits_match() {
+    let h = head();
+    let w = embeddings().weight();
+    let ids = verbalizer_ids();
+    assert_eq!(
+        ids,
+        vec![10518, 3645, 15000, 18447],
+        "the AG News verbalizers"
+    );
+
+    for f in fixtures() {
+        let final_norm = reference_2d(f.index, "final_norm");
+        let ours = h.logits_for_tokens(&final_norm, w, f.mask_position, &ids);
+        let reference = reference_1d(f.index, "logits.verbalizers");
+
+        let ours_m = Matrix::from_vec(1, ours.len(), ours.clone());
+        let reference_m = Matrix::from_vec(1, reference.len(), reference.clone());
+        assert_matches(
+            &format!("fixture {} ({}) logits.verbalizers", f.index, f.name),
+            &ours_m,
+            &reference_m,
+            1e-3,
+        );
+
+        // And the argmax must agree, not just the values. Two
+        // implementations can sit inside the tolerance and still disagree on
+        // which class wins when the margin is small, and the margin is what
+        // decides the prediction.
+        let pick = |v: &[f32]| {
+            v.iter()
+                .enumerate()
+                .max_by(|a, b| a.1.partial_cmp(b.1).expect("no NaN"))
+                .map(|(i, _)| i)
+                .expect("four logits")
+        };
+        assert_eq!(
+            pick(&ours),
+            pick(&reference),
+            "fixture {} ({}): the predicted class differs. ours {ours:?}, reference \
+             {reference:?}",
+            f.index,
+            f.name
+        );
+    }
+}
+
+/// The selective path is the optimization rung 1 measures, so it must agree
+/// with the full projection on the real weights, not only on synthetic ones.
+#[test]
+fn the_selective_path_agrees_on_the_real_weights() {
+    let h = head();
+    let w = embeddings().weight();
+    let ids = verbalizer_ids();
+    let f = &fixtures()[0];
+
+    let final_norm = reference_2d(f.index, "final_norm");
+    let full = h.logits_at(&final_norm, w, f.mask_position);
+    let selective = h.logits_for_tokens(&final_norm, w, f.mask_position, &ids);
+
+    for (slot, &id) in ids.iter().enumerate() {
+        assert_eq!(
+            selective[slot], full[id as usize],
+            "verbalizer id {id}: the selective path gave {} and the full projection {}",
+            selective[slot], full[id as usize]
+        );
+    }
 }
