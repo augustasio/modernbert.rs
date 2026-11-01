@@ -37,7 +37,7 @@
 //!    head_dim)`, so the 3 is the *outer* dimension: rows `0..1024` are all of
 //!    Q, `1024..2048` all of K, `2048..3072` all of V. A per-head-interleaved
 //!    `[q0 k0 v0 q1 k1 v1 ...]` layout, which some other fused-QKV
-//!    checkpoints use, is wrong here. See [`Attention::split_qkv`].
+//!    checkpoints use, is wrong here. See `Attention::split_qkv`.
 //! 2. **The scale is `head_dim ** -0.5`, so 0.125, applied exactly once.** HF
 //!    scales the logits after the matmul and `pylate-rs` scales `q` before.
 //!    Equivalent in exact arithmetic; this file follows HF and scales after.
@@ -305,8 +305,7 @@ impl Attention {
         for row in 0..qkv.rows {
             let fused = qkv.row(row);
             query.row_mut(row).copy_from_slice(&fused[0..hidden]);
-            key.row_mut(row)
-                .copy_from_slice(&fused[hidden..2 * hidden]);
+            key.row_mut(row).copy_from_slice(&fused[hidden..2 * hidden]);
             value
                 .row_mut(row)
                 .copy_from_slice(&fused[2 * hidden..3 * hidden]);
@@ -380,8 +379,7 @@ impl Attention {
 
                 // `attn_weights @ value`, for this head and this query.
                 let out = &mut context.row_mut(q)[offset..offset + self.head_dim];
-                for k in 0..seq_len {
-                    let p = probabilities[k];
+                for (k, &p) in probabilities.iter().enumerate() {
                     let v = &value.row(k)[offset..offset + self.head_dim];
                     for d in 0..self.head_dim {
                         out[d] += p * v[d];
@@ -510,7 +508,11 @@ mod tests {
     /// store a wrong one.
     fn layer_zero(wqkv: (Vec<usize>, Vec<f32>), wo: (Vec<usize>, Vec<f32>)) -> Checkpoint {
         checkpoint_of(&[
-            ("model.layers.0.attn.Wqkv.weight".to_string(), wqkv.0, wqkv.1),
+            (
+                "model.layers.0.attn.Wqkv.weight".to_string(),
+                wqkv.0,
+                wqkv.1,
+            ),
             ("model.layers.0.attn.Wo.weight".to_string(), wo.0, wo.1),
         ])
     }
@@ -582,9 +584,9 @@ mod tests {
     /// - reading 128 as per-side doubles the receptive field of 18 of the 28
     ///   layers, giving 257 keys;
     /// - a strict `<` instead of `<=` clips one key on each side, giving 127;
-    /// - copying current transformers' `sliding_window = local_attention / 2
-    ///   + 1` gives 131, and that `+1` exists only to cancel a `-1` inside
-    ///   the flash-attention wrapper.
+    /// - copying current transformers' `sliding_window` of
+    ///   `local_attention / 2 + 1` gives 131, and that `+1` exists only to
+    ///   cancel a `-1` inside the flash-attention wrapper.
     ///
     /// At the edges the window is truncated by the sequence, not wrapped, so
     /// query 0 sees 65 keys (itself and 64 ahead) and the last query sees 65
@@ -744,7 +746,11 @@ mod tests {
                         1.0 / (head_dim as f32).sqrt(),
                         &mut probabilities,
                     );
-                    let total: f32 = probabilities.iter().sum();
+                    // Summed in f64 on purpose. Adding 300 f32 values in f32
+                    // drifts by about 1e-6 all by itself, which would be the
+                    // test measuring its own arithmetic rather than the
+                    // softmax's.
+                    let total: f64 = probabilities.iter().map(|&p| p as f64).sum();
                     assert!(
                         (total - 1.0).abs() < 1e-6,
                         "is_global {is_global}, head {head}, query {q}: the row sums \
@@ -844,6 +850,30 @@ mod tests {
         let masks = Masks::new(&config, seq_len, Some(&padding));
         let x = Matrix::from_vec(seq_len, hidden, spread(seq_len * hidden, 42));
 
+        // The structural statement, which is what the reference's
+        // `[bs, 1, 1, seq]` shape means: the padding mask has no query axis,
+        // so a pad query's row is identical to a real query's row.
+        for q in 1..seq_len {
+            assert_eq!(
+                masks.additive_row(q, true),
+                masks.additive_row(0, true),
+                "the padding mask must not depend on the query, but row {q} differs \
+                 from row 0"
+            );
+        }
+        // And in a local layer, where the mask does have a query axis, a pad
+        // query still sees every real key inside its window. At 8 positions
+        // every key is inside every window, so all `real` of them are open.
+        for q in 0..seq_len {
+            let row = masks.additive_row(q, false);
+            for (k, &m) in row.iter().take(real).enumerate() {
+                assert_eq!(
+                    m, 0.0,
+                    "query {q} is padded but must still see real key {k}"
+                );
+            }
+        }
+
         for is_global in [true, false] {
             let y = attention.forward(&x, &rope, &masks, is_global);
             assert!(
@@ -858,6 +888,7 @@ mod tests {
         // masked. PyTorch's softmax over a row of `finfo.min` returns a
         // uniform distribution rather than NaN, and so does this one.
         let seq_len = 300;
+        let rope = RopeTable::new(config.head_dim(), seq_len, 160000.0);
         let padding: Vec<bool> = (0..seq_len).map(|t| t < 4).collect();
         let masks = Masks::new(&config, seq_len, Some(&padding));
         let x = Matrix::from_vec(seq_len, hidden, spread(seq_len * hidden, 43));
@@ -866,26 +897,65 @@ mod tests {
             y.data.iter().all(|v| v.is_finite()),
             "a fully masked local row must stay finite, not become NaN"
         );
+
+        // And what that row actually contains, which is the assertion that
+        // separates [`MASKED`] from `-inf`. Every score in it is `MASKED`, so
+        // the maximum is finite, the subtraction gives zeros, and the softmax
+        // returns a **uniform** distribution over all `seq_len` keys. That is
+        // bit-for-bit what PyTorch produces from `finfo(float32).min`. With
+        // `-inf` the row's maximum is not finite, `softmax_in_place` returns
+        // all zeros instead, and the output quietly becomes zero rather than
+        // junk — a different answer from the reference, and one no finiteness
+        // check can see.
+        let head_dim = config.head_dim();
+        let mut probabilities = vec![0.0f32; seq_len];
+        attention_row(
+            &vec![0.5f32; hidden],
+            &Matrix::from_vec(seq_len, hidden, spread(seq_len * hidden, 44)),
+            0,
+            head_dim,
+            masks.additive_row(200, false),
+            1.0 / (head_dim as f32).sqrt(),
+            &mut probabilities,
+        );
+        let uniform = 1.0 / seq_len as f32;
+        for (k, &p) in probabilities.iter().enumerate() {
+            assert!(
+                (p - uniform).abs() < 1e-9,
+                "a fully masked row must come out uniform at 1/{seq_len}, as PyTorch \
+                 does from finfo.min; key {k} got {p}"
+            );
+        }
     }
 
     /// Trap 1: `Wqkv` is three contiguous blocks `[Q | K | V]`, not per-head
     /// interleaved `[q0 k0 v0 q1 k1 v1 ...]`.
     ///
-    /// Two halves, each isolating one block by zeroing it:
+    /// Three parts. `hidden_size = 4` with 2 heads of 2, which is the
+    /// smallest size where the two layouts are not the same permutation, and
+    /// `Wo` is the identity so the output *is* the merged heads.
     ///
-    /// - **V zeroed.** Under the contiguous reading V is identically zero, so
-    ///   the output is exactly zero whatever Q and K do. Under the
-    ///   interleaved reading, head 0's V would come from rows
-    ///   `head_dim..2 * head_dim`, which hold nonzero K values, so the output
-    ///   would not be zero.
-    /// - **K zeroed.** Under the contiguous reading every key is the zero
-    ///   vector, so every score is 0, the probabilities are uniform, and
-    ///   every query gets the same answer: the mean of V. Under the
-    ///   interleaved reading head 0's K would come from nonzero Q rows, the
-    ///   scores would vary, and the rows would differ.
+    /// **V is not where the interleaved layout puts it.** Zero the third
+    /// block. Under the contiguous reading V is then identically zero and the
+    /// output is exactly zero whatever Q and K do. Under the interleaved
+    /// reading head 0's V would come from rows `2..4`, which still hold
+    /// nonzero values, so the output would not be zero.
     ///
-    /// `hidden_size = 4` with 2 heads of 2, which is the smallest size where
-    /// the two layouts are not the same permutation.
+    /// **V is the third block.** Zero everything *except* the third block.
+    /// Under the contiguous reading Q and K vanish, so every score is 0, the
+    /// probabilities are uniform, and every query gets the mean of V, which
+    /// is nonzero in both heads. Under the interleaved reading head 0's V
+    /// would come from rows `4..6`, now zero, so head 0's output block would
+    /// be exactly zero.
+    ///
+    /// **The three blocks are in the order Q, K, V.** Interleaving is not the
+    /// only way to mis-split a fused projection; reading `[K | Q | V]` is the
+    /// other. So give token 0 a nonzero `q` and no `k`, and token 1 a nonzero
+    /// `k` and no `q`. Then query 0's scores are `[q0.k0, q0.k1] = [0,
+    /// nonzero]`, which is not uniform, while query 1's are `[0, 0]`, which
+    /// is. So row 1 comes out as the mean of V and row 0 does not. Swap the
+    /// two blocks and the signature reverses: row 0 becomes the mean and row
+    /// 1 stops being it.
     #[test]
     fn the_qkv_split_is_three_contiguous_blocks() {
         let hidden = 4;
@@ -928,12 +998,8 @@ mod tests {
                 wqkv[row * hidden + c] = 0.0;
             }
         }
-        let contiguous = attention_with(wqkv.clone(), hidden, heads).forward(
-            &x,
-            &rope,
-            &masks,
-            true,
-        );
+        let contiguous =
+            attention_with(wqkv.clone(), hidden, heads).forward(&x, &rope, &masks, true);
         let interleaved = attention_with(interleaved_as_contiguous(&wqkv), hidden, heads)
             .forward(&x, &rope, &masks, true);
 
@@ -950,42 +1016,92 @@ mod tests {
              to tell them apart"
         );
 
-        // --- K zeroed: rows hidden .. 2 * hidden are all zero.
+        // --- Only V nonzero: rows 0 .. 2 * hidden are all zero.
         let mut wqkv = spread(3 * hidden * hidden, 53);
-        for row in hidden..(2 * hidden) {
+        for row in 0..(2 * hidden) {
             for c in 0..hidden {
                 wqkv[row * hidden + c] = 0.0;
             }
         }
-        let contiguous = attention_with(wqkv.clone(), hidden, heads).forward(
-            &x,
-            &rope,
-            &masks,
-            true,
-        );
+        let contiguous =
+            attention_with(wqkv.clone(), hidden, heads).forward(&x, &rope, &masks, true);
         let interleaved = attention_with(interleaved_as_contiguous(&wqkv), hidden, heads)
             .forward(&x, &rope, &masks, true);
 
+        let head_zero = |y: &Matrix| -> f32 {
+            (0..seq_len)
+                .flat_map(|t| (0..head_dim).map(move |d| (t, d)))
+                .map(|(t, d)| y.at(t, d).abs())
+                .fold(0.0f32, f32::max)
+        };
+        assert!(
+            head_zero(&contiguous) > 1e-3,
+            "V is the third block, so head 0 must produce something; got {contiguous:?}"
+        );
+        assert_eq!(
+            head_zero(&interleaved),
+            0.0,
+            "this weight must separate the two layouts: the interleaved reading puts \
+             head 0's V in the zeroed region and must give an exactly zero block"
+        );
+
+        // Every query sees q = k = 0, so the probabilities are uniform and
+        // every row is the mean of V. That is the same statement as "nothing
+        // outside the third block reached the scores".
         for t in 1..seq_len {
             for c in 0..hidden {
                 assert!(
                     (contiguous.at(t, c) - contiguous.at(0, c)).abs() < 1e-6,
-                    "with the second block zeroed every key is zero, so every query \
-                     must get the mean of V; row {t} col {c} is {} against {}",
+                    "with Q and K zeroed every query must get the same answer; row \
+                     {t} col {c} is {} against {}",
                     contiguous.at(t, c),
                     contiguous.at(0, c)
                 );
             }
         }
-        let interleaved_spread = (0..hidden)
-            .map(|c| (interleaved.at(1, c) - interleaved.at(0, c)).abs())
-            .fold(0.0f32, f32::max);
-        assert!(
-            interleaved_spread > 1e-3,
-            "this weight must separate the two layouts: the interleaved reading \
-             would have given rows differing by {interleaved_spread}, which is too \
-             small to tell them apart"
-        );
+
+        // --- The block order is Q, K, V and not K, Q, V.
+        let seq_len = 2;
+        let masks = Masks::new(&config, seq_len, None);
+        let x = one_hot_rows(seq_len, hidden);
+
+        let mut wqkv = vec![0.0f32; 3 * hidden * hidden];
+        let mut put = |row: usize, col: usize, value: f32| wqkv[row * hidden + col] = value;
+        // Q block, rows 0..4: token 0 only, so column 0.
+        for (d, value) in [1.0f32, 0.5, -0.5, 0.25].iter().enumerate() {
+            put(d, 0, *value);
+        }
+        // K block, rows 4..8: token 1 only, so column 1.
+        for (d, value) in [0.5f32, -1.0, 0.75, 0.5].iter().enumerate() {
+            put(hidden + d, 1, *value);
+        }
+        // V block, rows 8..12: both tokens, and different.
+        let v0 = [1.0f32, 2.0, 3.0, 4.0];
+        let v1 = [-1.0f32, 0.5, 2.0, -3.0];
+        for d in 0..hidden {
+            put(2 * hidden + d, 0, v0[d]);
+            put(2 * hidden + d, 1, v1[d]);
+        }
+
+        let y = attention_with(wqkv, hidden, heads).forward(&x, &rope, &masks, true);
+
+        for d in 0..hidden {
+            let mean = 0.5 * (v0[d] + v1[d]);
+            assert!(
+                (y.at(1, d) - mean).abs() < 1e-6,
+                "token 1 has no q, so query 1's scores are both zero and its row \
+                 must be the mean of V; dim {d} is {} rather than {mean}. Reading \
+                 the blocks as [K | Q | V] gives this row a non-uniform \
+                 distribution instead.",
+                y.at(1, d)
+            );
+            assert!(
+                (y.at(0, d) - mean).abs() > 1e-4,
+                "query 0 has a nonzero q and sees a nonzero k only at token 1, so \
+                 its distribution must not be uniform; dim {d} is the mean {mean}, \
+                 which is what [K | Q | V] would have given"
+            );
+        }
     }
 
     /// Trap 2: the scale is `head_dim ** -0.5`, applied exactly once.
@@ -1032,13 +1148,14 @@ mod tests {
         assert_eq!(config.head_dim(), 4);
 
         let mut wqkv = vec![0.0f32; 3 * hidden * hidden];
+        let mut put = |row: usize, col: usize, value: f32| wqkv[row * hidden + col] = value;
         // Q block, rows 0..4. Token 1's q is column 1 of row 0.
-        wqkv[0 * hidden + 1] = 4.0;
+        put(0, 1, 4.0);
         // K block, rows 4..8. Token 0's k is column 0 of row 4.
-        wqkv[4 * hidden + 0] = 1.0;
+        put(4, 0, 1.0);
         // V block, rows 8..12. Token 0's v, then token 1's v.
-        wqkv[8 * hidden + 0] = 1.0;
-        wqkv[8 * hidden + 1] = 10.0;
+        put(8, 0, 1.0);
+        put(8, 1, 10.0);
 
         let attention = attention_with(wqkv, hidden, heads);
         assert_eq!(attention.scale(), 0.5);
@@ -1081,10 +1198,7 @@ mod tests {
         // `Wqkv` must have 3 * hidden_size rows. Two blocks instead of three
         // is the mistake someone makes by forgetting that V shares the
         // projection.
-        let checkpoint = layer_zero(
-            (vec![8, 4], spread(32, 61)),
-            (vec![4, 4], identity(4)),
-        );
+        let checkpoint = layer_zero((vec![8, 4], spread(32, 61)), (vec![4, 4], identity(4)));
 
         let message = match Attention::load(&checkpoint, 0, 4, 2) {
             Err(error) => error.to_string(),
@@ -1102,13 +1216,25 @@ mod tests {
         // And the same for `Wo`, which is the squarer and therefore easier to
         // get wrong without noticing.
         let checkpoint = layer_zero((vec![12, 4], spread(48, 62)), (vec![4, 8], spread(32, 63)));
-        let message = match Attention::load(&checkpoint, 3, 4, 2) {
+        let message = match Attention::load(&checkpoint, 0, 4, 2) {
             Err(error) => error.to_string(),
             Ok(_) => panic!("a Wo of [4, 8] must not load"),
         };
         assert!(
-            message.contains("model.layers.3.attn.Wo.weight"),
+            message.contains("model.layers.0.attn.Wo.weight"),
             "the message must name the tensor, got {message:?}"
+        );
+
+        // A missing tensor names the layer it was looking for, so a loader
+        // pointed at the wrong layer index says so rather than reporting a
+        // shape problem.
+        let message = match Attention::load(&checkpoint, 3, 4, 2) {
+            Err(error) => error.to_string(),
+            Ok(_) => panic!("layer 3 is not in this checkpoint"),
+        };
+        assert!(
+            message.contains("model.layers.3.attn.Wqkv.weight"),
+            "the message must name the tensor it wanted, got {message:?}"
         );
     }
 
@@ -1180,14 +1306,13 @@ mod tests {
         let y = attention_with(wqkv, hidden, heads).forward(&x, &rope, &masks, true);
 
         for t in 0..seq_len {
-            for d in 0..hidden {
+            for (d, &expected) in v.iter().enumerate() {
                 assert!(
-                    (y.at(t, d) - v[d]).abs() < 1e-6,
+                    (y.at(t, d) - expected).abs() < 1e-6,
                     "every v is the same vector and the probabilities sum to 1, so \
-                     row {t} must be v exactly; dim {d} is {} rather than {}. A \
-                     rotated V would blend three different angles here.",
-                    y.at(t, d),
-                    v[d]
+                     row {t} must be v exactly; dim {d} is {} rather than {expected}. \
+                     A rotated V would blend three different angles here.",
+                    y.at(t, d)
                 );
             }
         }
@@ -1215,8 +1340,7 @@ mod tests {
         let qkv = linear(&x, &attention.wqkv);
         let (_, _, value) = attention.split_qkv(&qkv);
         for d in 0..hidden {
-            let mean: f32 =
-                (0..seq_len).map(|t| value.at(t, d)).sum::<f32>() / seq_len as f32;
+            let mean: f32 = (0..seq_len).map(|t| value.at(t, d)).sum::<f32>() / seq_len as f32;
             assert!(
                 (y.at(0, d) - mean).abs() > 1e-5,
                 "row 0 dim {d} is the mean of V ({mean}), which is what uniform \
@@ -1241,13 +1365,18 @@ mod tests {
     /// through a `[3072, 1024]` and a `[1024, 1024]`.
     ///
     /// The weights are synthetic, which is 16 MB of f32 rather than the
-    /// 1.58 GB checkpoint. The sequence length is 130, which is just past the
-    /// window, so both mask kinds are exercised at the production head count.
+    /// 1.58 GB checkpoint. The sequence is deliberately only 8 tokens: this
+    /// test is about the geometry, and `linear` is the naive triple loop of
+    /// rung 6, so every extra token costs another 3 million multiplies per
+    /// call in a debug build. The window behaviour is checked at 300 tokens
+    /// by `a_local_query_sees_129_keys` and
+    /// `global_and_local_agree_only_while_the_whole_sequence_fits`, where the
+    /// hidden size is small enough for it to be free.
     #[test]
     fn the_hidden_size_survives_the_round_trip() {
         let hidden = 1024;
         let heads = 16;
-        let seq_len = 130;
+        let seq_len = 8;
 
         let config = config_with(hidden, heads);
         assert_eq!(config.head_dim(), 64);
