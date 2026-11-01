@@ -1,0 +1,220 @@
+//! The whole forward pass: embeddings, 28 encoder layers, the final norm and
+//! the MLM head.
+//!
+//! ```text
+//! h = embeddings.norm(tok_embeddings[ids])
+//! for each layer:
+//!     h = h + Attn(attn_norm(h))      // attn_norm absent for layer 0
+//!     h = h + MLP(mlp_norm(h))
+//! h = final_norm(h)
+//! logits = decoder(head.norm(gelu_erf(head.dense(h))))   // mask position only
+//! ```
+//!
+//! Pre-norm: each residual adds to the **un-normed** `h`, and there is no
+//! norm on the attention output.
+
+use std::path::Path;
+
+use crate::attention::{Attention, Masks};
+use crate::config::{Config, ConfigError};
+use crate::embeddings::Embeddings;
+use crate::head::MlmHead;
+use crate::mlp::Mlp;
+use crate::ops::{add_in_place, layer_norm};
+use crate::rope::RopeTable;
+use crate::safetensors::{Checkpoint, TensorError};
+use crate::tensor::Matrix;
+
+/// A problem loading the model: either file.
+#[derive(Debug)]
+pub enum LoadError {
+    Config(ConfigError),
+    Tensor(TensorError),
+}
+
+impl std::fmt::Display for LoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LoadError::Config(e) => write!(f, "config.json: {e}"),
+            LoadError::Tensor(e) => write!(f, "model.safetensors: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for LoadError {}
+
+impl From<ConfigError> for LoadError {
+    fn from(e: ConfigError) -> Self {
+        LoadError::Config(e)
+    }
+}
+
+impl From<TensorError> for LoadError {
+    fn from(e: TensorError) -> Self {
+        LoadError::Tensor(e)
+    }
+}
+
+/// One encoder layer.
+struct Layer {
+    /// `None` for layer 0. The reference sets it to `nn.Identity`, and the
+    /// tensor is absent from the checkpoint. Defaulting a missing norm
+    /// weight to ones would normalize twice.
+    attn_norm: Option<Vec<f32>>,
+    attn: Attention,
+    mlp_norm: Vec<f32>,
+    mlp: Mlp,
+    /// Layer 0 is global. `Config::is_global_layer` decides.
+    is_global: bool,
+}
+
+pub struct ModernBert {
+    config: Config,
+    embeddings: Embeddings,
+    layers: Vec<Layer>,
+    final_norm: Vec<f32>,
+    head: MlmHead,
+    /// Global layers use base 160000 and local layers 10000. Two tables
+    /// serve all 28 layers.
+    rope_global: RopeTable,
+    rope_local: RopeTable,
+}
+
+impl ModernBert {
+    /// Load from a directory holding `config.json` and `model.safetensors`.
+    ///
+    /// Peak memory is about 3.2 GB: the checkpoint's 1.58 GB of f32 plus the
+    /// copies the components take, until the checkpoint drops at the end of
+    /// this function. The resident model afterwards is 1.58 GB.
+    pub fn load(dir: impl AsRef<Path>) -> Result<Self, LoadError> {
+        let dir = dir.as_ref();
+        let config = Config::from_file(dir.join("config.json"))?;
+        let checkpoint = Checkpoint::from_file(dir.join("model.safetensors"))?;
+        Self::from_checkpoint(config, &checkpoint)
+    }
+
+    pub fn from_checkpoint(config: Config, checkpoint: &Checkpoint) -> Result<Self, LoadError> {
+        let c = &config;
+        let embeddings = Embeddings::load(checkpoint, c.vocab_size, c.hidden_size, c.norm_eps)?;
+
+        let mut layers = Vec::with_capacity(c.num_hidden_layers);
+        for i in 0..c.num_hidden_layers {
+            let attn_norm = if i == 0 {
+                // Absent by design. Refuse a checkpoint that has one, since
+                // this loader would otherwise ignore it silently.
+                if checkpoint.get("model.layers.0.attn_norm.weight").is_some() {
+                    return Err(TensorError::new(
+                        "model.layers.0.attn_norm.weight is present, but layer 0 has no \
+                         attention norm in this architecture",
+                    )
+                    .into());
+                }
+                None
+            } else {
+                let name = format!("model.layers.{i}.attn_norm.weight");
+                Some(checkpoint.require(&name, &[c.hidden_size])?.data.clone())
+            };
+            let mlp_norm_name = format!("model.layers.{i}.mlp_norm.weight");
+            layers.push(Layer {
+                attn_norm,
+                attn: Attention::load(checkpoint, i, c.hidden_size, c.num_attention_heads)?,
+                mlp_norm: checkpoint
+                    .require(&mlp_norm_name, &[c.hidden_size])?
+                    .data
+                    .clone(),
+                mlp: Mlp::load(checkpoint, i, c.hidden_size, c.intermediate_size)?,
+                is_global: c.is_global_layer(i),
+            });
+        }
+
+        let final_norm = checkpoint
+            .require("model.final_norm.weight", &[c.hidden_size])?
+            .data
+            .clone();
+        let head = MlmHead::load(checkpoint, c.hidden_size, c.vocab_size, c.norm_eps)?;
+
+        let head_dim = c.head_dim();
+        let positions = c.max_position_embeddings;
+        Ok(ModernBert {
+            rope_global: RopeTable::new(head_dim, positions, c.global_rope_theta),
+            rope_local: RopeTable::new(head_dim, positions, c.local_rope_theta),
+            embeddings,
+            layers,
+            final_norm,
+            head,
+            config,
+        })
+    }
+
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
+    /// Run the encoder and return the `final_norm` output, `[seq, hidden]`.
+    ///
+    /// `observe` is called with the name of each checkpoint the reference
+    /// dump uses (`embeddings.norm`, `layer.0.out` to `layer.27.out`,
+    /// `final_norm`) and the activation at that point. The tier-2 tests use
+    /// it to compare every layer against PyTorch without storing 28 copies.
+    /// Pass `|_, _| {}` when nothing needs to look.
+    pub fn encode(
+        &self,
+        ids: &[u32],
+        mut observe: impl FnMut(&str, &Matrix),
+    ) -> Result<Matrix, TensorError> {
+        let c = &self.config;
+        let mut h = self.embeddings.forward(ids)?;
+        observe("embeddings.norm", &h);
+
+        // Built once and shared by every layer. No padding: one sequence.
+        let masks = Masks::new(c, ids.len(), None);
+
+        for (i, layer) in self.layers.iter().enumerate() {
+            let rope = if layer.is_global {
+                &self.rope_global
+            } else {
+                &self.rope_local
+            };
+
+            // Residual adds go onto the un-normed h.
+            let attn_in = match &layer.attn_norm {
+                Some(w) => layer_norm(&h, w, c.norm_eps),
+                None => h.clone(),
+            };
+            let attn_out = layer.attn.forward(&attn_in, rope, &masks, layer.is_global);
+            add_in_place(&mut h, &attn_out);
+
+            let mlp_out = layer
+                .mlp
+                .forward(&layer_norm(&h, &layer.mlp_norm, c.norm_eps));
+            add_in_place(&mut h, &mlp_out);
+
+            observe(&format!("layer.{i}.out"), &h);
+        }
+
+        let h = layer_norm(&h, &self.final_norm, c.norm_eps);
+        observe("final_norm", &h);
+        Ok(h)
+    }
+
+    /// The logits for `token_ids` at `position`, which for AG News is the
+    /// four verbalizers at the mask. The full 50,368-wide projection is
+    /// never computed.
+    pub fn logits_for_tokens(
+        &self,
+        ids: &[u32],
+        position: usize,
+        token_ids: &[u32],
+    ) -> Result<Vec<f32>, TensorError> {
+        let h = self.encode(ids, |_, _| {})?;
+        Ok(self
+            .head
+            .logits_for_tokens(&h, self.embeddings.weight(), position, token_ids))
+    }
+
+    /// The head and the tied decoder weight, for callers that already hold
+    /// the `final_norm` output.
+    pub fn head(&self) -> (&MlmHead, &Matrix) {
+        (&self.head, self.embeddings.weight())
+    }
+}

@@ -239,11 +239,15 @@ impl Checkpoint {
 
     /// Read the whole file. 1.58 GB of f32 for this checkpoint, so a test
     /// that calls this should share one instance across the binary.
+    ///
+    /// It reads one tensor at a time rather than the whole file at once, so
+    /// the 791 MB raw buffer is never held alongside the decoded f32. Peak is
+    /// the decoded 1.58 GB plus the largest single tensor's raw bytes.
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, TensorError> {
         let path = path.as_ref();
-        let bytes = std::fs::read(path)
-            .map_err(|e| TensorError(format!("cannot read {}: {e}", path.display())))?;
-        Self::from_bytes(&bytes)
+        let header = Header::from_file(path)?;
+        let names: Vec<&str> = header.names().collect();
+        Self::load_subset(path, &names)
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, TensorError> {

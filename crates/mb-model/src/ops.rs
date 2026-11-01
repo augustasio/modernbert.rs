@@ -109,6 +109,20 @@ pub fn add_bias(matrix: &mut Matrix, bias: &[f32]) {
     }
 }
 
+/// `a += b`, element by element. This is the residual add.
+pub fn add_in_place(a: &mut Matrix, b: &Matrix) {
+    assert_eq!(
+        a.shape(),
+        b.shape(),
+        "cannot add a {:?} matrix to a {:?} one",
+        b.shape(),
+        a.shape()
+    );
+    for (x, y) in a.data.iter_mut().zip(&b.data) {
+        *x += y;
+    }
+}
+
 /// GELU, the **exact** form, using the error function.
 ///
 /// `config.json` says `hidden_activation: "gelu"`, which the reference

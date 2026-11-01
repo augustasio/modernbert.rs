@@ -25,6 +25,13 @@ serde_json = "1.0"
 fancy-regex = "0.17"
 flate2 = "1.1"
 
+# Tests run the real forward pass, and rung 6's naive matmul is unusably slow
+# unoptimized: one 963-token fixture would take most of an hour. opt-level 3
+# without lto keeps both run time and compile memory reasonable on a 16 GB
+# machine. Benchmarks still use the release profile below.
+[profile.test]
+opt-level = 3
+
 # Optimize for the machine being benchmarked. Set in .cargo/config.toml so it applies
 # uniformly to every crate, keeping the rungs comparable.
 [profile.release]
