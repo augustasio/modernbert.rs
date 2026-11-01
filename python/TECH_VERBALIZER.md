@@ -137,9 +137,14 @@ three classes lose almost nothing.
 
 The full 7,600-example run confirms it. Uncalibrated (`results/rung0.json`): accuracy
 0.7158, and `Tech` is predicted 0 times out of 7,600. Of the 1,900 gold Sci/Tech examples,
-1,278 go to `Business` and 608 to `World`. Subtracting the same bias from the saved
-logits in `results/rung0_logits.npy`, with no new forward pass: accuracy 0.8541, per-class
-recall Business 0.904, World 0.921, Sports 0.992, Tech 0.600. So the model does carry the information needed to
+1,278 go to `Business` and 608 to `World`.
+
+The probe above subtracts a mean of raw logits. The adopted calibration is the exact form
+from Zhao et al. (2021): it divides by the mean content-free probability
+(`calibration.py`). On the full set it gives **84.78% [83.97, 85.59]**, with Tech recall
+56.16% [53.92, 58.42]. The cruder logit-mean probe gives 85.41% on the same logits. The two
+forms are close, but only the Zhao form is reported. Full statistics are in
+[STATISTICS.md](STATISTICS.md) and `results/rung0_stats.json`. So the model does carry the information needed to
 classify these examples. Only the decision rule throws it away.
 
 ## Why this happens

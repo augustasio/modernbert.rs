@@ -81,6 +81,22 @@ nothing. See [TECH_VERBALIZER.md](TECH_VERBALIZER.md).
 python/.venv/bin/python python/diagnose_tech.py
 ```
 
+**`calibration.py`** implements contextual calibration (Zhao et al. 2021) as two pure
+functions, `fit(content_free_logits)` and `apply(logits, params)`. Run as a script, it loads
+the model once, scores three content-free prompts, and writes `results/calibration.json`
+(the content-free logits and the fitted params). Calibration is post-processing only. Raw
+logits stay the oracle.
+
+**`stats.py`** reads `results/rung0.json`, `results/rung0_logits.npy` and
+`results/calibration.json`, and writes `results/rung0_stats.json`. It reports bootstrap and
+Wilson confidence intervals, raw and calibrated, and a paired comparison. It does not load
+the model. Method and results are in [STATISTICS.md](STATISTICS.md).
+
+```sh
+python/.venv/bin/python python/calibration.py
+python/.venv/bin/python python/stats.py
+```
+
 **`dump_reference.py`** re-runs rung 0 under forward hooks over eight fixtures and writes
 the tier-2 reference that the Rust tests assert against: `python/reference/activations.safetensors`
 (gitignored) and `python/reference/fixtures.json` (the prompts, their token ids, token

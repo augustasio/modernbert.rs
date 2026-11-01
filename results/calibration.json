@@ -1,0 +1,44 @@
+{
+  "method": "contextual calibration (Zhao et al. 2021, Calibrate Before Use, arXiv:2102.09690)",
+  "transform": "p = softmax(logits over the 4 verbalizers); q = (p / p_cf) / sum(p / p_cf); prediction = argmax(q). Computed in float64.",
+  "fitted_on": "content-free prompts only; no test examples, no labels",
+  "verbalizers": [
+    "Business",
+    "World",
+    "Sports",
+    "Tech"
+  ],
+  "content_free_strings": [
+    "N/A",
+    "",
+    "none"
+  ],
+  "content_free_logits": [
+    [
+      21.00543975830078,
+      21.14598274230957,
+      20.602766036987305,
+      14.406939506530762
+    ],
+    [
+      22.27653694152832,
+      22.495922088623047,
+      21.44327735900879,
+      14.708470344543457
+    ],
+    [
+      17.30827522277832,
+      18.064481735229492,
+      17.311416625976562,
+      12.171101570129395
+    ]
+  ],
+  "params": {
+    "p_cf": [
+      0.3230578717940403,
+      0.462410018290677,
+      0.21383379987711157,
+      0.0006983100381711405
+    ]
+  }
+}
