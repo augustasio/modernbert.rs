@@ -4,9 +4,13 @@
 //! the logits are checked in the run that is timed, not only in a separate
 //! correctness run.
 
-/// The same 1e-3 the Rust tier-2 tests hold the verbalizer logits to.
-/// PyTorch's own eager and sdpa backends differ by 6.4e-5 there.
-pub const MAX_LOGIT_ABS: f32 = 1e-3;
+/// Looser than the 1e-3 the tier-2 tests use on short fixtures, on purpose.
+/// Over all 7,600 prompts, correct fp32 rungs reach 4.7e-4 (ONNX Runtime) and,
+/// on one example, 2.55e-3 (candle's `gemm` summation order). A gate that
+/// fails a correct rung is useless, so the bound is 4x the worst seen. A rung
+/// computing something else (bf16 matmul, a skipped layer) misses by far more,
+/// and the argmax check stands beside it. See the PLAN.md changelog.
+pub const MAX_LOGIT_ABS: f32 = 1e-2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Check {

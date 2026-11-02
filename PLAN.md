@@ -579,3 +579,12 @@ Changes to the plan made after seeing data, with the reason.
   empty `TORCHINDUCTOR_CACHE_DIR` per process, and the warm-cache figure is reported
   beside it. Latency runs are unaffected: compiling happens before the worker reports
   ready, outside every timed slice.
+- **The benchmark's logit gate is 1e-2, not 1e-3.** The full-set comparison found one
+  example (index 4100, 173 tokens) where rung 4, candle with its default `gemm` matmul,
+  differs from rung 0 by 2.55e-3. The prediction is the same, with a margin of about one
+  logit. Rungs 2, 5 and 7 differ on that example by 2.7e-4 to 2.8e-4, so it is a sensitive
+  example, and rungs 4 and 5 run the same candle graph with only the matmul library
+  changed, so the cause is summation order, not a model difference. The 1e-3 tier-2 bound
+  on the short fixtures stays. The in-run gate of hard rule 5 must not fail a correct
+  rung, so it is now 4x the worst difference seen across all rungs and all 7,600
+  examples, and it still requires the same argmax.

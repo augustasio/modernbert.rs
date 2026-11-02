@@ -164,14 +164,14 @@ fn a_small_logit_drift_with_the_same_prediction_still_fails_past_the_tolerance()
     let cfg = config(
         &dir,
         fake_worker(&dir, "ruler", CORRECT, false),
-        fake_worker(&dir, "variant", "[1.0, 3.01, 2.0, 0.5]", false),
+        fake_worker(&dir, "variant", "[1.0, 3.1, 2.0, 0.5]", false),
         fake_thermal(&dir, "nominal"),
     );
     let result = run(&cfg).expect("the run completes");
     assert_eq!(
         result["valid"],
         json!(false),
-        "a 1e-2 drift is ten times the tolerance"
+        "a 0.1 drift is ten times the tolerance"
     );
 }
 
