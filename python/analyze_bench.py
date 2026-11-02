@@ -3,7 +3,7 @@
 The harness records raw samples only. This script is the one place where they become
 latencies, speedups and intervals, following the Statistics section of PLAN.md.
 
-    python python/analyze_bench.py results/bench/<label>/replicate_*.json
+    python python/analyze_bench.py results/bench/<label>/replicate_*.json[.gz]
 
 Each input file is one **replicate**: one harness run, in its own pair of worker
 processes. The design is nested. Examples sit inside cycles, and cycles inside
@@ -38,6 +38,7 @@ thermal state was nominal before and after. If the two disagree, the machine's
 temperature moved the result.
 """
 
+import gzip
 import json
 import sys
 
@@ -55,11 +56,17 @@ MIN_REPLICATES = 5
 # stops rather than guess. Slices for energy runs must be several seconds long.
 MIN_POWER_COVERAGE = 0.5
 
+# Below this, a slice holds too few whole samples for a power figure at all. A run with
+# such slices (rung 6's ruler slices are about 0.3 s) reports no energy, and says why.
+MIN_ENERGY_SLICE_SECONDS = 2.0
+
 
 def load(paths: list[str]) -> list[dict]:
     runs = []
     for p in paths:
-        with open(p) as handle:
+        # The committed replicates are gzipped; the harness writes plain JSON.
+        opener = gzip.open if p.endswith(".gz") else open
+        with opener(p, "rt") as handle:
             runs.append(json.load(handle))
     first = runs[0]["config"]
     same = ("ruler", "variant", "threads", "cycles", "examples_per_slice")
@@ -122,7 +129,11 @@ def cycles_of(run: dict, nominal_only: bool) -> list[dict]:
             "ruler": np.array(pair["ruler"]["worker_seconds"]),
             "variant": np.array(pair["variant"]["worker_seconds"]),
         }
-        if measured:
+        long_enough = measured and all(
+            pair[role]["end_seconds"] - pair[role]["start_seconds"] >= MIN_ENERGY_SLICE_SECONDS
+            for role in ("ruler", "variant")
+        )
+        if long_enough:
             for role in ("ruler", "variant"):
                 s = pair[role]
                 p = slice_power(power, s["start_seconds"], s["end_seconds"])
@@ -210,7 +221,16 @@ def summarize(runs: list[dict], nominal_only: bool) -> dict:
         if cv is not None and cv > MAX_CV:
             noisy.append(key)
 
+    energy = (
+        "reported"
+        if "energy_ratio" in point
+        else (
+            f"not reported: a slice was shorter than {MIN_ENERGY_SLICE_SECONDS} s, or power was "
+            "not measured"
+        )
+    )
     return {
+        "energy": energy,
         "replicates_used": len(kept),
         "cycles_used": sum(len(c) for c in kept),
         "cycles_dropped": dropped,

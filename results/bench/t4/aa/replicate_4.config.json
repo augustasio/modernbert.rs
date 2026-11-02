@@ -1,0 +1,35 @@
+{
+  "label": "4 threads: rung 0 ruler against rung0-copy (replicate 4)",
+  "ruler": {
+    "name": "rung0",
+    "command": [
+      "python/.venv/bin/python",
+      "python/worker.py",
+      "--rung",
+      "0"
+    ]
+  },
+  "variant": {
+    "name": "rung0-copy",
+    "command": [
+      "python/.venv/bin/python",
+      "python/worker.py",
+      "--rung",
+      "0"
+    ]
+  },
+  "threads": 4,
+  "cycles": 30,
+  "examples_per_slice": 64,
+  "warmup_examples": 3,
+  "seed": 4004,
+  "weights": "weights/ModernBERT-Large-Instruct",
+  "prompt_ids": "data/agnews_test_prompt_ids.tsv",
+  "reference_logits": "results/rung0_logits.npy",
+  "thermal_helper": "target/tools/thermal_state",
+  "powermetrics": [
+    "sudo",
+    "-n",
+    "/usr/bin/powermetrics"
+  ]
+}

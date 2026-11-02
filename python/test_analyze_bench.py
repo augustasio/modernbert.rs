@@ -147,3 +147,12 @@ def test_a_gap_in_the_power_samples_stops_the_analysis():
     run["power"]["samples"] = [p for p in samples if p["end_seconds"] <= last_start]
     with pytest.raises(SystemExit, match="power samples cover"):
         summarize([run], nominal_only=False)
+
+
+def test_slices_too_short_for_energy_report_no_energy_and_say_so():
+    run = with_power(make_run(0, 0.5, 0.02), {"ruler": 4.0, "variant": 4.0})
+    for s in run["slices"]:
+        s["end_seconds"] = s["start_seconds"] + 0.3
+    summary = summarize([run], nominal_only=False)
+    assert "energy_ratio" not in summary["figures"]
+    assert summary["energy"].startswith("not reported")
