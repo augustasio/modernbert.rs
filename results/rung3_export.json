@@ -1,0 +1,21 @@
+{
+  "exporter": "torch.onnx.export(dynamo=True)",
+  "torch_version": "2.15.0",
+  "dynamic_shapes": "sequence axis 1 of input_ids and attention_mask, 2..8192",
+  "example_seq_len": 163,
+  "path": "weights/onnx/rung1_mask_head.onnx",
+  "status": "ok",
+  "opset": {
+    "ai.onnx": 20
+  },
+  "graph_inputs": [
+    "input_ids",
+    "attention_mask",
+    "mask_position"
+  ],
+  "n_nodes": 1563,
+  "files": {
+    "rung1_mask_head.onnx": 3053854,
+    "rung1_mask_head.onnx.data": 1583341568
+  }
+}
