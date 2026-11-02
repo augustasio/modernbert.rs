@@ -22,7 +22,12 @@ fn filled(rows: usize, cols: usize, seed: u32) -> Matrix {
 
 #[test]
 fn the_build_reports_accelerate() {
-    assert_eq!(backend(), "accelerate");
+    let want = if cfg!(feature = "fused") {
+        "accelerate-fused"
+    } else {
+        "accelerate"
+    };
+    assert_eq!(backend(), want);
 }
 
 /// The shapes the model actually uses, plus edge cases: one row, which is the

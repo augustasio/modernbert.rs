@@ -19,6 +19,7 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use mb_model::attention::Masks;
+use mb_model::fused::Workspace;
 use mb_model::model::ModernBert;
 use mb_model::safetensors::Checkpoint;
 use mb_model::tensor::Matrix;
@@ -142,36 +143,68 @@ const MIN_COSINE: f32 = 1.0 - 1e-6;
 /// differ by 6.4e-5 there.
 const MAX_LOGIT_ABS: f32 = 1e-3;
 
+/// Which forward pass a check runs: rung 6/7's `encode`, or rung 8's
+/// `encode_fused`. Both must meet the same bounds against PyTorch.
+#[derive(Clone, Copy, Debug)]
+enum Path {
+    Plain,
+    Fused,
+}
+
 /// Run one fixture and return what was out of bounds. Empty means it passed.
-fn check_fixture(f: &Fixture, verbalizers: &[u32]) -> Vec<String> {
+fn check_fixture(f: &Fixture, verbalizers: &[u32], path: Path) -> Vec<String> {
     let m = model();
     let mut failures = Vec::new();
 
-    let final_norm = m
-        .encode(&f.token_ids, |name, ours| {
-            let reference = reference(f.index, name);
-            let g = gap(ours, &reference);
-            println!(
-                "fixture {} ({:<14}) {name:16} max abs {:.3e}  rel-to-peak {:.3e}  cosine {:.9}",
+    let mut check = |name: &str, ours: &Matrix| {
+        let reference = reference(f.index, name);
+        let g = gap(ours, &reference);
+        println!(
+                "{path:?} fixture {} ({:<14}) {name:16} max abs {:.3e}  rel-to-peak {:.3e}  cosine {:.9}",
                 f.index, f.name, g.max_abs, g.relative_to_peak, g.cosine
             );
-            let bound = if name == "final_norm" {
-                MAX_FINAL_NORM_RELATIVE
-            } else {
-                MAX_STACK_RELATIVE
-            };
-            if g.relative_to_peak > bound || g.cosine < MIN_COSINE {
-                failures.push(format!(
-                    "fixture {} ({}) {name}: rel-to-peak {:.3e} (bound {bound:.0e}), cosine \
-                     {:.9}",
-                    f.index, f.name, g.relative_to_peak, g.cosine
-                ));
-            }
-        })
-        .expect("the forward pass must run");
+        let bound = if name == "final_norm" {
+            MAX_FINAL_NORM_RELATIVE
+        } else {
+            MAX_STACK_RELATIVE
+        };
+        if g.relative_to_peak > bound || g.cosine < MIN_COSINE {
+            failures.push(format!(
+                "{path:?} fixture {} ({}) {name}: rel-to-peak {:.3e} (bound {bound:.0e}), \
+                     cosine {:.9}",
+                f.index, f.name, g.relative_to_peak, g.cosine
+            ));
+        }
+    };
 
-    let (head, decoder) = m.head();
-    let ours = head.logits_for_tokens(&final_norm, decoder, f.mask_position, verbalizers);
+    let ours = match path {
+        Path::Plain => {
+            let final_norm = m
+                .encode(&f.token_ids, &mut check)
+                .expect("the forward pass must run");
+            let (head, decoder) = m.head();
+            head.logits_for_tokens(&final_norm, decoder, f.mask_position, verbalizers)
+        }
+        Path::Fused => {
+            let mut ws = Workspace::new(m.config(), f.token_ids.len());
+            m.encode_fused(&f.token_ids, &mut ws, |point, ours| {
+                check(&point.name(), ours)
+            })
+            .expect("the forward pass must run");
+            // The fused head reads the encoder output from the workspace, so
+            // this runs the encoder a second time, unobserved.
+            let mut logits = vec![0.0f32; verbalizers.len()];
+            m.logits_for_tokens_fused(
+                &f.token_ids,
+                f.mask_position,
+                verbalizers,
+                &mut ws,
+                &mut logits,
+            )
+            .expect("the forward pass must run");
+            logits
+        }
+    };
     let reference = reference(f.index, "logits.verbalizers").data;
     let worst = ours
         .iter()
@@ -179,12 +212,12 @@ fn check_fixture(f: &Fixture, verbalizers: &[u32]) -> Vec<String> {
         .map(|(a, b)| (a - b).abs())
         .fold(0.0f32, f32::max);
     println!(
-        "fixture {} ({:<14}) verbalizers      max abs {worst:.3e}  ours {ours:?}",
+        "{path:?} fixture {} ({:<14}) verbalizers      max abs {worst:.3e}  ours {ours:?}",
         f.index, f.name
     );
     if worst > MAX_LOGIT_ABS {
         failures.push(format!(
-            "fixture {} ({}) logits.verbalizers: max abs {worst:.3e}",
+            "{path:?} fixture {} ({}) logits.verbalizers: max abs {worst:.3e}",
             f.index, f.name
         ));
     }
@@ -198,7 +231,7 @@ fn check_fixture(f: &Fixture, verbalizers: &[u32]) -> Vec<String> {
     };
     if pick(&ours) != pick(&reference) {
         failures.push(format!(
-            "fixture {} ({}): the predicted class differs: ours {ours:?}, reference \
+            "{path:?} fixture {} ({}): the predicted class differs: ours {ours:?}, reference \
              {reference:?}",
             f.index, f.name
         ));
@@ -225,6 +258,16 @@ fn assert_no_failures(failures: Vec<String>) {
 /// sequence.
 #[test]
 fn every_layer_matches_on_the_short_fixtures() {
+    short_fixtures(Path::Plain);
+}
+
+/// Rung 8's fused path, against the same dumps and bounds.
+#[test]
+fn every_layer_matches_on_the_short_fixtures_fused() {
+    short_fixtures(Path::Fused);
+}
+
+fn short_fixtures(path: Path) {
     let (fixtures, verbalizers) = fixtures();
     let mut failures = Vec::new();
     for name in ["near_empty", "shortest_real", "multi_space"] {
@@ -232,7 +275,7 @@ fn every_layer_matches_on_the_short_fixtures() {
             .iter()
             .find(|f| f.name == name)
             .unwrap_or_else(|| panic!("no fixture {name}"));
-        failures.extend(check_fixture(f, &verbalizers));
+        failures.extend(check_fixture(f, &verbalizers, path));
     }
     assert_no_failures(failures);
 }
@@ -242,13 +285,23 @@ fn every_layer_matches_on_the_short_fixtures() {
 #[test]
 #[ignore = "minutes on the naive matmul; run with -- --ignored"]
 fn every_layer_matches_on_the_long_fixtures() {
+    long_fixtures(Path::Plain);
+}
+
+#[test]
+#[ignore = "minutes on the naive matmul; run with -- --ignored"]
+fn every_layer_matches_on_the_long_fixtures_fused() {
+    long_fixtures(Path::Fused);
+}
+
+fn long_fixtures(path: Path) {
     let (fixtures, verbalizers) = fixtures();
     let mut failures = Vec::new();
     for f in fixtures
         .iter()
         .filter(|f| !["near_empty", "shortest_real", "multi_space"].contains(&f.name.as_str()))
     {
-        failures.extend(check_fixture(f, &verbalizers));
+        failures.extend(check_fixture(f, &verbalizers, path));
     }
     assert_no_failures(failures);
 }
@@ -263,6 +316,16 @@ fn every_layer_matches_on_the_long_fixtures() {
 #[test]
 #[ignore = "minutes on the naive matmul; run with -- --ignored"]
 fn each_layer_alone_matches_when_fed_the_reference_input() {
+    each_layer_alone(Path::Plain);
+}
+
+#[test]
+#[ignore = "minutes on the naive matmul; run with -- --ignored"]
+fn each_layer_alone_matches_when_fed_the_reference_input_fused() {
+    each_layer_alone(Path::Fused);
+}
+
+fn each_layer_alone(path: Path) {
     let (fixtures, _) = fixtures();
     let only = std::env::var("MB_FIXTURE").ok();
     let m = model();
@@ -280,7 +343,15 @@ fn each_layer_alone_matches_when_fed_the_reference_input() {
                 format!("layer.{}.out", i - 1)
             };
             let mut h = reference(f.index, &input);
-            m.layer(i, &mut h, &masks);
+            match path {
+                Path::Plain => m.layer(i, &mut h, &masks),
+                Path::Fused => {
+                    let mut ws = Workspace::new(m.config(), h.rows);
+                    ws.set_residual(&h);
+                    m.layer_fused(i, &mut ws);
+                    h = ws.residual().clone();
+                }
+            }
             let want = reference(f.index, &format!("layer.{i}.out"));
             let g = gap(&h, &want);
 
@@ -298,17 +369,71 @@ fn each_layer_alone_matches_when_fed_the_reference_input() {
             }
             let (token, dim) = (at / want.cols, at % want.cols);
             println!(
-                "fixture {} ({:<18}) layer {i:2} alone  max abs {:.3e}  rel-to-peak {:.3e}  \
+                "{path:?} fixture {} ({:<18}) layer {i:2} alone  max abs {:.3e}  rel-to-peak {:.3e}  \
                  at token {token} dim {dim} (reference value {:.3})",
                 f.index, f.name, g.max_abs, g.relative_to_peak, want.data[at]
             );
             if g.relative_to_peak > MAX_ALONE_RELATIVE {
                 failures.push(format!(
-                    "fixture {} ({}) layer {i} alone: rel-to-peak {:.3e}",
+                    "{path:?} fixture {} ({}) layer {i} alone: rel-to-peak {:.3e}",
                     f.index, f.name, g.relative_to_peak
                 ));
             }
         }
     }
     assert_no_failures(failures);
+}
+
+/// Rung 8 restructures rung 7's forward pass without changing its arithmetic:
+/// every sum adds the same terms in the same order, and every matmul has the
+/// same shape, so it gives the same matmul result. So the two must agree to
+/// the bit, at every checkpoint and at the logits. A difference here means
+/// the fused path computes something else, however small.
+#[test]
+fn the_fused_path_is_bit_identical_to_the_plain_one() {
+    let (fixtures, verbalizers) = fixtures();
+    let m = model();
+    for name in ["near_empty", "shortest_real", "multi_space"] {
+        let f = fixtures
+            .iter()
+            .find(|f| f.name == name)
+            .unwrap_or_else(|| panic!("no fixture {name}"));
+
+        let mut plain = Vec::new();
+        let final_norm = m
+            .encode(&f.token_ids, |_, h| plain.push(h.clone()))
+            .expect("the forward pass must run");
+        let (head, decoder) = m.head();
+        let plain_logits =
+            head.logits_for_tokens(&final_norm, decoder, f.mask_position, &verbalizers);
+
+        let mut ws = Workspace::new(m.config(), f.token_ids.len());
+        let mut at = 0;
+        m.encode_fused(&f.token_ids, &mut ws, |point, h| {
+            assert!(
+                *h == plain[at],
+                "{name}: {} differs, max abs {:.3e}",
+                point.name(),
+                h.max_abs_diff(&plain[at])
+            );
+            at += 1;
+        })
+        .expect("the forward pass must run");
+        assert_eq!(
+            at,
+            plain.len(),
+            "{name}: the two paths report different checkpoints"
+        );
+
+        let mut fused_logits = vec![0.0f32; verbalizers.len()];
+        m.logits_for_tokens_fused(
+            &f.token_ids,
+            f.mask_position,
+            &verbalizers,
+            &mut ws,
+            &mut fused_logits,
+        )
+        .expect("the forward pass must run");
+        assert_eq!(fused_logits, plain_logits, "{name}: the logits differ");
+    }
 }

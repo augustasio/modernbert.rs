@@ -14,3 +14,6 @@ serde_json = { workspace = true }
 # Rung 7: route ops::linear through Apple Accelerate's cblas_sgemm. Off by
 # default, so the default build is rung 6, the naive loop.
 accelerate = []
+# Rung 8: the binaries run the fused, allocation-free forward pass in
+# `fused.rs`. The matmul stays rung 7's Accelerate, so this needs it.
+fused = ["accelerate"]

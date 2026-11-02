@@ -49,15 +49,32 @@ extern "C" {
 /// `input` is `[M, K]` and `weight` is `[N, K]` (safetensors' `[out, in]`), so
 /// the weight goes in transposed and nothing is copied.
 pub fn linear(input: &Matrix, weight: &Matrix) -> Matrix {
+    let mut out = Matrix::zeros(input.rows, weight.rows);
+    linear_into(input, weight, &mut out);
+    out
+}
+
+/// `out = input @ weight.T`, into a buffer the caller owns, for rung 8's
+/// workspace.
+///
+/// `beta` is always 0. Rung 8 tried `beta = 1`, which adds the product onto
+/// what `out` holds and so would fuse the residual add into the matmul. See
+/// `fused.rs` for why it does not.
+pub fn linear_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
     assert_eq!(
         input.cols, weight.cols,
         "cannot multiply a {}x{} input by a {}x{} weight",
         input.rows, input.cols, weight.rows, weight.cols
     );
     let (m, k, n) = (input.rows, input.cols, weight.rows);
-    let mut out = Matrix::zeros(m, n);
+    assert_eq!(
+        out.shape(),
+        (m, n),
+        "a {m}x{n} product cannot go into a {:?} buffer",
+        out.shape()
+    );
     if m == 0 || n == 0 {
-        return out;
+        return;
     }
 
     // The sizes must fit the 32-bit CBLAS integers. The largest product in
@@ -68,10 +85,11 @@ pub fn linear(input: &Matrix, weight: &Matrix) -> Matrix {
     let (m32, n32, k32) = (to_i32(m, "M"), to_i32(n, "N"), to_i32(k, "K"));
 
     // SAFETY: the three buffers are live for the call and sized exactly as
-    // the arguments describe. `input.data` holds M * K values with row
-    // stride K, `weight.data` holds N * K with row stride K, and `out.data`
-    // holds M * N with row stride N. Accelerate only reads A and B and only
-    // writes C, and C does not alias A or B.
+    // the arguments describe, which the asserts above check. `input.data`
+    // holds M * K values with row stride K, `weight.data` holds N * K with
+    // row stride K, and `out.data` holds M * N with row stride N. Accelerate
+    // only reads A and B and only writes C. C does not alias A or
+    // B: it is borrowed mutably, they are borrowed shared.
     unsafe {
         cblas_sgemm(
             CBLAS_ROW_MAJOR,
@@ -90,5 +108,4 @@ pub fn linear(input: &Matrix, weight: &Matrix) -> Matrix {
             n32,
         );
     }
-    out
 }

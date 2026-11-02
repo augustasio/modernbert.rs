@@ -43,6 +43,17 @@ impl Matrix {
         Matrix { rows, cols, data }
     }
 
+    /// Change the number of rows, keeping the buffer.
+    ///
+    /// Rung 8's workspace holds one buffer per activation and reuses it for
+    /// every forward pass. A shorter sequence than the buffer has held
+    /// before never allocates. A longer one grows the buffer once. The
+    /// values are left as they were, so the caller overwrites every row.
+    pub fn resize_rows(&mut self, rows: usize) {
+        self.data.resize(rows * self.cols, 0.0);
+        self.rows = rows;
+    }
+
     #[inline]
     pub fn row(&self, i: usize) -> &[f32] {
         &self.data[i * self.cols..(i + 1) * self.cols]

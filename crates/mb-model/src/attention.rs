@@ -207,13 +207,13 @@ impl Masks {
 pub struct Attention {
     /// `Wqkv`, shaped `[3 * hidden_size, in_features]`. Rows `0..hidden_size`
     /// project Q, the next `hidden_size` project K, the last project V.
-    wqkv: Matrix,
+    pub(crate) wqkv: Matrix,
     /// `Wo`, shaped `[hidden_size, hidden_size]`.
-    wo: Matrix,
-    num_heads: usize,
+    pub(crate) wo: Matrix,
+    pub(crate) num_heads: usize,
     /// `hidden_size / num_heads`, so 64. Kept rather than recomputed because
     /// it is the stride every loop below steps by.
-    head_dim: usize,
+    pub(crate) head_dim: usize,
 }
 
 impl Attention {

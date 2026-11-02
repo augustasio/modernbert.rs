@@ -56,28 +56,28 @@ impl From<TensorError> for LoadError {
 }
 
 /// One encoder layer.
-struct Layer {
+pub(crate) struct Layer {
     /// `None` for layer 0. The reference sets it to `nn.Identity`, and the
     /// tensor is absent from the checkpoint. Defaulting a missing norm
     /// weight to ones would normalize twice.
-    attn_norm: Option<Vec<f32>>,
-    attn: Attention,
-    mlp_norm: Vec<f32>,
-    mlp: Mlp,
+    pub(crate) attn_norm: Option<Vec<f32>>,
+    pub(crate) attn: Attention,
+    pub(crate) mlp_norm: Vec<f32>,
+    pub(crate) mlp: Mlp,
     /// Layer 0 is global. `Config::is_global_layer` decides.
-    is_global: bool,
+    pub(crate) is_global: bool,
 }
 
 pub struct ModernBert {
-    config: Config,
-    embeddings: Embeddings,
-    layers: Vec<Layer>,
-    final_norm: Vec<f32>,
-    head: MlmHead,
+    pub(crate) config: Config,
+    pub(crate) embeddings: Embeddings,
+    pub(crate) layers: Vec<Layer>,
+    pub(crate) final_norm: Vec<f32>,
+    pub(crate) head: MlmHead,
     /// Global layers use base 160000 and local layers 10000. Two tables
     /// serve all 28 layers.
-    rope_global: RopeTable,
-    rope_local: RopeTable,
+    pub(crate) rope_global: RopeTable,
+    pub(crate) rope_local: RopeTable,
 }
 
 impl ModernBert {

@@ -596,3 +596,19 @@ Changes to the plan made after seeing data, with the reason.
   splitting such samples by overlap gives. So a slice that feeds an energy figure must be
   several seconds long. The figure is whole-CPU energy, including `powermetrics` itself
   and the idle worker, and the A/A run measures that floor.
+- **Rung 8 keeps rung 7's arithmetic exactly.** Profiling rung 7 put 52% of its time
+  in the two attention loops, which read K and V with a stride of 1024 floats and sum
+  each `q . k` one add at a time. Rung 8 (`crates/mb-model/src/fused.rs`, feature
+  `fused`) stores each head's Q, K and V contiguously, with K transposed, so the vector
+  runs across keys and every score still adds its 64 products in rung 7's order. The
+  local window is a key range instead of an additive mask, RoPE is applied while
+  scattering the heads, the residual add and the next norm share one pass, and every
+  buffer lives in a reused workspace, so a forward pass makes zero allocations (a test
+  asserts it with a counting allocator; Accelerate's own `malloc` calls are outside
+  what it can see). The result is bit-identical to rung 7, which a test asserts at
+  every checkpoint, so rung 8's speedup is layout alone. One fusion was tried and
+  dropped: adding the output projections onto the residual stream inside `cblas_sgemm`
+  (`beta = 1`) made the drift against PyTorch five times worse, because the residual
+  holds values near 28,000. Two levers remain and are not in rung 8, because each
+  changes something other than layout: `exp` (17% of rung 8's time, f64 libm, used by
+  softmax and GELU) and the attention products, which could go to `cblas_sgemm` too.

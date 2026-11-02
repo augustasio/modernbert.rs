@@ -85,14 +85,14 @@ use crate::tensor::Matrix;
 /// argument. See trap 1 in the module docs.
 pub struct MlmHead {
     /// `head.dense.weight`, `[hidden_size, hidden_size]`. No bias.
-    dense: Matrix,
+    pub(crate) dense: Matrix,
     /// `head.norm.weight`. Weight only, because `norm_bias` is false.
-    norm_weight: Vec<f32>,
+    pub(crate) norm_weight: Vec<f32>,
     /// `norm_eps`, 1e-5. The file's `layer_norm_eps` is the vestigial
     /// duplicate; the reference reads `norm_eps`.
-    eps: f32,
+    pub(crate) eps: f32,
     /// `decoder.bias`, `[vocab_size]`. The only bias in the checkpoint.
-    decoder_bias: Vec<f32>,
+    pub(crate) decoder_bias: Vec<f32>,
 }
 
 impl MlmHead {

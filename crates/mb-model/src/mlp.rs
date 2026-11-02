@@ -40,12 +40,12 @@ pub struct Mlp {
     /// `Wi`, shaped `[2 * intermediate_size, hidden_size]`. Rows
     /// `0..intermediate_size` project the activated branch, the rest project
     /// the multiplicative branch.
-    wi: Matrix,
+    pub(crate) wi: Matrix,
     /// `Wo`, shaped `[hidden_size, intermediate_size]`.
-    wo: Matrix,
+    pub(crate) wo: Matrix,
     /// `intermediate_size`, which is where `Wi`'s output splits. Kept because
     /// it is half of `wi.rows` and the halving is the thing a reader checks.
-    intermediate_size: usize,
+    pub(crate) intermediate_size: usize,
 }
 
 impl Mlp {

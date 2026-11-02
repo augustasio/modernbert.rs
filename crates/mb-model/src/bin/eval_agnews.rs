@@ -21,6 +21,7 @@ use std::io::Write;
 use std::path::Path;
 use std::time::Instant;
 
+use mb_model::fused::Workspace;
 use mb_model::model::ModernBert;
 use mb_model::ops::backend;
 
@@ -55,6 +56,7 @@ fn main() {
         std::process::exit(1);
     });
 
+    let mut workspace = Workspace::new(model.config(), 512);
     let start = Instant::now();
     let mut logits = Vec::with_capacity(examples.len() * VERBALIZER_IDS.len());
     for (n, ids) in examples.iter().enumerate() {
@@ -64,9 +66,19 @@ fn main() {
             .iter()
             .rposition(|&id| id == MASK_ID)
             .unwrap_or_else(|| panic!("example {n} has no [MASK]"));
-        let row = model
-            .logits_for_tokens(ids, mask, &VERBALIZER_IDS)
-            .unwrap_or_else(|e| panic!("example {n}: {e}"));
+        // Rung 8 builds run the fused path, so its logits are the ones the
+        // benchmark times.
+        let row = if cfg!(feature = "fused") {
+            let mut row = [0.0f32; 4];
+            model
+                .logits_for_tokens_fused(ids, mask, &VERBALIZER_IDS, &mut workspace, &mut row)
+                .unwrap_or_else(|e| panic!("example {n}: {e}"));
+            row.to_vec()
+        } else {
+            model
+                .logits_for_tokens(ids, mask, &VERBALIZER_IDS)
+                .unwrap_or_else(|e| panic!("example {n}: {e}"))
+        };
         logits.extend_from_slice(&row);
 
         if (n + 1) % 100 == 0 || n + 1 == examples.len() {

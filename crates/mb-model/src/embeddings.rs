@@ -16,10 +16,10 @@ use crate::tensor::Matrix;
 
 pub struct Embeddings {
     /// `[vocab_size, hidden_size]`. One row per token.
-    weight: Matrix,
+    pub(crate) weight: Matrix,
     /// The LayerNorm applied after the lookup. Weight only, no bias.
-    norm_weight: Vec<f32>,
-    eps: f32,
+    pub(crate) norm_weight: Vec<f32>,
+    pub(crate) eps: f32,
 }
 
 impl Embeddings {

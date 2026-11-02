@@ -16,6 +16,13 @@ use crate::tensor::Matrix;
 /// `weight` is the per-feature scale. There is no bias: `norm_bias` is false
 /// for this model, so no norm in the checkpoint has one.
 pub fn layer_norm(input: &Matrix, weight: &[f32], eps: f32) -> Matrix {
+    let mut out = Matrix::zeros(input.rows, input.cols);
+    layer_norm_into(input, weight, eps, &mut out);
+    out
+}
+
+/// [`layer_norm`] into a buffer the caller owns, for rung 8's workspace.
+pub fn layer_norm_into(input: &Matrix, weight: &[f32], eps: f32, out: &mut Matrix) {
     assert_eq!(
         weight.len(),
         input.cols,
@@ -23,39 +30,40 @@ pub fn layer_norm(input: &Matrix, weight: &[f32], eps: f32) -> Matrix {
         weight.len(),
         input.cols
     );
-
-    let mut out = Matrix::zeros(input.rows, input.cols);
-    let n = input.cols as f32;
-
+    out.resize_rows(input.rows);
+    assert_eq!(out.cols, input.cols, "the norm output is the wrong width");
     for row in 0..input.rows {
-        let x = input.row(row);
-
-        // Accumulate in f64. The sums run over 1024 values, and f32
-        // accumulation there costs real precision against PyTorch, which
-        // computes the statistics in f32 but from a different summation
-        // order. f64 here keeps us inside the 1e-4 tolerance.
-        let mut sum = 0.0f64;
-        for &v in x {
-            sum += v as f64;
-        }
-        let mean = (sum / n as f64) as f32;
-
-        let mut variance = 0.0f64;
-        for &v in x {
-            let d = (v - mean) as f64;
-            variance += d * d;
-        }
-        // The biased variance, dividing by n rather than n - 1, which is what
-        // LayerNorm uses.
-        let variance = (variance / n as f64) as f32;
-
-        let scale = 1.0 / (variance + eps).sqrt();
-        let y = out.row_mut(row);
-        for i in 0..x.len() {
-            y[i] = (x[i] - mean) * scale * weight[i];
-        }
+        layer_norm_row(input.row(row), weight, eps, out.row_mut(row));
     }
-    out
+}
+
+/// One row of [`layer_norm`].
+pub fn layer_norm_row(x: &[f32], weight: &[f32], eps: f32, y: &mut [f32]) {
+    let n = x.len() as f32;
+
+    // Accumulate in f64. The sums run over 1024 values, and f32
+    // accumulation there costs real precision against PyTorch, which
+    // computes the statistics in f32 but from a different summation
+    // order. f64 here keeps us inside the 1e-4 tolerance.
+    let mut sum = 0.0f64;
+    for &v in x {
+        sum += v as f64;
+    }
+    let mean = (sum / n as f64) as f32;
+
+    let mut variance = 0.0f64;
+    for &v in x {
+        let d = (v - mean) as f64;
+        variance += d * d;
+    }
+    // The biased variance, dividing by n rather than n - 1, which is what
+    // LayerNorm uses.
+    let variance = (variance / n as f64) as f32;
+
+    let scale = 1.0 / (variance + eps).sqrt();
+    for i in 0..x.len() {
+        y[i] = (x[i] - mean) * scale * weight[i];
+    }
 }
 
 /// `input @ weight.T`, which is what a `torch.nn.Linear` with no bias does.
@@ -80,11 +88,39 @@ pub fn linear(input: &Matrix, weight: &Matrix) -> Matrix {
     }
 }
 
-/// The matmul backend this build was compiled with. The benchmark harness
-/// records it with every run, because a silently missing Accelerate link
-/// would turn the rung 6 to rung 7 comparison into a comparison of nothing.
+/// `out = input @ weight.T`, into a buffer the caller owns. Rung 8's
+/// version of [`linear`]: the same product, no allocation.
+pub fn linear_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
+    out.resize_rows(input.rows);
+    #[cfg(feature = "accelerate")]
+    crate::accelerate::linear_into(input, weight, out);
+    #[cfg(not(feature = "accelerate"))]
+    {
+        assert_eq!(input.cols, weight.cols, "the inner dimensions differ");
+        assert_eq!(out.cols, weight.rows, "the output is the wrong width");
+        for row in 0..input.rows {
+            let x = input.row(row);
+            let y = out.row_mut(row);
+            for (feature, value) in y.iter_mut().enumerate() {
+                let w = weight.row(feature);
+                let mut sum = 0.0f32;
+                for i in 0..x.len() {
+                    sum += x[i] * w[i];
+                }
+                *value = sum;
+            }
+        }
+    }
+}
+
+/// The matmul backend this build was compiled with, and for rung 8 that the
+/// binaries run the fused forward pass. The benchmark harness records it with
+/// every run, because a silently missing Accelerate link would turn the rung
+/// 6 to rung 7 comparison into a comparison of nothing.
 pub fn backend() -> &'static str {
-    if cfg!(feature = "accelerate") {
+    if cfg!(feature = "fused") {
+        "accelerate-fused"
+    } else if cfg!(feature = "accelerate") {
         "accelerate"
     } else {
         "naive"
@@ -101,7 +137,7 @@ pub fn backend() -> &'static str {
 /// Under Accelerate this allows 16 steps relative to the larger value, which
 /// is far above the 1 measured and far below any real error.
 pub fn same_up_to_summation_order(a: f32, b: f32) -> bool {
-    if backend() == "naive" {
+    if !cfg!(feature = "accelerate") {
         a == b
     } else {
         (a - b).abs() <= 16.0 * f32::EPSILON * a.abs().max(b.abs()).max(1.0)

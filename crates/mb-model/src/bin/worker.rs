@@ -1,12 +1,14 @@
-//! The benchmark worker for rungs 6 and 7. See `crates/mb-harness/PROTOCOL.md`.
+//! The benchmark worker for rungs 6, 7 and 8. See `crates/mb-harness/PROTOCOL.md`.
 //!
-//! One binary serves both rungs. Built normally it is rung 6, the naive loop;
-//! built with `--features accelerate` it is rung 7. It names itself from the
-//! backend it was compiled with, so the harness records which one it ran.
+//! One binary serves all three. Built normally it is rung 6, the naive loop;
+//! built with `--features accelerate` it is rung 7; with `--features fused`
+//! it is rung 8, the fused forward pass. It names itself from the backend it
+//! was compiled with, so the harness records which one it ran.
 
 use std::io::{BufRead, Write};
 use std::time::Instant;
 
+use mb_model::fused::Workspace;
 use mb_model::model::ModernBert;
 use mb_model::ops::backend;
 use serde_json::{json, Value};
@@ -25,11 +27,14 @@ fn main() {
     let model = ModernBert::load(&weights).unwrap_or_else(|e| fail(&format!("load: {e}")));
     let load_seconds = start.elapsed().as_secs_f64();
 
-    let variant = if backend() == "accelerate" {
-        "rung7"
-    } else {
-        "rung6"
+    let variant = match backend() {
+        "accelerate-fused" => "rung8",
+        "accelerate" => "rung7",
+        _ => "rung6",
     };
+    // Rung 8's buffers. Built once here, outside any timed call, and sized
+    // past the longest AG News prompt so no request grows them.
+    let mut workspace = Workspace::new(model.config(), 512);
     let mut out = std::io::stdout().lock();
     send(
         &mut out,
@@ -62,8 +67,7 @@ fn main() {
 
                 // The forward pass alone. Parsing and replying are outside it.
                 let t = Instant::now();
-                let logits = model
-                    .logits_for_tokens(&ids, mask, &VERBALIZER_IDS)
+                let logits = forward(&model, &mut workspace, &ids, mask)
                     .unwrap_or_else(|e| fail(&format!("example {example}: {e}")));
                 let seconds = t.elapsed().as_secs_f64();
 
@@ -76,6 +80,23 @@ fn main() {
             other => fail(&format!("unknown command {other:?}")),
         }
     }
+}
+
+/// The four verbalizer logits, through rung 8's fused path when this build is
+/// rung 8 and through the plain `logits_for_tokens` otherwise.
+fn forward(
+    model: &ModernBert,
+    workspace: &mut Workspace,
+    ids: &[u32],
+    mask: usize,
+) -> Result<[f32; 4], mb_model::safetensors::TensorError> {
+    let mut logits = [0.0f32; 4];
+    if cfg!(feature = "fused") {
+        model.logits_for_tokens_fused(ids, mask, &VERBALIZER_IDS, workspace, &mut logits)?;
+    } else {
+        logits.copy_from_slice(&model.logits_for_tokens(ids, mask, &VERBALIZER_IDS)?);
+    }
+    Ok(logits)
 }
 
 fn send(out: &mut impl Write, message: &Value) {
