@@ -1,0 +1,40 @@
+{
+  "rung": 6,
+  "backend": "naive",
+  "sample": {
+    "n": 400,
+    "indices_file": "data/agnews_subset400_indices.json",
+    "prompt_ids_sha256": "e24a0efc4cbfb385cfcb499fe3c9bbef76f6a95a1f49b3089775b27a2e00ef8d"
+  },
+  "eval_wall_clock_seconds_not_a_benchmark": 11665.3,
+  "vs_rung0": {
+    "agree": 400,
+    "n": 400,
+    "agreement_wilson95": [
+      0.9904877056657034,
+      0.9999999999999999
+    ],
+    "disagreement_rule_of_three_upper": 0.0075,
+    "max_abs_logit_diff": {
+      "median": 1.33514404296875e-05,
+      "p99": 3.435134931351058e-05,
+      "max": 6.4849853515625e-05,
+      "argmax_example": 3411
+    }
+  },
+  "vs_rung7": {
+    "agree": 400,
+    "n": 400,
+    "agreement_wilson95": [
+      0.9904877056657034,
+      0.9999999999999999
+    ],
+    "disagreement_rule_of_three_upper": 0.0075,
+    "max_abs_logit_diff": {
+      "median": 1.52587890625e-05,
+      "p99": 4.198074384476058e-05,
+      "max": 6.67572021484375e-05,
+      "argmax_example": 1518
+    }
+  }
+}

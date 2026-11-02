@@ -1,0 +1,10 @@
+{
+  "backend": "naive",
+  "prompt_ids_file": "data/agnews_subset400_prompt_ids.tsv",
+  "prompt_ids_bytes": 280772,
+  "prompt_ids_sha256_expected": "e24a0efc4cbfb385cfcb499fe3c9bbef76f6a95a1f49b3089775b27a2e00ef8d",
+  "examples": 400,
+  "columns": ["Business", "World", "Sports", "Tech"],
+  "wall_clock_seconds": 11665.3,
+  "note": "progress timing only, not a benchmark"
+}
