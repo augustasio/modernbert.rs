@@ -36,12 +36,19 @@ IDS_TSV = os.path.join(REPO, "data", "agnews_test_prompt_ids.tsv")
 CONTENT_FREE_TSV = os.path.join(REPO, "data", "content_free_prompt_ids.tsv")
 WEIGHTS = os.path.join(REPO, "weights", "ModernBERT-Large-Instruct")
 
-EXPECTED_BACKEND = {4: "candle-cpu", 5: "candle-accelerate", 6: "naive", 7: "accelerate"}
+EXPECTED_BACKEND = {
+    4: "candle-cpu",
+    5: "candle-accelerate",
+    6: "naive",
+    7: "accelerate",
+    8: "accelerate-fused",
+}
 DESCRIPTION = {
     4: "candle-transformers encoder with a mask-only head, candle CPU (gemm) matmul",
     5: "candle-transformers encoder with a mask-only head, candle Accelerate matmul",
     6: "hand-written Rust forward pass, naive matmul",
     7: "hand-written Rust forward pass, Accelerate matmul",
+    8: "hand-written Rust forward pass, Accelerate matmul, fused and allocation-free",
 }
 
 
