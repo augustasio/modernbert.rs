@@ -26,3 +26,24 @@ was built against.
 ## Status
 
 Planning done, scaffold in place. Nothing implemented yet.
+
+## Machine setup for benchmarks
+
+Energy and CPU frequency come from `powermetrics`, which runs only as root. So that
+unattended benchmark runs can call it, one sudo rule lets your user run
+`/usr/bin/powermetrics` without a password, and nothing else. It was installed on
+2026-11-02 at `/etc/sudoers.d/powermetrics`.
+
+**To remove it when the benchmarks are done:**
+
+```bash
+sudo rm /etc/sudoers.d/powermetrics
+```
+
+To install it again:
+
+```bash
+echo "$USER ALL=(root) NOPASSWD: /usr/bin/powermetrics" > /tmp/powermetrics.sudoers
+sudo visudo -cf /tmp/powermetrics.sudoers   # must print "parsed OK"
+sudo install -m 0440 -o root -g wheel /tmp/powermetrics.sudoers /etc/sudoers.d/powermetrics
+```
