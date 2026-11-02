@@ -200,3 +200,96 @@ fn an_unreadable_thermal_state_stops_the_run_before_anything_loads() {
     let err = run(&cfg).expect_err("a bad thermal reading must stop the run");
     assert!(err.contains("lukewarm"), "got {err}");
 }
+
+/// A fake `powermetrics`: one small plist sample, NUL-terminated, every
+/// 20 ms, until it is sent SIGTERM. It ignores the arguments it is given.
+fn fake_powermetrics(dir: &Path) -> Vec<String> {
+    let path = dir.join("powermetrics.sh");
+    let sample = "<plist><dict><key>elapsed_ns</key><integer>20000000</integer>\
+        <key>processor</key><dict><key>clusters</key><array>\
+        <dict><key>name</key><string>P-Cluster</string>\
+        <key>freq_hz</key><real>4000000000.0</real></dict></array>\
+        <key>cpu_energy</key><integer>60</integer>\
+        <key>combined_power</key><real>3000.0</real></dict></dict></plist>";
+    let body = format!("#!/bin/sh\nwhile true; do printf '{sample}\\0'; sleep 0.02; done\n");
+    std::fs::write(&path, body).expect("script");
+    let status = std::process::Command::new("chmod")
+        .args(["+x", &path.display().to_string()])
+        .status()
+        .expect("chmod");
+    assert!(status.success());
+    vec![path.display().to_string()]
+}
+
+#[test]
+fn power_samples_are_recorded_on_the_same_clock_as_the_slices() {
+    let dir = scratch("power");
+    let mut cfg = config(
+        &dir,
+        fake_worker(&dir, "ruler", CORRECT, false),
+        fake_worker(&dir, "variant", CORRECT, false),
+        fake_thermal(&dir, "nominal"),
+    );
+    cfg.powermetrics = Some(fake_powermetrics(&dir));
+    let result = run(&cfg).expect("the run completes");
+
+    assert_eq!(
+        result["valid"],
+        json!(true),
+        "{}",
+        result["invalid_because"]
+    );
+    assert_eq!(result["power"]["measured"], json!(true));
+    let samples = result["power"]["samples"].as_array().expect("samples");
+    assert!(!samples.is_empty());
+    assert_eq!(samples[0]["cpu_energy_mj"], json!(60.0));
+    assert_eq!(samples[0]["cluster_hz"]["P-Cluster"], json!(4.0e9));
+
+    // Samples arrive in order, and the slices sit inside the sampled span.
+    let ends: Vec<f64> = samples
+        .iter()
+        .map(|s| s["end_seconds"].as_f64().expect("end"))
+        .collect();
+    assert!(ends.windows(2).all(|w| w[0] <= w[1]));
+    let slices = result["slices"].as_array().expect("slices");
+    let last_slice_end = slices
+        .iter()
+        .map(|s| s["end_seconds"].as_f64().expect("slice end"))
+        .fold(0.0, f64::max);
+    assert!(ends[0] < slices[0]["start_seconds"].as_f64().expect("start"));
+    assert!(last_slice_end <= *ends.last().expect("a sample"));
+
+    // SIGTERM stopped it: no fake sampler is left running.
+    let left = std::process::Command::new("pgrep")
+        .args(["-f", &cfg.powermetrics.as_ref().expect("set")[0]])
+        .output()
+        .expect("pgrep");
+    assert!(left.stdout.is_empty(), "the sampler is still running");
+}
+
+#[test]
+fn without_a_powermetrics_command_energy_is_reported_as_not_measured() {
+    let dir = scratch("nopower");
+    let cfg = config(
+        &dir,
+        fake_worker(&dir, "ruler", CORRECT, false),
+        fake_worker(&dir, "variant", CORRECT, false),
+        fake_thermal(&dir, "nominal"),
+    );
+    let result = run(&cfg).expect("the run completes");
+    assert_eq!(result["power"]["measured"], json!(false));
+}
+
+#[test]
+fn a_sampler_that_gives_no_sample_stops_the_run_before_it_starts() {
+    let dir = scratch("badpower");
+    let mut cfg = config(
+        &dir,
+        fake_worker(&dir, "ruler", CORRECT, false),
+        fake_worker(&dir, "variant", CORRECT, false),
+        fake_thermal(&dir, "nominal"),
+    );
+    cfg.powermetrics = Some(vec!["false".to_string()]);
+    let err = run(&cfg).expect_err("the run must not start");
+    assert!(err.contains("sudo rule"), "{err}");
+}

@@ -15,6 +15,7 @@
 pub mod bench;
 pub mod integrity;
 pub mod npy;
+pub mod power;
 pub mod rng;
 pub mod schedule;
 pub mod thermal;

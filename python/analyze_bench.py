@@ -24,6 +24,15 @@ independent and give intervals that are too narrow.
 The speedup is a geometric mean of the paired per-example ratios, because ratios
 multiply: a 2x speedup and a 0.5x slowdown should average to 1, not to 1.25.
 
+Energy, when the run sampled it, comes from `powermetrics` samples, each the CPU energy
+since the one before. A sample that straddles a slice edge mixes two workers' power, so
+only samples wholly inside a slice count: their mean power, times the slice's length, is
+the slice's energy. That assumes steady power inside a slice, which a loop of forward
+passes gives. Energy adds up, so energy per example is the total
+over the total, not a mean of per-example figures, and hard rule 4 is about latency, not
+this. The energy ratio is, like the speedup, a geometric mean of paired ratios, here one
+per cycle, because powermetrics cannot see single examples.
+
 Every figure is reported twice: over all measured slices, and over the slices whose
 thermal state was nominal before and after. If the two disagree, the machine's
 temperature moved the result.
@@ -40,6 +49,11 @@ from stats import N_RESAMPLES, SEED, percentile_interval
 # not summarized into a number (PLAN.md, Statistics).
 MAX_CV = 0.05
 MIN_REPLICATES = 5
+
+# A slice that samples wholly inside it cover less than this has too little data for a
+# power figure (with 100 ms samples, the two edges lose up to 0.2 s), and the analysis
+# stops rather than guess. Slices for energy runs must be several seconds long.
+MIN_POWER_COVERAGE = 0.5
 
 
 def load(paths: list[str]) -> list[dict]:
@@ -62,8 +76,34 @@ def is_nominal(s: dict) -> bool:
     return s["thermal_before"] == "nominal" and s["thermal_after"] == "nominal"
 
 
+def slice_power(power: dict, start: float, end: float) -> dict:
+    """The CPU energy and mean P-cluster clock of [start, end], from the samples inside it."""
+    samples = power["samples"]
+    ends = np.array([p["end_seconds"] for p in samples])
+    spans = np.array([p["elapsed_seconds"] for p in samples])
+    energy = np.array([p["cpu_energy_mj"] for p in samples])
+    p_hz = np.array([p["cluster_hz"]["P-Cluster"] for p in samples])
+    inside = (ends - spans >= start) & (ends <= end)
+    covered = spans[inside].sum()
+    if covered < MIN_POWER_COVERAGE * (end - start):
+        raise SystemExit(
+            f"power samples cover {covered:.3f} s of a {end - start:.3f} s slice at {start:.3f} s"
+        )
+    mean_mw = energy[inside].sum() / covered
+    return {
+        "energy_mj": float(mean_mw * (end - start)),
+        "p_cluster_hz": float((p_hz[inside] * spans[inside]).sum() / covered),
+    }
+
+
 def cycles_of(run: dict, nominal_only: bool) -> list[dict]:
-    """Each measured cycle as {'ruler': [...], 'variant': [...]}, paired by example."""
+    """Each measured cycle as {'ruler': [...], 'variant': [...]}, paired by example.
+
+    With power measured, each cycle also holds both roles' energy per example and mean
+    P-cluster clock.
+    """
+    power = run.get("power", {})
+    measured = power.get("measured", False)
     by_cycle: dict[int, dict] = {}
     for s in run["slices"]:
         if s["warmup"]:
@@ -78,12 +118,17 @@ def cycles_of(run: dict, nominal_only: bool) -> list[dict]:
             raise SystemExit(f"cycle {c}: the two slices ran different examples")
         if nominal_only and not (is_nominal(pair["ruler"]) and is_nominal(pair["variant"])):
             continue
-        out.append(
-            {
-                "ruler": np.array(pair["ruler"]["worker_seconds"]),
-                "variant": np.array(pair["variant"]["worker_seconds"]),
-            }
-        )
+        cycle = {
+            "ruler": np.array(pair["ruler"]["worker_seconds"]),
+            "variant": np.array(pair["variant"]["worker_seconds"]),
+        }
+        if measured:
+            for role in ("ruler", "variant"):
+                s = pair[role]
+                p = slice_power(power, s["start_seconds"], s["end_seconds"])
+                cycle[f"{role}_mj"] = p["energy_mj"] / len(s["examples"])
+                cycle[f"{role}_p_hz"] = p["p_cluster_hz"]
+        out.append(cycle)
     return out
 
 
@@ -101,6 +146,16 @@ def statistics(cycles_per_replicate: list[list[dict]]) -> dict:
     for name, values in (("ruler", ruler), ("variant", variant)):
         for q in (50, 90, 99):
             out[f"{name}_p{q}_ms"] = float(np.percentile(values, q) * 1000)
+
+    cycles = [c for cs in cycles_per_replicate for c in cs]
+    if all("ruler_mj" in c for c in cycles):
+        for name in ("ruler", "variant"):
+            # Every slice holds the same number of examples, so the mean of per-slice
+            # energy per example is the total over the total.
+            out[f"{name}_mj_per_example"] = float(np.mean([c[f"{name}_mj"] for c in cycles]))
+            out[f"{name}_p_cluster_ghz"] = float(np.mean([c[f"{name}_p_hz"] for c in cycles]) / 1e9)
+        ratios = [c["ruler_mj"] / c["variant_mj"] for c in cycles]
+        out["energy_ratio"] = float(np.exp(np.mean(np.log(ratios))))
     return out
 
 
@@ -179,6 +234,8 @@ def main() -> None:
         "seeds": [run["config"]["seed"] for run in runs],
         "bootstrap": {"seed": SEED, "resamples": N_RESAMPLES, "design": "two-stage"},
         "speedup_definition": "ruler time / variant time, geometric mean over paired examples",
+        "energy_ratio_definition": "ruler energy / variant energy, geometric mean over cycles",
+        "power_measured": all(run.get("power", {}).get("measured", False) for run in runs),
         "all_slices": summarize(runs, nominal_only=False),
         "nominal_slices_only": summarize(runs, nominal_only=True),
         "warnings": [],

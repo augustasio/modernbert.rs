@@ -588,3 +588,11 @@ Changes to the plan made after seeing data, with the reason.
   on the short fixtures stays. The in-run gate of hard rule 5 must not fail a correct
   rung, so it is now 4x the worst difference seen across all rungs and all 7,600
   examples, and it still requires the same argmax.
+- **Energy and CPU frequency are now measured.** The README's sudo rule lets the harness
+  run `sudo -n /usr/bin/powermetrics` with no password. One sampler runs for the whole
+  benchmark at 100 ms and the harness records its raw samples on the same clock as the
+  slices. The analysis uses only samples wholly inside a slice, because a sample that
+  straddles an edge mixes two workers' power; a synthetic test showed the bias that
+  splitting such samples by overlap gives. So a slice that feeds an energy figure must be
+  several seconds long. The figure is whole-CPU energy, including `powermetrics` itself
+  and the idle worker, and the A/A run measures that floor.

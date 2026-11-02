@@ -10,5 +10,6 @@
   "weights": "weights/ModernBERT-Large-Instruct",
   "prompt_ids": "data/agnews_test_prompt_ids.tsv",
   "reference_logits": "results/rung0_logits.npy",
-  "thermal_helper": "target/tools/thermal_state"
+  "thermal_helper": "target/tools/thermal_state",
+  "powermetrics": ["sudo", "-n", "/usr/bin/powermetrics"]
 }

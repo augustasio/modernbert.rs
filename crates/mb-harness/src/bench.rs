@@ -7,11 +7,13 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Instant;
 
 use serde_json::{json, Value};
 
 use crate::integrity::{self, MAX_LOGIT_ABS};
 use crate::npy;
+use crate::power::{self, Sampler};
 use crate::schedule::{self, Role};
 use crate::thermal;
 use crate::worker::Worker;
@@ -40,6 +42,10 @@ pub struct Config {
     pub prompt_ids: PathBuf,
     pub reference_logits: PathBuf,
     pub thermal_helper: PathBuf,
+    /// The command that runs `powermetrics` as root, for example
+    /// `["sudo", "-n", "/usr/bin/powermetrics"]`. Absent means energy and
+    /// frequency are not measured, and the result says so.
+    pub powermetrics: Option<Vec<String>>,
 }
 
 impl Config {
@@ -93,6 +99,17 @@ impl Config {
             prompt_ids: text("prompt_ids")?.into(),
             reference_logits: text("reference_logits")?.into(),
             thermal_helper: text("thermal_helper")?.into(),
+            powermetrics: match &v["powermetrics"] {
+                Value::Null => None,
+                Value::Array(parts) => Some(
+                    parts
+                        .iter()
+                        .map(|s| s.as_str().map(str::to_string))
+                        .collect::<Option<Vec<_>>>()
+                        .ok_or("config: powermetrics must hold strings")?,
+                ),
+                _ => return Err("config: powermetrics must be a list".to_string()),
+            },
         })
     }
 }
@@ -193,6 +210,14 @@ pub fn run(config: &Config) -> Result<Value, String> {
     // Fail before loading anything if the thermal reader is not there.
     thermal::read(&config.thermal_helper)?;
 
+    // Every timestamp in the result is seconds since this instant, so slices
+    // and power samples share one clock.
+    let origin = Instant::now();
+    let sampler = match &config.powermetrics {
+        Some(command) => Some(Sampler::start(command, origin)?),
+        None => None,
+    };
+
     let environment = environment();
     let cycles = schedule::plan(
         examples.len(),
@@ -231,6 +256,7 @@ pub fn run(config: &Config) -> Result<Value, String> {
                          slices: &mut Vec<Value>|
      -> Result<(), String> {
         let thermal_before = thermal::read(&config.thermal_helper)?;
+        let start_seconds = origin.elapsed().as_secs_f64();
         let mut worker_seconds = Vec::with_capacity(picks.len());
         let mut roundtrip_seconds = Vec::with_capacity(picks.len());
         for &e in picks {
@@ -249,6 +275,7 @@ pub fn run(config: &Config) -> Result<Value, String> {
             worker_seconds.push(reply.worker_seconds);
             roundtrip_seconds.push(reply.roundtrip_seconds);
         }
+        let end_seconds = origin.elapsed().as_secs_f64();
         let thermal_after = thermal::read(&config.thermal_helper)?;
         slices.push(json!({
             "cycle": cycle,
@@ -260,6 +287,8 @@ pub fn run(config: &Config) -> Result<Value, String> {
             "roundtrip_seconds": roundtrip_seconds,
             "thermal_before": thermal_before,
             "thermal_after": thermal_after,
+            "start_seconds": start_seconds,
+            "end_seconds": end_seconds,
         }));
         Ok(())
     };
@@ -281,6 +310,21 @@ pub fn run(config: &Config) -> Result<Value, String> {
     let workers = json!({ "ruler": ruler.ready.clone(), "variant": variant.ready.clone() });
     ruler.quit()?;
     variant.quit()?;
+    let power = match sampler {
+        Some(s) => {
+            let samples = s.stop()?;
+            json!({
+                "measured": true,
+                "command": config.powermetrics,
+                "interval_ms": power::INTERVAL_MS,
+                "samples": samples.iter().map(power::Sample::to_json).collect::<Vec<_>>(),
+            })
+        }
+        None => json!({
+            "measured": false,
+            "reason": "no powermetrics command in the config",
+        }),
+    };
 
     let mut reasons = Vec::new();
     if !failures.is_empty() {
@@ -319,5 +363,6 @@ pub fn run(config: &Config) -> Result<Value, String> {
             "failures": failures,
         },
         "slices": slices,
+        "power": power,
     }))
 }
