@@ -168,7 +168,8 @@ fn environment() -> Value {
         "low_power_mode": probe("pmset", &["-g"]).lines()
             .find(|l| l.contains("lowpowermode")).unwrap_or("(not reported)").trim().to_string(),
         "git_commit": probe("git", &["rev-parse", "HEAD"]),
-        "git_dirty": !probe("git", &["status", "--porcelain"]).is_empty(),
+        // Tracked files only: the session writes its own results while it runs.
+        "git_dirty": !probe("git", &["status", "--porcelain", "--untracked-files=no"]).is_empty(),
     })
 }
 
