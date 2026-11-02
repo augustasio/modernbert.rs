@@ -87,11 +87,14 @@ class MaskHeadModel(nn.Module):
         return verbalizer_head(hidden_at_mask, self.head, self.decoder_rows, self.decoder_bias)
 
 
-def load_mask_head_model(verbalizer_ids: list[int]) -> MaskHeadModel:
-    """The same load as rung 0: fp32 upcast from bf16, default attention (SDPA), eval."""
+def load_mask_head_model(verbalizer_ids: list[int], model_dir: str = MODEL_DIR) -> MaskHeadModel:
+    """The same load as rung 0: fp32 upcast from bf16, default attention (SDPA), eval.
+
+    model_dir defaults to the repo's checkpoint; the benchmark worker passes MB_WEIGHTS.
+    """
     from transformers import AutoModelForMaskedLM  # noqa: PLC0415
 
-    masked_lm = AutoModelForMaskedLM.from_pretrained(MODEL_DIR, dtype=torch.float32)
+    masked_lm = AutoModelForMaskedLM.from_pretrained(model_dir, dtype=torch.float32)
     masked_lm.eval()
     model = MaskHeadModel(masked_lm, verbalizer_ids)
     model.eval()

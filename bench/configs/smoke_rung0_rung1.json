@@ -1,0 +1,14 @@
+{
+  "label": "smoke: rung 0 ruler against rung 1, mechanics only",
+  "ruler": { "name": "rung0", "command": ["python/.venv/bin/python", "python/worker.py", "--rung", "0"] },
+  "variant": { "name": "rung1", "command": ["python/.venv/bin/python", "python/worker.py", "--rung", "1"] },
+  "threads": 4,
+  "cycles": 2,
+  "examples_per_slice": 3,
+  "warmup_examples": 1,
+  "seed": 1,
+  "weights": "weights/ModernBERT-Large-Instruct",
+  "prompt_ids": "data/agnews_test_prompt_ids.tsv",
+  "reference_logits": "results/rung0_logits.npy",
+  "thermal_helper": "target/tools/thermal_state"
+}

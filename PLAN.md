@@ -573,3 +573,9 @@ Changes to the plan made after seeing data, with the reason.
   It was one replicate of 6 examples on a machine running another job, so it proves
   nothing, but it shows why a same-against-same run must set the detection floor of
   every session. See "The A/A floor" in Statistics.
+- **Cold start needs an empty compiler cache.** Rung 2's first compile took 32.6 s in a
+  fresh run and 14.5 s in a later process, because inductor caches compiled kernels on
+  disk across processes. A cold-start figure for rung 2 is therefore taken with a fresh,
+  empty `TORCHINDUCTOR_CACHE_DIR` per process, and the warm-cache figure is reported
+  beside it. Latency runs are unaffected: compiling happens before the worker reports
+  ready, outside every timed slice.

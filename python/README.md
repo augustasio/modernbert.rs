@@ -152,3 +152,27 @@ Subtracting the content-free bias moves accuracy from 0.72 to 0.87 and Tech reca
 decision rule discards it. Full diagnosis, evidence and recommendation in
 [TECH_VERBALIZER.md](TECH_VERBALIZER.md); reproduce with `diagnose_tech.py`. Rung 0 is
 unchanged and still reports the uncalibrated argmax.
+
+## Rungs 1 to 3 and the benchmark worker
+
+Each rung script runs all 7,600 examples plus the three content-free prompts, and checks
+the result against rung 0 with `ladder.compare_with_rung0`. It writes
+`results/rungN.json` and `results/rungN_logits.npy`. No timing is done here.
+
+```sh
+python/.venv/bin/python python/rung1_mask_head.py     # head at the mask, 4 ids only
+python/.venv/bin/python python/rung2_compile.py       # rung 1 + torch.compile (inductor)
+python/.venv/bin/python python/rung3_onnx.py export   # writes weights/onnx/
+python/.venv/bin/python python/rung3_onnx.py run      # ONNX Runtime, CPU provider
+```
+
+Run them one at a time: each holds one fp32 model (CLAUDE.md hard rule 9).
+
+**`worker.py --rung {0,1,2,3}`** is the benchmark worker that the harness starts
+(`crates/mb-harness/PROTOCOL.md`). It never tokenizes, it takes its thread count from
+`MB_THREADS`, and it keeps stdout for protocol lines only. Rung 2 compiles before its
+`ready` line and reports `compile_seconds` there. The harness runs it from the repo root:
+
+```sh
+cargo run -q --release -p mb-harness --bin mb-harness -- bench/configs/smoke_rung0_rung1.json /tmp/smoke01.json
+```
