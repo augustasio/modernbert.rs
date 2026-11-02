@@ -9,7 +9,13 @@ example, so it gets 2 examples a slice and 8 cycles, which is still about 8 minu
 replicate.
 
 Writes bench/configs/t<threads>_<name>.json. The Rust workers are release builds, one
-target folder per rung, because mb-model and mb-candle both name their binary `worker`.
+target folder per rung, because mb-model and mb-candle both name their binary `worker`:
+
+    cargo build --release -p mb-candle --bin worker --target-dir target/bench/rung4
+    cargo build --release -p mb-candle --features accelerate --bin worker --target-dir target/bench/rung5
+    cargo build --release -p mb-model --bin worker --target-dir target/bench/rung6
+    cargo build --release -p mb-model --features accelerate --bin worker --target-dir target/bench/rung7
+    cargo build --release -p mb-model --features fused --bin worker --target-dir target/bench/rung8
 """
 
 import json
@@ -28,6 +34,7 @@ VARIANTS = {
     "rung5": ("rung5", ["target/bench/rung5/release/worker"]),
     "rung6": ("rung6", ["target/bench/rung6/release/worker"]),
     "rung7": ("rung7", ["target/bench/rung7/release/worker"]),
+    "rung8": ("rung8", ["target/bench/rung8/release/worker"]),
 }
 
 

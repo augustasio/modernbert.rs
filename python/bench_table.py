@@ -20,6 +20,7 @@ ROWS = [
     ("rung5", "5: candle + Accelerate"),
     ("rung6", "6: our Rust, naive matmul"),
     ("rung7", "7: our Rust + Accelerate"),
+    ("rung8", "8: + fusion, no allocation"),
 ]
 
 

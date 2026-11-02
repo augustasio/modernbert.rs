@@ -9,7 +9,7 @@
 threads=$1
 [ -n "$threads" ] || { echo "usage: $0 <threads>"; exit 2; }
 cd "$(dirname "$0")/.." || exit 1
-for name in aa rung7 rung5 rung4 rung1 rung3 rung2 rung6; do
+for name in aa rung8 rung7 rung5 rung4 rung1 rung3 rung2 rung6; do
     echo "== $name, $(date -u +%H:%M:%SZ)"
     python/.venv/bin/python python/run_replicates.py \
         "bench/configs/t${threads}_${name}.json" 5 "results/bench/t${threads}/${name}" \
