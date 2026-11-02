@@ -1,0 +1,26 @@
+[package]
+name = "mb-candle"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Rungs 4 and 5: ModernBERT through candle-transformers, as a framework baseline"
+
+# This crate is the one place a tensor framework is allowed, because rungs 4 and
+# 5 measure what a framework gives you. It must never become a dependency of
+# mb-model, whose forward pass is ours.
+[dependencies]
+candle-core = { workspace = true }
+candle-nn = { workspace = true }
+candle-transformers = { workspace = true }
+serde_json = { workspace = true }
+
+[features]
+# Rung 5: candle's own Accelerate backend for matmul. Off by default, so the
+# default build is rung 4, candle's CPU backend (the `gemm` crate). The code is
+# the same; this feature is the one variable between the two rungs.
+accelerate = [
+    "candle-core/accelerate",
+    "candle-nn/accelerate",
+    "candle-transformers/accelerate",
+]

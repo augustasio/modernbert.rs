@@ -4,6 +4,7 @@ members = [
     "crates/mb-tokenizer",
     "crates/mb-model",
     "crates/mb-harness",
+    "crates/mb-candle",
 ]
 
 [workspace.package]
@@ -19,6 +20,13 @@ unicode-general-category = "1.0"
 # fiddly; writing this by hand would be transcription, not insight.
 unicode-normalization = "0.1"
 serde_json = "1.0"
+
+# Rungs 4 and 5 only (crates/mb-candle): the framework baseline. Pinned exactly,
+# so the framework being measured cannot move underneath the results. 0.11.0 is
+# the newest release older than two weeks.
+candle-core = "=0.11.0"
+candle-nn = "=0.11.0"
+candle-transformers = "=0.11.0"
 
 # Test oracles and test-data handling only. These must never appear outside
 # dev-dependencies.
