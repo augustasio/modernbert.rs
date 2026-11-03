@@ -4,9 +4,10 @@
 # and the failure is in its folder's manifest and in the log.
 #
 #     bench/run_session.sh 4
-#     bench/run_session.sh 1 rung1 rung3 rung2 rung6    # resume: run only these
+#     bench/run_session.sh 1 rung1 rung3    # only these
 #
-# A rung that was cut off part-way must be rerun whole: move its folder aside first.
+# To resume a stopped session, run the same command again: run_replicates.py skips every
+# replicate that already finished, and reruns one the Mac slept through.
 # Results go to results/bench/t<threads>/<name>/. Run nothing else on the Mac meanwhile.
 threads=$1
 [ -n "$threads" ] || { echo "usage: $0 <threads> [name ...]"; exit 2; }

@@ -1,0 +1,13 @@
+{
+  "config": "bench/configs/t1_rung1.json",
+  "replicates": [
+    {
+      "replicate": 0,
+      "seed": 1000,
+      "started_utc": "2026-11-03T06:50:29Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_0.json"
+    }
+  ]
+}
