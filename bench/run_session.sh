@@ -4,12 +4,16 @@
 # and the failure is in its folder's manifest and in the log.
 #
 #     bench/run_session.sh 4
+#     bench/run_session.sh 1 rung1 rung3 rung2 rung6    # resume: run only these
 #
+# A rung that was cut off part-way must be rerun whole: move its folder aside first.
 # Results go to results/bench/t<threads>/<name>/. Run nothing else on the Mac meanwhile.
 threads=$1
-[ -n "$threads" ] || { echo "usage: $0 <threads>"; exit 2; }
+[ -n "$threads" ] || { echo "usage: $0 <threads> [name ...]"; exit 2; }
+shift
+names=${*:-aa rung8 rung7 rung5 rung4 rung1 rung3 rung2 rung6}
 cd "$(dirname "$0")/.." || exit 1
-for name in aa rung8 rung7 rung5 rung4 rung1 rung3 rung2 rung6; do
+for name in $names; do
     echo "== $name, $(date -u +%H:%M:%SZ)"
     python/.venv/bin/python python/run_replicates.py \
         "bench/configs/t${threads}_${name}.json" 5 "results/bench/t${threads}/${name}" \
