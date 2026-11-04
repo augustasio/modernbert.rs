@@ -22,6 +22,7 @@ pub mod accelerate;
 pub mod attention;
 pub mod config;
 pub mod embeddings;
+pub mod expf;
 pub mod fused;
 pub mod head;
 pub mod mlp;

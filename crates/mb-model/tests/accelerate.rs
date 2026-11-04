@@ -22,7 +22,9 @@ fn filled(rows: usize, cols: usize, seed: u32) -> Matrix {
 
 #[test]
 fn the_build_reports_accelerate() {
-    let want = if cfg!(feature = "fused") {
+    let want = if cfg!(feature = "expf") {
+        "accelerate-fused-expf"
+    } else if cfg!(feature = "fused") {
         "accelerate-fused"
     } else {
         "accelerate"

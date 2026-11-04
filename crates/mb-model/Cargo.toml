@@ -17,3 +17,6 @@ accelerate = []
 # Rung 8: the binaries run the fused, allocation-free forward pass in
 # `fused.rs`. The matmul stays rung 7's Accelerate, so this needs it.
 fused = ["accelerate"]
+# Rung 9: `exp` in the softmax and in `erf` is the f32 polynomial in
+# `expf.rs`, which vectorises, instead of f64 libm `exp`. Built on rung 8.
+expf = ["fused"]

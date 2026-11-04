@@ -113,12 +113,14 @@ pub fn linear_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
     }
 }
 
-/// The matmul backend this build was compiled with, and for rung 8 that the
-/// binaries run the fused forward pass. The benchmark harness records it with
+/// The matmul backend this build was compiled with, for rung 8 that the
+/// binaries run the fused forward pass, and for rung 9 that `exp` is f32. The benchmark harness records it with
 /// every run, because a silently missing Accelerate link would turn the rung
 /// 6 to rung 7 comparison into a comparison of nothing.
 pub fn backend() -> &'static str {
-    if cfg!(feature = "fused") {
+    if cfg!(feature = "expf") {
+        "accelerate-fused-expf"
+    } else if cfg!(feature = "fused") {
         "accelerate-fused"
     } else if cfg!(feature = "accelerate") {
         "accelerate"
@@ -242,8 +244,18 @@ fn erf(x: f64) -> f64 {
     let sign = if x < 0.0 { -1.0 } else { 1.0 };
     let x = x.abs();
     let t = 1.0 / (1.0 + P * x);
-    let y = 1.0 - (((((A5 * t + A4) * t) + A3) * t + A2) * t + A1) * t * (-x * x).exp();
+    let y = 1.0 - (((((A5 * t + A4) * t) + A3) * t + A2) * t + A1) * t * exp(-x * x);
     sign * y
+}
+
+/// `e^x` for [`erf`]: f64 libm, or from rung 9 the f32 polynomial in
+/// `expf.rs`. Only the `exp` changes; the arithmetic around it stays f64.
+fn exp(x: f64) -> f64 {
+    if cfg!(feature = "expf") {
+        crate::expf::exp_f32(x as f32) as f64
+    } else {
+        x.exp()
+    }
 }
 
 /// Softmax over `values`, in place.
@@ -263,10 +275,23 @@ pub fn softmax_in_place(values: &mut [f32]) {
         return;
     }
     let mut total = 0.0f64;
-    for v in values.iter_mut() {
-        let e = ((*v - max) as f64).exp();
-        *v = e as f32;
-        total += e;
+    if cfg!(feature = "expf") {
+        // Rung 9: f32 `exp`, in a loop of its own so it vectorises. The f64
+        // sum is a second pass, in the same order as before; an ordered sum
+        // cannot vectorise, so keeping it in the first loop would stop that
+        // loop vectorising too.
+        for v in values.iter_mut() {
+            *v = crate::expf::exp_f32(*v - max);
+        }
+        for v in values.iter() {
+            total += *v as f64;
+        }
+    } else {
+        for v in values.iter_mut() {
+            let e = ((*v - max) as f64).exp();
+            *v = e as f32;
+            total += e;
+        }
     }
     if total > 0.0 {
         let inv = (1.0 / total) as f32;

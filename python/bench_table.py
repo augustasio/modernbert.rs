@@ -21,6 +21,7 @@ ROWS = [
     ("rung6", "6: our Rust, naive matmul"),
     ("rung7", "7: our Rust + Accelerate"),
     ("rung8", "8: + fusion, no allocation"),
+    ("rung9", "9: + f32 exp"),
 ]
 
 
@@ -35,8 +36,10 @@ def main() -> None:
     session = sys.argv[1]
     analyses = {}
     for name, _ in ROWS:
-        with open(os.path.join(session, name, "analysis.json")) as handle:
-            analyses[name] = json.load(handle)
+        path = os.path.join(session, name, "analysis.json")
+        if os.path.exists(path):  # a rung added after this session ran
+            with open(path) as handle:
+                analyses[name] = json.load(handle)
     floor = analyses["aa"]["all_slices"]["figures"]["speedup"]["ci95"]
 
     print(
@@ -45,6 +48,8 @@ def main() -> None:
     )
     print("|---|---|---|---|---|---|---|")
     for name, label in ROWS:
+        if name not in analyses:
+            continue
         a = analyses[name]
         f = a["all_slices"]["figures"]
         nominal = a["nominal_slices_only"]

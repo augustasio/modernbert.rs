@@ -612,3 +612,15 @@ Changes to the plan made after seeing data, with the reason.
   holds values near 28,000. Two levers remain and are not in rung 8, because each
   changes something other than layout: `exp` (17% of rung 8's time, f64 libm, used by
   softmax and GELU) and the attention products, which could go to `cblas_sgemm` too.
+- **Rung 9 changes only `exp`.** It replaces f64 libm `exp` in the attention softmax and
+  in `erf` with an f32 polynomial (`crates/mb-model/src/expf.rs`, feature `expf`), the
+  Cephes `expf` method, written as plain branch-free Rust so LLVM vectorises it on NEON.
+  It is within 2 ulp of f64 `exp` over a 35-million-value sweep, and exactly 0 below
+  the f32 range, so a masked key still adds nothing. The f64 softmax sum and the f64
+  `erf` arithmetic stay, so only `exp` changes. On 400 examples it saves 16 ms of 209
+  (8 ms each from the softmax and `erf`), less than the 17% that `exp` took in the rung 8
+  profile: the ordered f64 sum and the f64 `erf` arithmetic around it remain. Rung 9 is
+  no longer bit-identical to rung 8, but it agrees 7600/7600 with rung 0, with Tier 2
+  errors no larger than rung 8's. The 1-thread session showed that threading explains
+  little of rung 8's gap to rung 0 (1.34x on one core, 1.47x on four), so the per-core
+  work goes first.

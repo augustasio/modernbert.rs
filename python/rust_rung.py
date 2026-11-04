@@ -42,6 +42,7 @@ EXPECTED_BACKEND = {
     6: "naive",
     7: "accelerate",
     8: "accelerate-fused",
+    9: "accelerate-fused-expf",
 }
 DESCRIPTION = {
     4: "candle-transformers encoder with a mask-only head, candle CPU (gemm) matmul",
@@ -49,6 +50,7 @@ DESCRIPTION = {
     6: "hand-written Rust forward pass, naive matmul",
     7: "hand-written Rust forward pass, Accelerate matmul",
     8: "hand-written Rust forward pass, Accelerate matmul, fused and allocation-free",
+    9: "rung 8 with f32 polynomial exp in the softmax and erf, instead of f64 libm exp",
 }
 
 
