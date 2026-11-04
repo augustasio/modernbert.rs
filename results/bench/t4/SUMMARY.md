@@ -4,7 +4,9 @@ Run on 2026-11-02, 10:08 to 18:08 UTC, at commit 3fa98ab, on AC power, Low Power
 off. Each row is 5 replicates (separate processes) of 30 cycles of 64 examples, rung 0
 as the ruler in every cycle. Rung 6 is 5 replicates of 8 cycles of 2 examples. Rung 8
 was added later, on 2026-11-02, 21:01 to 22:05 UTC, at commit 693078e, in the same
-setup. All 45 replicates passed the in-run correctness check. Intervals are 95%, from the two-stage
+setup. Rung 9 was added on 2026-11-04 in two sittings, 08:02 to 08:36 and 19:21 to
+19:43 UTC, at commit 3133da8, with the resumable runner. All 50 replicates passed the
+in-run correctness check. Intervals are 95%, from the two-stage
 bootstrap in `python/analyze_bench.py`. The table comes from `python/bench_table.py`.
 
 Speedup is rung 0 time over the variant's time: above 1 is faster than rung 0. The energy
@@ -21,6 +23,7 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 | 6: our Rust, naive matmul | 0.00803 [0.00732, 0.00877] | 2.38e+04 [2.31e+04, 2.44e+04] | 3.14e+04 [2.78e+04, 3.33e+04] | n/a | n/a | 0.00803 [0.00732, 0.00877] (40) |
 | 7: our Rust + Accelerate | 0.408 [0.397, 0.421] | 338 [336, 341] | 601 [581, 630] | 0.476 [0.452, 0.5] | 3.97 [3.94, 3.99] | 0.389 [0.385, 0.392] (13) |
 | 8: + fusion, no allocation | 0.681 [0.677, 0.685] | 220 [216, 223] | 339 [324, 348] | 0.668 [0.661, 0.676] | 3.68 [3.62, 3.75] | 0.651 [0.646, 0.657] (11) |
+| 9: + f32 exp | 0.734 [0.715, 0.756] | 189 [185, 199] | 320 [272, 374] | 0.838 [0.817, 0.859] | 3.9 [3.76, 3.98] | 0.725 [0.71, 0.742] (123) |
 
 ## Notes
 
@@ -37,6 +40,13 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
   logit row is bit-identical to rung 7's. Rung 8 still takes 15% longer than rung 5,
   and 1.47x as long as rung 0. Its profile points next at the f64 `exp` in
   softmax and at the attention products, which do not use Accelerate yet.
+- **Rung 9 is 1.08x faster than rung 8.** p50 drops from 220 ms to 189 ms. The only
+  change is f32 `exp` in the softmax and `erf` (`PLAN.md`, changelog). Energy per example
+  falls 1.25x, more than the time, perhaps because the vector `exp` does less work per
+  element. Replicate 2 was disturbed (ruler p50 165 ms against 126 to 142 ms, 4 nominal
+  cycles of 30), which widens the interval; its speedup, 0.772, is the highest of the
+  five, and the other four give 0.703 to 0.748. Rung 9 still takes 1.36x as long as
+  rung 0.
 - **Rungs 6 and 7 do not use 4 threads.** The naive loop is single-threaded, and
   rung 7's P-cluster clock (3.97 GHz, near the maximum) suggests Accelerate ran it on
   about one core. Rung 4's 2.85 GHz is the one rung loading all 4 cores.
