@@ -389,7 +389,15 @@ fn each_layer_alone(path: Path) {
 /// same shape, so it gives the same matmul result. So the two must agree to
 /// the bit, at every checkpoint and at the logits. A difference here means
 /// the fused path computes something else, however small.
+///
+/// Rung 10 moves the attention products into `cblas_sgemm`, which sums in its
+/// own order, so from rung 10 on this no longer holds and the test is off;
+/// the per-layer bounds above still apply.
 #[test]
+#[cfg_attr(
+    feature = "attention-sgemm",
+    ignore = "rung 10 sums attention in sgemm's order"
+)]
 fn the_fused_path_is_bit_identical_to_the_plain_one() {
     let (fixtures, verbalizers) = fixtures();
     let m = model();

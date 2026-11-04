@@ -109,3 +109,68 @@ pub fn linear_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
         );
     }
 }
+
+/// `c = alpha * a @ b`, all row-major, none transposed, with explicit row
+/// strides, for rung 10's attention products.
+///
+/// `a` is `[m, k]` with row stride `lda`, `b` is `[k, n]` with row stride
+/// `ldb`, and `c` is `[m, n]` with row stride `ldc`. The strides let a product
+/// read one head's block of a wider buffer, or write one head's columns of
+/// the `[seq, hidden]` context, without a copy.
+#[allow(clippy::too_many_arguments)]
+pub fn sgemm_strided(
+    m: usize,
+    n: usize,
+    k: usize,
+    alpha: f32,
+    a: &[f32],
+    lda: usize,
+    b: &[f32],
+    ldb: usize,
+    c: &mut [f32],
+    ldc: usize,
+) {
+    if m == 0 || n == 0 {
+        return;
+    }
+    // The last row of each matrix needs only its own width, not a full stride.
+    let needs = |rows: usize, cols: usize, stride: usize| (rows - 1) * stride + cols;
+    assert!(
+        lda >= k && ldb >= n && ldc >= n,
+        "a row stride is narrower than its row"
+    );
+    assert!(
+        k == 0 || a.len() >= needs(m, k, lda),
+        "a is too short for {m}x{k}"
+    );
+    assert!(
+        k == 0 || b.len() >= needs(k, n, ldb),
+        "b is too short for {k}x{n}"
+    );
+    assert!(c.len() >= needs(m, n, ldc), "c is too short for {m}x{n}");
+    let to_i32 = |v: usize, what: &str| -> i32 {
+        i32::try_from(v).unwrap_or_else(|_| panic!("{what} = {v} does not fit a CBLAS int"))
+    };
+
+    // SAFETY: the asserts above check that every element the arguments
+    // describe lies inside its slice. Accelerate only reads `a` and `b` and
+    // only writes `c`, which is borrowed mutably, so it aliases neither.
+    unsafe {
+        cblas_sgemm(
+            CBLAS_ROW_MAJOR,
+            CBLAS_NO_TRANS,
+            CBLAS_NO_TRANS,
+            to_i32(m, "M"),
+            to_i32(n, "N"),
+            to_i32(k, "K"),
+            alpha,
+            a.as_ptr(),
+            to_i32(lda, "lda"),
+            b.as_ptr(),
+            to_i32(ldb, "ldb"),
+            0.0,
+            c.as_mut_ptr(),
+            to_i32(ldc, "ldc"),
+        );
+    }
+}

@@ -1,9 +1,10 @@
-//! The benchmark worker for rungs 6 to 9. See `crates/mb-harness/PROTOCOL.md`.
+//! The benchmark worker for rungs 6 to 10. See `crates/mb-harness/PROTOCOL.md`.
 //!
-//! One binary serves all four. Built normally it is rung 6, the naive loop;
+//! One binary serves all five. Built normally it is rung 6, the naive loop;
 //! built with `--features accelerate` it is rung 7; with `--features fused`
 //! it is rung 8, the fused forward pass; with `--features expf` it is rung 9,
-//! rung 8 with f32 `exp`. It names itself from the backend it
+//! rung 8 with f32 `exp`; with `--features attention-sgemm` it is rung 10,
+//! rung 9 with the attention products in `cblas_sgemm`. It names itself from the backend it
 //! was compiled with, so the harness records which one it ran.
 
 use std::io::{BufRead, Write};
@@ -29,6 +30,7 @@ fn main() {
     let load_seconds = start.elapsed().as_secs_f64();
 
     let variant = match backend() {
+        "accelerate-fused-expf-attention-sgemm" => "rung10",
         "accelerate-fused-expf" => "rung9",
         "accelerate-fused" => "rung8",
         "accelerate" => "rung7",

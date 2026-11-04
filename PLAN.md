@@ -624,3 +624,12 @@ Changes to the plan made after seeing data, with the reason.
   errors no larger than rung 8's. The 1-thread session showed that threading explains
   little of rung 8's gap to rung 0 (1.34x on one core, 1.47x on four), so the per-core
   work goes first.
+- **Rung 10 moves the attention products into `cblas_sgemm`.** Per head, `scale * Q K^T`
+  is one `[seq, 64] x [64, seq]` product and `P V` one `[seq, seq] x [seq, 64]` product
+  written straight into the head's columns of the context (feature `attention-sgemm`,
+  `attend_sgemm` in `fused.rs`, `sgemm_strided` in `accelerate.rs`). This is what
+  PyTorch's CPU attention does. A local layer computes every score, as PyTorch does, and
+  the keys outside the window get probability exactly 0. Accelerate sums in its own
+  order, so rung 10 is not bit-identical to rung 9 and the fused-equals-plain test is
+  off for it. Tier 2: worst stack error 8.2e-5 of peak (rung 9: 6.1e-5; bound 3e-4).
+  Tier 3: 7600/7600 agreement, max logit difference 4.6e-4 (rung 9: 2.5e-4; bound 1e-3).

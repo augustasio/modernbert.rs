@@ -22,7 +22,9 @@ fn filled(rows: usize, cols: usize, seed: u32) -> Matrix {
 
 #[test]
 fn the_build_reports_accelerate() {
-    let want = if cfg!(feature = "expf") {
+    let want = if cfg!(feature = "attention-sgemm") {
+        "accelerate-fused-expf-attention-sgemm"
+    } else if cfg!(feature = "expf") {
         "accelerate-fused-expf"
     } else if cfg!(feature = "fused") {
         "accelerate-fused"
@@ -67,4 +69,59 @@ fn accelerate_agrees_with_the_naive_loop() {
 fn an_empty_product_is_empty() {
     let out = linear(&Matrix::zeros(0, 8), &filled(4, 8, 9));
     assert_eq!(out.shape(), (0, 4));
+}
+
+/// Rung 10's strided product: one head's block in, that head's columns of a
+/// wider buffer out, and nothing outside those columns touched.
+#[test]
+fn the_strided_product_writes_only_its_columns() {
+    use mb_model::accelerate::sgemm_strided;
+    let (seq, hd, heads, head) = (7, 4, 3, 1);
+    let hidden = heads * hd;
+    let p = filled(seq, seq, 11);
+    let v = filled(seq, hd, 12);
+    let mut context = vec![9.0f32; seq * hidden];
+    sgemm_strided(
+        seq,
+        hd,
+        seq,
+        1.0,
+        &p.data,
+        seq,
+        &v.data,
+        hd,
+        &mut context[head * hd..],
+        hidden,
+    );
+    for t in 0..seq {
+        for c in 0..hidden {
+            let got = context[t * hidden + c];
+            if c / hd != head {
+                assert_eq!(got, 9.0, "row {t} column {c} was written");
+                continue;
+            }
+            let d = c - head * hd;
+            let want: f32 = (0..seq)
+                .map(|j| p.data[t * seq + j] * v.data[j * hd + d])
+                .sum();
+            assert!(
+                (got - want).abs() < 1e-5,
+                "row {t} dim {d}: {got} vs {want}"
+            );
+        }
+    }
+}
+
+#[test]
+fn alpha_scales_the_strided_product() {
+    use mb_model::accelerate::sgemm_strided;
+    let a = filled(3, 5, 21);
+    let b = filled(5, 2, 22);
+    let mut one = vec![0.0f32; 6];
+    let mut half = vec![0.0f32; 6];
+    sgemm_strided(3, 2, 5, 1.0, &a.data, 5, &b.data, 2, &mut one, 2);
+    sgemm_strided(3, 2, 5, 0.5, &a.data, 5, &b.data, 2, &mut half, 2);
+    for (o, h) in one.iter().zip(&half) {
+        assert!((o * 0.5 - h).abs() < 1e-6);
+    }
 }

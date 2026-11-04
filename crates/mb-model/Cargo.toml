@@ -20,3 +20,7 @@ fused = ["accelerate"]
 # Rung 9: `exp` in the softmax and in `erf` is the f32 polynomial in
 # `expf.rs`, which vectorises, instead of f64 libm `exp`. Built on rung 8.
 expf = ["fused"]
+# Rung 10: the two attention products, `Q K^T` and `P V`, go through
+# `cblas_sgemm` per head, as PyTorch's CPU attention does, instead of rung
+# 8's hand loops. Built on rung 9.
+attention-sgemm = ["expf"]

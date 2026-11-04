@@ -89,7 +89,8 @@ pub struct Workspace {
     query: Vec<f32>,
     key: Vec<f32>,
     value: Vec<f32>,
-    /// One query's scores, then its probabilities. At most `seq` long.
+    /// Rungs 8 and 9: one query's scores, then its probabilities, at most
+    /// `seq` long. Rung 10: one head's scores for every query, `[seq, seq]`.
     scores: Vec<f32>,
     /// The attention output before `Wo`, `[seq, hidden]`.
     context: Matrix,
@@ -161,7 +162,12 @@ impl Workspace {
         self.query.resize(per_head, 0.0);
         self.key.resize(per_head, 0.0);
         self.value.resize(per_head, 0.0);
-        self.scores.resize(seq, 0.0);
+        let scores = if cfg!(feature = "attention-sgemm") {
+            seq * seq
+        } else {
+            seq
+        };
+        self.scores.resize(scores, 0.0);
     }
 
     /// Put `h` in the residual stream, for a test that runs one layer on
@@ -416,6 +422,15 @@ fn scatter_heads(ws: &mut Workspace, rope: &RopeTable) {
 /// and stored once per four products instead of once per product. The
 /// order inside a pass is still the sum's order.
 fn attend(ws: &mut Workspace, window: Option<usize>, scale: f32) {
+    #[cfg(feature = "attention-sgemm")]
+    attend_sgemm(ws, window, scale);
+    #[cfg(not(feature = "attention-sgemm"))]
+    attend_loops(ws, window, scale);
+}
+
+/// Rungs 8 and 9's [`attend`].
+#[cfg_attr(feature = "attention-sgemm", allow(dead_code))]
+fn attend_loops(ws: &mut Workspace, window: Option<usize>, scale: f32) {
     let (heads, hd) = (ws.num_heads, ws.head_dim);
     let seq = ws.h.rows;
 
@@ -486,6 +501,55 @@ fn attend(ws: &mut Workspace, window: Option<usize>, scale: f32) {
                 }
             }
         }
+    }
+}
+
+/// Rung 10's [`attend`]: both products of each head through `cblas_sgemm`.
+///
+/// Per head, `S = scale * Q K^T` is one `[seq, head_dim] x [head_dim, seq]`
+/// product (K is already stored transposed), the softmax runs over each row
+/// of `S`, and `P V` is one `[seq, seq] x [seq, head_dim]` product written
+/// straight into that head's columns of `ws.context`. This is what PyTorch's
+/// CPU attention does, on blocks of queries (`notes/pytorch_cpu_research.md`).
+///
+/// The price is the summation order. Accelerate picks its own, so rung 10 is
+/// not bit-identical to rung 9, and `scale` is applied inside the product
+/// (`alpha`) rather than after it.
+///
+/// A local layer still computes every score, as PyTorch does, and the keys
+/// outside the window get probability exactly 0, so they add nothing to
+/// `P V`. With about 150 tokens and a window of 64 each side, that wastes
+/// little.
+#[cfg(feature = "attention-sgemm")]
+fn attend_sgemm(ws: &mut Workspace, window: Option<usize>, scale: f32) {
+    use crate::accelerate::sgemm_strided;
+    let (heads, hd) = (ws.num_heads, ws.head_dim);
+    let seq = ws.h.rows;
+    let hidden = heads * hd;
+    let scores = &mut ws.scores[..seq * seq];
+
+    for head in 0..heads {
+        let query = &ws.query[head * seq * hd..(head + 1) * seq * hd];
+        let key_t = &ws.key[head * hd * seq..(head + 1) * hd * seq];
+        let values = &ws.value[head * seq * hd..(head + 1) * seq * hd];
+        sgemm_strided(seq, seq, hd, scale, query, hd, key_t, seq, scores, seq);
+
+        for t in 0..seq {
+            let (first, end) = match window {
+                None => (0, seq),
+                Some(w) => (t.saturating_sub(w), (t + w + 1).min(seq)),
+            };
+            let row = &mut scores[t * seq..(t + 1) * seq];
+            // f64 accumulation, as in rung 7. See `ops::softmax_in_place`.
+            crate::ops::softmax_in_place(&mut row[first..end]);
+            row[..first].fill(0.0);
+            row[end..].fill(0.0);
+        }
+
+        // This head's columns of the context: start at column head * hd,
+        // row stride hidden.
+        let context = &mut ws.context.data[head * hd..];
+        sgemm_strided(seq, hd, seq, 1.0, scores, seq, values, hd, context, hidden);
     }
 }
 

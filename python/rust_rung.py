@@ -43,6 +43,7 @@ EXPECTED_BACKEND = {
     7: "accelerate",
     8: "accelerate-fused",
     9: "accelerate-fused-expf",
+    10: "accelerate-fused-expf-attention-sgemm",
 }
 DESCRIPTION = {
     4: "candle-transformers encoder with a mask-only head, candle CPU (gemm) matmul",
@@ -51,6 +52,7 @@ DESCRIPTION = {
     7: "hand-written Rust forward pass, Accelerate matmul",
     8: "hand-written Rust forward pass, Accelerate matmul, fused and allocation-free",
     9: "rung 8 with f32 polynomial exp in the softmax and erf, instead of f64 libm exp",
+    10: "rung 9 with both attention products in cblas_sgemm, per head",
 }
 
 
