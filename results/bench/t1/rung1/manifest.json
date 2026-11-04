@@ -8,6 +8,39 @@
       "cooldown_seconds": 0.0,
       "exit_status": 0,
       "result": "replicate_0.json"
+    },
+    {
+      "replicate": 1,
+      "seed": 1001,
+      "started_utc": "2026-11-03T23:03:43Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_1.json"
+    },
+    {
+      "replicate": 2,
+      "seed": 1002,
+      "started_utc": "2026-11-03T23:15:31Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_2.json"
+    },
+    {
+      "replicate": 3,
+      "seed": 1003,
+      "started_utc": "2026-11-03T23:25:31Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_3.json"
+    },
+    {
+      "replicate": 4,
+      "seed": 1004,
+      "started_utc": "2026-11-03T23:37:48Z",
+      "cooldown_seconds": 30.0,
+      "exit_status": 0,
+      "result": "replicate_4.json"
     }
-  ]
+  ],
+  "discarded": []
 }

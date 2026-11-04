@@ -954,3 +954,625 @@ cycle 3 of 30 done
   warnings.warn(
 /opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/resource_tracker.py:324: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/mp-u7ca1gk1'}
   warnings.warn(
+== resume 2026-11-03T22:57:18Z
+== aa, 23:03:43Z
+replicate 1 of 5 already done, skipping
+replicate 2 of 5 already done, skipping
+replicate 3 of 5 already done, skipping
+replicate 4 of 5 already done, skipping
+replicate 5 of 5 already done, skipping
+done: 5 replicates in results/bench/t1/aa
+== rung8, 23:03:43Z
+replicate 1 of 5 already done, skipping
+replicate 2 of 5 already done, skipping
+replicate 3 of 5 already done, skipping
+replicate 4 of 5 already done, skipping
+replicate 5 of 5 already done, skipping
+done: 5 replicates in results/bench/t1/rung8
+== rung7, 23:03:43Z
+replicate 1 of 5 already done, skipping
+replicate 2 of 5 already done, skipping
+replicate 3 of 5 already done, skipping
+replicate 4 of 5 already done, skipping
+replicate 5 of 5 already done, skipping
+done: 5 replicates in results/bench/t1/rung7
+== rung5, 23:03:43Z
+replicate 1 of 5 already done, skipping
+replicate 2 of 5 already done, skipping
+replicate 3 of 5 already done, skipping
+replicate 4 of 5 already done, skipping
+replicate 5 of 5 already done, skipping
+done: 5 replicates in results/bench/t1/rung5
+== rung4, 23:03:43Z
+replicate 1 of 5 already done, skipping
+replicate 2 of 5 already done, skipping
+replicate 3 of 5 already done, skipping
+replicate 4 of 5 already done, skipping
+replicate 5 of 5 already done, skipping
+done: 5 replicates in results/bench/t1/rung4
+== rung1, 23:03:43Z
+replicate 1 of 5 already done, skipping
+replicate 2 of 5, seed 1001
+starting rung0 and rung1
+W1104 00:03:54.457000 68918 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:02<01:10,  2.39it/s]Loading weights:  36%|███▋      | 63/173 [00:02<00:02, 38.14it/s]Loading weights:  50%|█████     | 87/173 [00:03<00:02, 30.09it/s]Loading weights:  58%|█████▊    | 101/173 [00:03<00:02, 30.35it/s]Loading weights:  64%|██████▍   | 111/173 [00:04<00:02, 27.95it/s]Loading weights:  68%|██████▊   | 118/173 [00:04<00:01, 28.46it/s]Loading weights:  72%|███████▏  | 124/173 [00:04<00:01, 28.16it/s]Loading weights:  75%|███████▍  | 129/173 [00:04<00:01, 26.69it/s]Loading weights:  78%|███████▊  | 135/173 [00:05<00:01, 26.02it/s]Loading weights:  82%|████████▏ | 141/173 [00:05<00:01, 26.56it/s]Loading weights:  85%|████████▍ | 147/173 [00:05<00:00, 26.32it/s]Loading weights:  88%|████████▊ | 153/173 [00:05<00:00, 25.12it/s]Loading weights:  92%|█████████▏| 159/173 [00:06<00:00, 24.19it/s]Loading weights:  95%|█████████▌| 165/173 [00:06<00:00, 22.76it/s]Loading weights:  99%|█████████▉| 171/173 [00:06<00:00, 25.30it/s]Loading weights: 100%|██████████| 173/173 [00:06<00:00, 25.93it/s]
+W1104 00:04:16.868000 69664 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:02<01:31,  1.84it/s]Loading weights:   3%|▎         | 6/173 [00:04<02:34,  1.08it/s]Loading weights:  63%|██████▎   | 109/173 [00:05<00:01, 34.85it/s]Loading weights:  83%|████████▎ | 144/173 [00:07<00:01, 25.07it/s]Loading weights:  96%|█████████▌| 166/173 [00:08<00:00, 22.01it/s]Loading weights: 100%|██████████| 173/173 [00:08<00:00, 19.43it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung1/replicate_1.json. valid: true. checked 3846 replies, worst logit difference 0.0000438690185546875
+replicate 3 of 5, seed 1002
+starting rung0 and rung1
+W1104 00:15:35.532000 2918 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:30,  5.53it/s]Loading weights:  35%|███▌      | 61/173 [00:01<00:01, 80.17it/s]Loading weights:  53%|█████▎    | 92/173 [00:01<00:01, 75.21it/s]Loading weights:  65%|██████▍   | 112/173 [00:01<00:00, 69.82it/s]Loading weights:  73%|███████▎  | 127/173 [00:01<00:00, 73.05it/s]Loading weights:  81%|████████  | 140/173 [00:02<00:00, 72.22it/s]Loading weights:  87%|████████▋ | 151/173 [00:02<00:00, 73.60it/s]Loading weights:  93%|█████████▎| 161/173 [00:02<00:00, 74.16it/s]Loading weights:  99%|█████████▉| 171/173 [00:02<00:00, 77.94it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 68.20it/s]
+W1104 00:15:40.289000 3126 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  33%|███▎      | 57/173 [00:00<00:00, 530.75it/s]Loading weights:  64%|██████▍   | 111/173 [00:00<00:00, 495.40it/s]Loading weights:  93%|█████████▎| 161/173 [00:00<00:00, 346.34it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 395.52it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung1/replicate_2.json. valid: true. checked 3846 replies, worst logit difference 0.0000514984130859375
+replicate 4 of 5, seed 1003
+starting rung0 and rung1
+W1104 00:25:34.851000 25910 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:32,  5.22it/s]Loading weights:  36%|███▋      | 63/173 [00:01<00:01, 71.58it/s]Loading weights:  47%|████▋     | 82/173 [00:01<00:01, 72.90it/s]Loading weights:  55%|█████▌    | 96/173 [00:01<00:01, 74.22it/s]Loading weights:  62%|██████▏   | 108/173 [00:01<00:00, 75.10it/s]Loading weights:  68%|██████▊   | 118/173 [00:01<00:00, 69.47it/s]Loading weights:  73%|███████▎  | 127/173 [00:02<00:00, 69.88it/s]Loading weights:  79%|███████▊  | 136/173 [00:02<00:00, 66.27it/s]Loading weights:  85%|████████▍ | 147/173 [00:02<00:00, 70.96it/s]Loading weights:  92%|█████████▏| 159/173 [00:02<00:00, 69.93it/s]Loading weights:  98%|█████████▊| 169/173 [00:02<00:00, 75.23it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 65.10it/s]
+W1104 00:25:39.869000 26100 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:07, 23.66it/s]Loading weights:  61%|██████    | 105/173 [00:00<00:00, 358.90it/s]Loading weights:  92%|█████████▏| 159/173 [00:00<00:00, 417.03it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 368.26it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung1/replicate_3.json. valid: true. checked 3846 replies, worst logit difference 0.0000514984130859375
+  thermal state fair, waiting
+replicate 5 of 5, seed 1004
+starting rung0 and rung1
+W1104 00:37:52.178000 63444 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:31,  5.40it/s]Loading weights:  40%|███▉      | 69/173 [00:01<00:01, 88.09it/s]Loading weights:  59%|█████▉    | 102/173 [00:01<00:00, 82.62it/s]Loading weights:  71%|███████   | 123/173 [00:01<00:00, 86.32it/s]Loading weights:  81%|████████  | 140/173 [00:01<00:00, 94.95it/s]Loading weights:  90%|█████████ | 156/173 [00:01<00:00, 98.05it/s]Loading weights:  98%|█████████▊| 170/173 [00:02<00:00, 101.60it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 81.98it/s] 
+W1104 00:37:56.632000 63654 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:04, 38.79it/s]Loading weights:  57%|█████▋    | 99/173 [00:00<00:00, 436.63it/s]Loading weights:  83%|████████▎ | 143/173 [00:00<00:00, 399.06it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 384.65it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung1/replicate_4.json. valid: true. checked 3846 replies, worst logit difference 0.0000457763671875
+done: 5 replicates in results/bench/t1/rung1
+== rung3, 23:48:16Z
+  thermal state fair, waiting
+replicate 1 of 5, seed 1000
+starting rung0 and rung3
+W1104 00:48:50.036000 94526 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:32,  5.22it/s]Loading weights:  36%|███▋      | 63/173 [00:01<00:01, 73.64it/s]Loading weights:  49%|████▉     | 85/173 [00:01<00:01, 83.21it/s]Loading weights:  59%|█████▉    | 102/173 [00:01<00:00, 83.38it/s]Loading weights:  67%|██████▋   | 116/173 [00:01<00:00, 83.74it/s]Loading weights:  74%|███████▍  | 128/173 [00:01<00:00, 84.69it/s]Loading weights:  80%|████████  | 139/173 [00:02<00:00, 75.48it/s]Loading weights:  86%|████████▌ | 148/173 [00:02<00:00, 73.12it/s]Loading weights:  92%|█████████▏| 159/173 [00:02<00:00, 75.19it/s]Loading weights:  98%|█████████▊| 169/173 [00:02<00:00, 80.29it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 71.32it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung3/replicate_0.json. valid: true. checked 3846 replies, worst logit difference 0.00047397613525390625
+replicate 2 of 5, seed 1001
+starting rung0 and rung3
+W1104 01:00:41.027000 21954 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:31,  5.38it/s]Loading weights:  36%|███▋      | 63/173 [00:01<00:01, 74.04it/s]Loading weights:  48%|████▊     | 83/173 [00:01<00:01, 75.10it/s]Loading weights:  56%|█████▌    | 97/173 [00:01<00:01, 74.69it/s]Loading weights:  63%|██████▎   | 109/173 [00:01<00:00, 74.96it/s]Loading weights:  69%|██████▉   | 119/173 [00:01<00:00, 74.61it/s]Loading weights:  75%|███████▍  | 129/173 [00:02<00:00, 70.65it/s]Loading weights:  80%|███████▉  | 138/173 [00:02<00:00, 74.00it/s]Loading weights:  85%|████████▍ | 147/173 [00:02<00:00, 71.49it/s]Loading weights:  92%|█████████▏| 159/173 [00:02<00:00, 73.52it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 69.03it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung3/replicate_1.json. valid: true. checked 3846 replies, worst logit difference 0.0001049041748046875
+replicate 3 of 5, seed 1002
+starting rung0 and rung3
+W1104 01:12:23.518000 48664 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:31,  5.28it/s]Loading weights:  36%|███▋      | 63/173 [00:01<00:01, 75.30it/s]Loading weights:  50%|████▉     | 86/173 [00:01<00:01, 79.30it/s]Loading weights:  60%|█████▉    | 103/173 [00:01<00:00, 75.89it/s]Loading weights:  67%|██████▋   | 116/173 [00:01<00:00, 77.51it/s]Loading weights:  73%|███████▎  | 127/173 [00:01<00:00, 75.10it/s]Loading weights:  79%|███████▉  | 137/173 [00:02<00:00, 70.87it/s]Loading weights:  85%|████████▍ | 147/173 [00:02<00:00, 71.54it/s]Loading weights:  90%|█████████ | 156/173 [00:02<00:00, 73.02it/s]Loading weights:  95%|█████████▌| 165/173 [00:02<00:00, 71.24it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 68.47it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung3/replicate_2.json. valid: true. checked 3846 replies, worst logit difference 0.000293731689453125
+replicate 4 of 5, seed 1003
+starting rung0 and rung3
+W1104 01:24:22.282000 75997 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:30,  5.51it/s]Loading weights:  36%|███▋      | 63/173 [00:01<00:01, 74.13it/s]Loading weights:  47%|████▋     | 81/173 [00:01<00:01, 73.08it/s]Loading weights:  54%|█████▍    | 94/173 [00:01<00:01, 73.55it/s]Loading weights:  61%|██████    | 105/173 [00:01<00:00, 75.47it/s]Loading weights:  66%|██████▋   | 115/173 [00:01<00:00, 77.55it/s]Loading weights:  72%|███████▏  | 125/173 [00:01<00:00, 74.88it/s]Loading weights:  77%|███████▋  | 134/173 [00:02<00:00, 76.84it/s]Loading weights:  83%|████████▎ | 143/173 [00:02<00:00, 73.79it/s]Loading weights:  88%|████████▊ | 153/173 [00:02<00:00, 71.03it/s]Loading weights:  95%|█████████▌| 165/173 [00:02<00:00, 78.83it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 69.54it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung3/replicate_3.json. valid: true. checked 3846 replies, worst logit difference 0.0003299713134765625
+  thermal state fair, waiting
+replicate 5 of 5, seed 1004
+starting rung0 and rung3
+W1104 01:36:50.722000 4654 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:32,  5.23it/s]Loading weights:  35%|███▌      | 61/173 [00:01<00:01, 76.72it/s]Loading weights:  54%|█████▍    | 93/173 [00:01<00:01, 69.26it/s]Loading weights:  65%|██████▌   | 113/173 [00:01<00:00, 71.39it/s]Loading weights:  75%|███████▍  | 129/173 [00:02<00:00, 70.02it/s]Loading weights:  82%|████████▏ | 142/173 [00:02<00:00, 72.80it/s]Loading weights:  88%|████████▊ | 153/173 [00:02<00:00, 73.69it/s]Loading weights:  95%|█████████▌| 165/173 [00:02<00:00, 76.45it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 67.48it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung3/replicate_4.json. valid: true. checked 3846 replies, worst logit difference 0.00047397613525390625
+done: 5 replicates in results/bench/t1/rung3
+== rung2, 00:48:49Z
+replicate 1 of 5, seed 1000
+starting rung0 and rung2
+W1104 01:48:52.992000 32105 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:31,  5.41it/s]Loading weights:  36%|███▋      | 63/173 [00:01<00:01, 75.18it/s]Loading weights:  49%|████▊     | 84/173 [00:01<00:01, 77.28it/s]Loading weights:  57%|█████▋    | 99/173 [00:01<00:01, 72.38it/s]Loading weights:  64%|██████▍   | 111/173 [00:01<00:00, 70.70it/s]Loading weights:  71%|███████   | 123/173 [00:01<00:00, 74.25it/s]Loading weights:  77%|███████▋  | 133/173 [00:02<00:00, 78.64it/s]Loading weights:  83%|████████▎ | 143/173 [00:02<00:00, 77.25it/s]Loading weights:  88%|████████▊ | 153/173 [00:02<00:00, 70.61it/s]Loading weights:  95%|█████████▌| 165/173 [00:02<00:00, 73.81it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 68.60it/s]
+W1104 01:48:57.728000 32318 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:04, 40.73it/s]Loading weights:  57%|█████▋    | 99/173 [00:00<00:00, 515.05it/s]Loading weights:  90%|████████▉ | 155/173 [00:00<00:00, 422.99it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 302.32it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung2/replicate_0.json. valid: true. checked 3846 replies, worst logit difference 0.0002384185791015625
+replicate 2 of 5, seed 1001
+starting rung0 and rung2
+W1104 01:59:26.191000 56202 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:29,  5.72it/s]Loading weights:  35%|███▌      | 61/173 [00:00<00:01, 82.92it/s]Loading weights:  54%|█████▍    | 93/173 [00:01<00:01, 71.83it/s]Loading weights:  65%|██████▌   | 113/173 [00:01<00:00, 73.37it/s]Loading weights:  75%|███████▍  | 129/173 [00:01<00:00, 73.11it/s]Loading weights:  82%|████████▏ | 142/173 [00:02<00:00, 72.05it/s]Loading weights:  88%|████████▊ | 153/173 [00:02<00:00, 69.86it/s]Loading weights:  95%|█████████▌| 165/173 [00:02<00:00, 72.61it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 68.06it/s]
+W1104 01:59:30.678000 56406 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  33%|███▎      | 57/173 [00:00<00:00, 426.98it/s]Loading weights:  58%|█████▊    | 100/173 [00:00<00:00, 355.09it/s]Loading weights:  79%|███████▊  | 136/173 [00:00<00:00, 241.84it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 302.65it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung2/replicate_1.json. valid: true. checked 3846 replies, worst logit difference 0.00014400482177734375
+replicate 3 of 5, seed 1002
+starting rung0 and rung2
+W1104 02:09:40.122000 79627 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:30,  5.45it/s]Loading weights:  36%|███▋      | 63/173 [00:01<00:01, 73.42it/s]Loading weights:  47%|████▋     | 81/173 [00:01<00:01, 74.49it/s]Loading weights:  55%|█████▍    | 95/173 [00:01<00:01, 75.98it/s]Loading weights:  62%|██████▏   | 107/173 [00:01<00:00, 77.04it/s]Loading weights:  68%|██████▊   | 118/173 [00:01<00:00, 72.31it/s]Loading weights:  73%|███████▎  | 127/173 [00:01<00:00, 75.47it/s]Loading weights:  79%|███████▊  | 136/173 [00:02<00:00, 71.65it/s]Loading weights:  84%|████████▍ | 145/173 [00:02<00:00, 72.83it/s]Loading weights:  88%|████████▊ | 153/173 [00:02<00:00, 69.07it/s]Loading weights:  95%|█████████▌| 165/173 [00:02<00:00, 70.11it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 67.80it/s]
+W1104 02:09:44.796000 79827 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  43%|████▎     | 75/173 [00:00<00:00, 334.26it/s]Loading weights:  63%|██████▎   | 109/173 [00:00<00:00, 297.27it/s]Loading weights:  82%|████████▏ | 141/173 [00:00<00:00, 301.63it/s]Loading weights:  99%|█████████▉| 171/173 [00:00<00:00, 283.01it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 295.10it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung2/replicate_2.json. valid: true. checked 3846 replies, worst logit difference 0.0002765655517578125
+replicate 4 of 5, seed 1003
+starting rung0 and rung2
+W1104 02:19:54.688000 3486 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:31,  5.36it/s]Loading weights:  36%|███▋      | 63/173 [00:01<00:01, 76.49it/s]Loading weights:  50%|████▉     | 86/173 [00:01<00:01, 80.22it/s]Loading weights:  60%|█████▉    | 103/173 [00:01<00:00, 75.40it/s]Loading weights:  67%|██████▋   | 116/173 [00:01<00:00, 77.29it/s]Loading weights:  74%|███████▍  | 128/173 [00:01<00:00, 76.24it/s]Loading weights:  80%|███████▉  | 138/173 [00:02<00:00, 74.41it/s]Loading weights:  85%|████████▍ | 147/173 [00:02<00:00, 69.54it/s]Loading weights:  92%|█████████▏| 159/173 [00:02<00:00, 68.99it/s]Loading weights:  99%|█████████▉| 171/173 [00:02<00:00, 77.12it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 68.63it/s]
+W1104 02:19:59.181000 3659 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  46%|████▌     | 79/173 [00:00<00:00, 767.42it/s]Loading weights:  90%|█████████ | 156/173 [00:00<00:00, 351.79it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 375.79it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung2/replicate_3.json. valid: true. checked 3846 replies, worst logit difference 0.0002384185791015625
+replicate 5 of 5, seed 1004
+starting rung0 and rung2
+W1104 02:30:03.790000 26710 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:32,  5.22it/s]Loading weights:  36%|███▋      | 63/173 [00:01<00:01, 72.89it/s]Loading weights:  48%|████▊     | 83/173 [00:01<00:01, 76.66it/s]Loading weights:  57%|█████▋    | 98/173 [00:01<00:00, 75.79it/s]Loading weights:  64%|██████▎   | 110/173 [00:01<00:00, 74.85it/s]Loading weights:  70%|██████▉   | 121/173 [00:01<00:00, 72.97it/s]Loading weights:  75%|███████▌  | 130/173 [00:02<00:00, 69.87it/s]Loading weights:  80%|████████  | 139/173 [00:02<00:00, 70.72it/s]Loading weights:  85%|████████▍ | 147/173 [00:02<00:00, 70.55it/s]Loading weights:  92%|█████████▏| 159/173 [00:02<00:00, 75.26it/s]Loading weights:  99%|█████████▉| 171/173 [00:02<00:00, 84.80it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 68.51it/s]
+W1104 02:30:08.618000 26915 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  43%|████▎     | 75/173 [00:00<00:00, 746.05it/s]Loading weights:  87%|████████▋ | 150/173 [00:00<00:00, 700.87it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 679.11it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/t1/rung2/replicate_4.json. valid: true. checked 3846 replies, worst logit difference 0.0002574920654296875
+done: 5 replicates in results/bench/t1/rung2
+== rung6, 01:40:12Z
+replicate 1 of 5, seed 1000
+starting rung0 and rung6
+W1104 02:40:15.971000 50046 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:31,  5.30it/s]Loading weights:  35%|███▌      | 61/173 [00:01<00:01, 78.23it/s]Loading weights:  55%|█████▍    | 95/173 [00:01<00:01, 75.10it/s]Loading weights:  68%|██████▊   | 117/173 [00:01<00:00, 73.62it/s]Loading weights:  77%|███████▋  | 133/173 [00:02<00:00, 76.13it/s]Loading weights:  85%|████████▍ | 147/173 [00:02<00:00, 71.65it/s]Loading weights:  91%|█████████▏| 158/173 [00:02<00:00, 76.31it/s]Loading weights:  98%|█████████▊| 169/173 [00:02<00:00, 74.26it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 68.03it/s]
+cycle 1 of 8 done
+cycle 2 of 8 done
+cycle 3 of 8 done
+cycle 4 of 8 done
+cycle 5 of 8 done
+cycle 6 of 8 done
+cycle 7 of 8 done
+cycle 8 of 8 done
+wrote results/bench/t1/rung6/replicate_0.json. valid: true. checked 34 replies, worst logit difference 0.000026702880859375
+replicate 2 of 5, seed 1001
+starting rung0 and rung6
+W1104 02:47:04.847000 65629 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:30,  5.50it/s]Loading weights:  35%|███▌      | 61/173 [00:01<00:01, 80.61it/s]Loading weights:  54%|█████▍    | 94/173 [00:01<00:01, 73.66it/s]Loading weights:  66%|██████▋   | 115/173 [00:01<00:00, 76.46it/s]Loading weights:  76%|███████▌  | 131/173 [00:01<00:00, 74.92it/s]Loading weights:  83%|████████▎ | 144/173 [00:02<00:00, 75.18it/s]Loading weights:  90%|████████▉ | 155/173 [00:02<00:00, 72.87it/s]Loading weights:  95%|█████████▌| 165/173 [00:02<00:00, 70.25it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 68.79it/s]
+cycle 1 of 8 done
+cycle 2 of 8 done
+cycle 3 of 8 done
+cycle 4 of 8 done
+cycle 5 of 8 done
+cycle 6 of 8 done
+cycle 7 of 8 done
+cycle 8 of 8 done
+wrote results/bench/t1/rung6/replicate_1.json. valid: true. checked 34 replies, worst logit difference 0.0000209808349609375
+replicate 3 of 5, seed 1002
+starting rung0 and rung6
+W1104 02:54:10.110000 81830 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:29,  5.67it/s]Loading weights:  35%|███▌      | 61/173 [00:01<00:01, 80.37it/s]Loading weights:  51%|█████▏    | 89/173 [00:01<00:01, 76.18it/s]Loading weights:  62%|██████▏   | 107/173 [00:01<00:00, 75.86it/s]Loading weights:  70%|██████▉   | 121/173 [00:01<00:00, 75.96it/s]Loading weights:  77%|███████▋  | 133/173 [00:01<00:00, 74.20it/s]Loading weights:  83%|████████▎ | 143/173 [00:02<00:00, 71.97it/s]Loading weights:  88%|████████▊ | 152/173 [00:02<00:00, 74.65it/s]Loading weights:  93%|█████████▎| 161/173 [00:02<00:00, 69.62it/s]Loading weights:  99%|█████████▉| 171/173 [00:02<00:00, 75.23it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 68.64it/s]
+cycle 1 of 8 done
+cycle 2 of 8 done
+cycle 3 of 8 done
+cycle 4 of 8 done
+cycle 5 of 8 done
+cycle 6 of 8 done
+cycle 7 of 8 done
+cycle 8 of 8 done
+wrote results/bench/t1/rung6/replicate_2.json. valid: true. checked 34 replies, worst logit difference 0.000026702880859375
+replicate 4 of 5, seed 1003
+starting rung0 and rung6
+W1104 03:01:12.429000 97902 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:30,  5.58it/s]Loading weights:  35%|███▌      | 61/173 [00:01<00:01, 80.36it/s]Loading weights:  53%|█████▎    | 91/173 [00:01<00:01, 74.74it/s]Loading weights:  64%|██████▍   | 111/173 [00:01<00:00, 72.17it/s]Loading weights:  73%|███████▎  | 126/173 [00:01<00:00, 75.09it/s]Loading weights:  80%|████████  | 139/173 [00:02<00:00, 75.77it/s]Loading weights:  87%|████████▋ | 150/173 [00:02<00:00, 74.24it/s]Loading weights:  92%|█████████▏| 160/173 [00:02<00:00, 69.13it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 68.64it/s]
+cycle 1 of 8 done
+cycle 2 of 8 done
+cycle 3 of 8 done
+cycle 4 of 8 done
+cycle 5 of 8 done
+cycle 6 of 8 done
+cycle 7 of 8 done
+cycle 8 of 8 done
+wrote results/bench/t1/rung6/replicate_3.json. valid: true. checked 34 replies, worst logit difference 0.0000247955322265625
+replicate 5 of 5, seed 1004
+starting rung0 and rung6
+W1104 03:08:25.691000 15208 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:32,  5.18it/s]Loading weights:  35%|███▌      | 61/173 [00:01<00:01, 75.21it/s]Loading weights:  52%|█████▏    | 90/173 [00:01<00:01, 72.17it/s]Loading weights:  63%|██████▎   | 109/173 [00:01<00:00, 71.65it/s]Loading weights:  72%|███████▏  | 124/173 [00:01<00:00, 71.16it/s]Loading weights:  79%|███████▊  | 136/173 [00:02<00:00, 74.99it/s]Loading weights:  85%|████████▍ | 147/173 [00:02<00:00, 77.64it/s]Loading weights:  92%|█████████▏| 159/173 [00:02<00:00, 82.81it/s]Loading weights:  98%|█████████▊| 170/173 [00:02<00:00, 86.22it/s]Loading weights: 100%|██████████| 173/173 [00:02<00:00, 69.01it/s]
+cycle 1 of 8 done
+cycle 2 of 8 done
+cycle 3 of 8 done
+cycle 4 of 8 done
+cycle 5 of 8 done
+cycle 6 of 8 done
+cycle 7 of 8 done
+cycle 8 of 8 done
+wrote results/bench/t1/rung6/replicate_4.json. valid: true. checked 34 replies, worst logit difference 0.0000324249267578125
+done: 5 replicates in results/bench/t1/rung6
+== session done, 02:15:27Z
