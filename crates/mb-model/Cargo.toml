@@ -24,3 +24,8 @@ expf = ["fused"]
 # `cblas_sgemm` per head, as PyTorch's CPU attention does, instead of rung
 # 8's hand loops. Built on rung 9.
 attention-sgemm = ["expf"]
+# Rung 11: the work outside the big matmuls (attention per head, the norms,
+# the residual adds and the GELU gate) is split across `MB_THREADS` threads,
+# as PyTorch splits it across its OpenMP pool. Built on rung 10, with the
+# same arithmetic.
+threads = ["attention-sgemm"]

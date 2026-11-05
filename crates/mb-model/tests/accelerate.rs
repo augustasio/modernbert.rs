@@ -22,7 +22,9 @@ fn filled(rows: usize, cols: usize, seed: u32) -> Matrix {
 
 #[test]
 fn the_build_reports_accelerate() {
-    let want = if cfg!(feature = "attention-sgemm") {
+    let want = if cfg!(feature = "threads") {
+        "accelerate-fused-expf-attention-sgemm-threads"
+    } else if cfg!(feature = "attention-sgemm") {
         "accelerate-fused-expf-attention-sgemm"
     } else if cfg!(feature = "expf") {
         "accelerate-fused-expf"

@@ -51,6 +51,9 @@ use crate::rope::RopeTable;
 use crate::safetensors::TensorError;
 use crate::tensor::Matrix;
 
+#[cfg(feature = "threads")]
+mod threads;
+
 /// Where in the forward pass an activation was observed. The tier-2 tests
 /// turn it into the reference dump's checkpoint name.
 ///
@@ -91,9 +94,13 @@ pub struct Workspace {
     value: Vec<f32>,
     /// Rungs 8 and 9: one query's scores, then its probabilities, at most
     /// `seq` long. Rung 10: one head's scores for every query, `[seq, seq]`.
+    /// Rung 11: one `[seq, seq]` block per thread.
     scores: Vec<f32>,
     /// The attention output before `Wo`, `[seq, hidden]`.
     context: Matrix,
+    /// Rung 11: each head's attention output, `[heads, seq, head_dim]`,
+    /// before it is copied into `context`. Empty before rung 11.
+    context_heads: Vec<f32>,
     /// An output projection, `Wo` of attention or of the feed-forward,
     /// before it is added to `h`. `[seq, hidden]`.
     projection: Matrix,
@@ -111,6 +118,9 @@ pub struct Workspace {
     logits: Matrix,
     num_heads: usize,
     head_dim: usize,
+    /// How many threads rung 11 splits the work across. Earlier rungs
+    /// ignore it.
+    threads: usize,
 }
 
 impl Workspace {
@@ -128,6 +138,7 @@ impl Workspace {
             value: Vec::new(),
             scores: Vec::new(),
             context: Matrix::zeros(0, hidden),
+            context_heads: Vec::new(),
             projection: Matrix::zeros(0, hidden),
             projected: Matrix::zeros(0, 2 * intermediate),
             gated: Matrix::zeros(0, intermediate),
@@ -139,6 +150,7 @@ impl Workspace {
             logits: Matrix::zeros(1, 4),
             num_heads: config.num_attention_heads,
             head_dim: config.head_dim(),
+            threads: 1,
         };
         ws.set_seq_len(max_seq);
         ws
@@ -162,12 +174,26 @@ impl Workspace {
         self.query.resize(per_head, 0.0);
         self.key.resize(per_head, 0.0);
         self.value.resize(per_head, 0.0);
-        let scores = if cfg!(feature = "attention-sgemm") {
+        let scores = if cfg!(feature = "threads") {
+            self.threads * seq * seq
+        } else if cfg!(feature = "attention-sgemm") {
             seq * seq
         } else {
             seq
         };
         self.scores.resize(scores, 0.0);
+        if cfg!(feature = "threads") {
+            self.context_heads.resize(per_head, 0.0);
+        }
+    }
+
+    /// Split rung 11's work across `threads` threads. Earlier rungs run on
+    /// one thread whatever this says. Call it before the first forward pass:
+    /// it resizes the score buffers, which allocates.
+    pub fn set_threads(&mut self, threads: usize) {
+        assert!(threads >= 1, "at least one thread");
+        self.threads = threads;
+        self.set_seq_len(self.h.rows);
     }
 
     /// Put `h` in the residual stream, for a test that runs one layer on
@@ -216,11 +242,12 @@ impl ModernBert {
             }
             ws.normed.row_mut(row).copy_from_slice(table.row(id));
         }
-        layer_norm_into(
+        norm_rows(
             &ws.normed,
             &self.embeddings.norm_weight,
             self.embeddings.eps,
             &mut ws.h,
+            ws.threads,
         );
         observe(Point::Embeddings, &ws.h);
 
@@ -229,7 +256,13 @@ impl ModernBert {
             observe(Point::Layer(i), &ws.h);
         }
 
-        layer_norm_into(&ws.h, &self.final_norm, c.norm_eps, &mut ws.normed);
+        norm_rows(
+            &ws.h,
+            &self.final_norm,
+            c.norm_eps,
+            &mut ws.normed,
+            ws.threads,
+        );
         observe(Point::FinalNorm, &ws.normed);
         Ok(())
     }
@@ -295,11 +328,21 @@ impl ModernBert {
         Ok(())
     }
 
-    /// Encoder layer `index` on `ws.h`, in place.
+    /// Encoder layer `index` on `ws.h`, in place: rung 11's threaded layer
+    /// in a rung 11 build, [`ModernBert::layer_serial`] before that.
     ///
     /// Public, like [`ModernBert::layer`], so a test can feed one layer
     /// PyTorch's own input. `ws.h` must already hold that input.
     pub fn layer_fused(&self, index: usize, ws: &mut Workspace) {
+        #[cfg(feature = "threads")]
+        self.layer_threaded(index, ws);
+        #[cfg(not(feature = "threads"))]
+        self.layer_serial(index, ws);
+    }
+
+    /// Rungs 8 to 10's encoder layer, on one thread apart from the matmuls.
+    /// Public so that a test can hold rung 11's layer against it.
+    pub fn layer_serial(&self, index: usize, ws: &mut Workspace) {
         let c = &self.config;
         let layer = &self.layers[index];
         let attn = &layer.attn;
@@ -558,14 +601,30 @@ fn attend_sgemm(ws: &mut Workspace, window: Option<usize>, scale: f32) {
 /// The first half of each row is the input, the second the gate, as in
 /// `Mlp::forward`, whose arithmetic this repeats.
 fn gelu_gate(projected: &Matrix, gated: &mut Matrix) {
-    let intermediate = gated.cols;
     gated.resize_rows(projected.rows);
     for row in 0..projected.rows {
-        let (input, gate) = projected.row(row).split_at(intermediate);
-        let out = gated.row_mut(row);
-        for i in 0..intermediate {
-            out[i] = gelu_erf(input[i]) * gate[i];
-        }
+        gelu_gate_row(projected.row(row), gated.row_mut(row));
+    }
+}
+
+/// One row of [`gelu_gate`]: `projected` is the input then the gate.
+fn gelu_gate_row(projected: &[f32], out: &mut [f32]) {
+    let intermediate = out.len();
+    let (input, gate) = projected.split_at(intermediate);
+    for i in 0..intermediate {
+        out[i] = gelu_erf(input[i]) * gate[i];
+    }
+}
+
+/// LayerNorm of every row: by blocks of rows across threads in rung 11,
+/// one row after another before it. The same arithmetic either way.
+fn norm_rows(input: &Matrix, weight: &[f32], eps: f32, out: &mut Matrix, threads: usize) {
+    #[cfg(feature = "threads")]
+    threads::layer_norm_rows(input, weight, eps, out, threads);
+    #[cfg(not(feature = "threads"))]
+    {
+        let _ = threads;
+        layer_norm_into(input, weight, eps, out);
     }
 }
 

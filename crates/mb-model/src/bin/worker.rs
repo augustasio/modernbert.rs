@@ -1,10 +1,11 @@
-//! The benchmark worker for rungs 6 to 10. See `crates/mb-harness/PROTOCOL.md`.
+//! The benchmark worker for rungs 6 to 11. See `crates/mb-harness/PROTOCOL.md`.
 //!
-//! One binary serves all five. Built normally it is rung 6, the naive loop;
+//! One binary serves all six. Built normally it is rung 6, the naive loop;
 //! built with `--features accelerate` it is rung 7; with `--features fused`
 //! it is rung 8, the fused forward pass; with `--features expf` it is rung 9,
 //! rung 8 with f32 `exp`; with `--features attention-sgemm` it is rung 10,
-//! rung 9 with the attention products in `cblas_sgemm`. It names itself from the backend it
+//! rung 9 with the attention products in `cblas_sgemm`; with `--features
+//! threads` it is rung 11, rung 10 split across `MB_THREADS` threads. It names itself from the backend it
 //! was compiled with, so the harness records which one it ran.
 
 use std::io::{BufRead, Write};
@@ -30,6 +31,7 @@ fn main() {
     let load_seconds = start.elapsed().as_secs_f64();
 
     let variant = match backend() {
+        "accelerate-fused-expf-attention-sgemm-threads" => "rung11",
         "accelerate-fused-expf-attention-sgemm" => "rung10",
         "accelerate-fused-expf" => "rung9",
         "accelerate-fused" => "rung8",
@@ -39,6 +41,9 @@ fn main() {
     // Rung 8's buffers. Built once here, outside any timed call, and sized
     // past the longest AG News prompt so no request grows them.
     let mut workspace = Workspace::new(model.config(), 512);
+    // Rung 11 splits its work across the same thread count as every other
+    // rung gets. Earlier rungs ignore it.
+    workspace.set_threads(threads as usize);
     let mut out = std::io::stdout().lock();
     send(
         &mut out,

@@ -633,3 +633,15 @@ Changes to the plan made after seeing data, with the reason.
   order, so rung 10 is not bit-identical to rung 9 and the fused-equals-plain test is
   off for it. Tier 2: worst stack error 8.2e-5 of peak (rung 9: 6.1e-5; bound 3e-4).
   Tier 3: 7600/7600 agreement, max logit difference 4.6e-4 (rung 9: 2.5e-4; bound 1e-3).
+- **Rung 11 splits the work outside the big matmuls across threads.** Attention is split
+  by head: each thread scatters, rotates and attends its own heads, with its own score
+  buffer. The norms, the residual adds and the GELU gate are split by blocks of rows. The
+  thread count is `MB_THREADS`, the same one every rung gets (feature `threads`,
+  `fused/threads.rs`). This is how PyTorch spreads the same work over its OpenMP pool. The
+  threads are `std::thread::scope`, started and joined five times a layer, because a pool
+  kept alive between calls needs a dependency or `unsafe`. So with more than one thread a
+  forward pass allocates again (thread spawns); with one it still allocates nothing. Each
+  head now writes its own `[seq, 64]` block, copied into the context afterwards, because
+  the heads' columns of the context interleave. The arithmetic is rung 10's: every layer
+  is bit-identical to rung 10's at 1, 3 and 4 threads, and all 7,600 Tier 3 logits are
+  bit-identical to rung 10's.

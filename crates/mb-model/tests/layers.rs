@@ -445,3 +445,81 @@ fn the_fused_path_is_bit_identical_to_the_plain_one() {
         assert_eq!(fused_logits, plain_logits, "{name}: the logits differ");
     }
 }
+
+/// Rung 11 splits rung 10's layer across threads without changing a sum: each
+/// row and each head is computed by the same code in the same order. So every
+/// layer's output must equal rung 10's to the bit, with 1, 3 and 4 threads (3
+/// does not divide the 16 heads evenly), and so must the logits. The
+/// 963-token fixture makes the row blocks and the score buffers large.
+#[test]
+#[cfg(feature = "threads")]
+fn the_threaded_layer_is_bit_identical_to_rung_10s() {
+    let (fixtures, verbalizers) = fixtures();
+    let m = model();
+    for name in [
+        "near_empty",
+        "shortest_real",
+        "multi_space",
+        "synthetic_600",
+    ] {
+        let f = fixtures
+            .iter()
+            .find(|f| f.name == name)
+            .unwrap_or_else(|| panic!("no fixture {name}"));
+        let seq = f.token_ids.len();
+
+        // Rung 10: the serial layer, on one thread.
+        let mut serial = Workspace::new(m.config(), seq);
+        let mut embeddings = None;
+        m.encode_fused(&f.token_ids, &mut serial, |point, h| {
+            if point == mb_model::fused::Point::Embeddings {
+                embeddings = Some(h.clone());
+            }
+        })
+        .expect("the forward pass must run");
+        let embeddings = embeddings.expect("the embeddings checkpoint");
+        serial.set_residual(&embeddings);
+        let mut expected = Vec::new();
+        for i in 0..m.config().num_hidden_layers {
+            m.layer_serial(i, &mut serial);
+            expected.push(serial.residual().clone());
+        }
+        let mut serial_logits = vec![0.0f32; verbalizers.len()];
+        let mut one = Workspace::new(m.config(), seq);
+        m.logits_for_tokens_fused(
+            &f.token_ids,
+            f.mask_position,
+            &verbalizers,
+            &mut one,
+            &mut serial_logits,
+        )
+        .expect("the forward pass must run");
+
+        for threads in [1, 3, 4] {
+            let mut ws = Workspace::new(m.config(), seq);
+            ws.set_threads(threads);
+            ws.set_residual(&embeddings);
+            for (i, want) in expected.iter().enumerate() {
+                m.layer_fused(i, &mut ws);
+                assert!(
+                    ws.residual() == want,
+                    "{name}, {threads} threads: layer {i} differs, max abs {:.3e}",
+                    ws.residual().max_abs_diff(want)
+                );
+            }
+            let mut logits = vec![0.0f32; verbalizers.len()];
+            m.logits_for_tokens_fused(
+                &f.token_ids,
+                f.mask_position,
+                &verbalizers,
+                &mut ws,
+                &mut logits,
+            )
+            .expect("the forward pass must run");
+            assert_eq!(
+                logits, serial_logits,
+                "{name}, {threads} threads: the logits differ"
+            );
+        }
+    }
+}

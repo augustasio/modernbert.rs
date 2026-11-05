@@ -16,6 +16,8 @@
 //!     weights/ModernBERT-Large-Instruct data/agnews_test_prompt_ids.tsv \
 //!     results/rung7_logits.npy
 //! ```
+//!
+//! Rung 11 reads `MB_THREADS` for its thread count, 1 if unset.
 
 use std::io::Write;
 use std::path::Path;
@@ -57,6 +59,16 @@ fn main() {
     });
 
     let mut workspace = Workspace::new(model.config(), 512);
+    // Rung 11 splits its work across `MB_THREADS` threads, 1 if unset.
+    // Earlier rungs ignore it. The logits do not depend on it.
+    let threads = match std::env::var("MB_THREADS") {
+        Ok(t) => t.parse().unwrap_or_else(|_| {
+            eprintln!("MB_THREADS is {t:?}, not a thread count");
+            std::process::exit(2);
+        }),
+        Err(_) => 1,
+    };
+    workspace.set_threads(threads);
     let start = Instant::now();
     let mut logits = Vec::with_capacity(examples.len() * VERBALIZER_IDS.len());
     for (n, ids) in examples.iter().enumerate() {
