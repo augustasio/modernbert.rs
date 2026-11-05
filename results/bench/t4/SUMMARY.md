@@ -7,7 +7,8 @@ was added later, on 2026-11-02, 21:01 to 22:05 UTC, at commit 693078e, in the sa
 setup. Rung 9 was added on 2026-11-04 in two sittings, 08:02 to 08:36 and 19:21 to
 19:43 UTC, at commit 3133da8, with the resumable runner. Rung 10 was added on
 2026-11-05, 00:31 to 01:26 UTC, at commit e3b9a66, and rung 11 the same day, 08:04 to
-08:50 UTC, at commit 9f46fbd. All 60 replicates passed the in-run correctness check. Intervals are 95%, from the two-stage
+08:50 UTC, at commit 9f46fbd. Rung 12 was added on 2026-11-05, 19:12 to 19:58 UTC,
+at commit 465c39e. All 65 replicates passed the in-run correctness check. Intervals are 95%, from the two-stage
 bootstrap in `python/analyze_bench.py`. The table comes from `python/bench_table.py`.
 
 Speedup is rung 0 time over the variant's time: above 1 is faster than rung 0. The energy
@@ -27,6 +28,7 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 | 9: + f32 exp | 0.734 [0.715, 0.756] | 189 [185, 199] | 320 [272, 374] | 0.838 [0.817, 0.859] | 3.9 [3.76, 3.98] | 0.725 [0.71, 0.742] (123) |
 | 10: + attention in sgemm | 0.969 [0.951, 0.997] | 146 [144, 151] | 364 [219, 682] | 1.14 [1.1, 1.17] | 3.88 [3.74, 3.95] | 0.954 [0.942, 0.967] (18) |
 | 11: + threads outside matmul | 1.14 [1.11, 1.16] | 116 [111, 120] | 323 [184, 486] | 1.13 [1.09, 1.16] | 3.81 [3.7, 3.91] | 1.12 [0.989, 1.16] (25) |
+| 12: + f32 erf, norms, softmax sum | 1.22 [1.2, 1.25] | 110 [107, 117] | 292 [180, 387] | 1.23 [1.21, 1.26] | 3.8 [3.7, 3.88] | 1.22 [1.2, 1.24] (30) |
 
 ## Notes
 
@@ -64,6 +66,13 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
   1.17x over rung 10. Rung 11 is now level with rungs 1 and 2 (1.12), the best PyTorch
   rungs. Energy per example is 1.13x lower than rung 0's, about the same as rung 10: the
   extra cores finish sooner but draw more power while they run.
+- **Rung 12 is 1.22 [1.20, 1.25], now ahead of every PyTorch rung.** p50 drops from
+  116 ms to 110 ms. The change moves GELU's `erf`, the LayerNorm mean and variance,
+  and the softmax total from f64 to f32 (`PLAN.md`, changelog). Energy per example is
+  1.23x lower than rung 0's. Replicate 0 ran while the Mac was still busy (ruler p50
+  145 ms against 127 to 135 ms); it gives 1.27, and the other four give 1.20 to 1.21.
+  The gain over rung 11 is smaller here than with 1 thread (session t1), because at 4
+  threads the work it speeds up is already split 4 ways.
 - **Rungs 6 and 7 do not use 4 threads.** The naive loop is single-threaded, and
   rung 7's P-cluster clock (3.97 GHz, near the maximum) suggests Accelerate ran it on
   about one core. Rung 4's 2.85 GHz is the one rung loading all 4 cores.
