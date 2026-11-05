@@ -6,8 +6,8 @@ as the ruler in every cycle. Rung 6 is 5 replicates of 8 cycles of 2 examples. R
 was added later, on 2026-11-02, 21:01 to 22:05 UTC, at commit 693078e, in the same
 setup. Rung 9 was added on 2026-11-04 in two sittings, 08:02 to 08:36 and 19:21 to
 19:43 UTC, at commit 3133da8, with the resumable runner. Rung 10 was added on
-2026-11-05, 00:31 to 01:26 UTC, at commit e3b9a66. All 55 replicates passed the in-run
-correctness check. Intervals are 95%, from the two-stage
+2026-11-05, 00:31 to 01:26 UTC, at commit e3b9a66, and rung 11 the same day, 08:04 to
+08:50 UTC, at commit 9f46fbd. All 60 replicates passed the in-run correctness check. Intervals are 95%, from the two-stage
 bootstrap in `python/analyze_bench.py`. The table comes from `python/bench_table.py`.
 
 Speedup is rung 0 time over the variant's time: above 1 is faster than rung 0. The energy
@@ -26,6 +26,7 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 | 8: + fusion, no allocation | 0.681 [0.677, 0.685] | 220 [216, 223] | 339 [324, 348] | 0.668 [0.661, 0.676] | 3.68 [3.62, 3.75] | 0.651 [0.646, 0.657] (11) |
 | 9: + f32 exp | 0.734 [0.715, 0.756] | 189 [185, 199] | 320 [272, 374] | 0.838 [0.817, 0.859] | 3.9 [3.76, 3.98] | 0.725 [0.71, 0.742] (123) |
 | 10: + attention in sgemm | 0.969 [0.951, 0.997] | 146 [144, 151] | 364 [219, 682] | 1.14 [1.1, 1.17] | 3.88 [3.74, 3.95] | 0.954 [0.942, 0.967] (18) |
+| 11: + threads outside matmul | 1.14 [1.11, 1.16] | 116 [111, 120] | 323 [184, 486] | 1.13 [1.09, 1.16] | 3.81 [3.7, 3.91] | 1.12 [0.989, 1.16] (25) |
 
 ## Notes
 
@@ -56,6 +57,13 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
   while the Mac was still busy (ruler p50 154 ms against 133 to 146 ms); it gives 1.00,
   and the other four give 0.948 to 0.983. Its p99 interval, [219, 682] ms, is wide for
   the same reason.
+- **Rung 11 is faster than rung 0: 1.14 [1.11, 1.16].** p50 drops from 146 ms to
+  116 ms, against the ruler's 125 to 140 ms. Rung 11 is rung 10 with attention, the
+  norms, the residual adds and the GELU gate split across the 4 threads, and its logits
+  are bit-identical to rung 10's (`PLAN.md`, changelog). So threading that work is worth
+  1.17x over rung 10. Rung 11 is now level with rungs 1 and 2 (1.12), the best PyTorch
+  rungs. Energy per example is 1.13x lower than rung 0's, about the same as rung 10: the
+  extra cores finish sooner but draw more power while they run.
 - **Rungs 6 and 7 do not use 4 threads.** The naive loop is single-threaded, and
   rung 7's P-cluster clock (3.97 GHz, near the maximum) suggests Accelerate ran it on
   about one core. Rung 4's 2.85 GHz is the one rung loading all 4 cores.
