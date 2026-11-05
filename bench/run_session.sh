@@ -12,7 +12,7 @@
 threads=$1
 [ -n "$threads" ] || { echo "usage: $0 <threads> [name ...]"; exit 2; }
 shift
-names=${*:-aa rung10 rung9 rung8 rung7 rung5 rung4 rung1 rung3 rung2 rung6}
+names=${*:-aa rung11 rung10 rung9 rung8 rung7 rung5 rung4 rung1 rung3 rung2 rung6}
 cd "$(dirname "$0")/.." || exit 1
 for name in $names; do
     echo "== $name, $(date -u +%H:%M:%SZ)"

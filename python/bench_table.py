@@ -23,6 +23,7 @@ ROWS = [
     ("rung8", "8: + fusion, no allocation"),
     ("rung9", "9: + f32 exp"),
     ("rung10", "10: + attention in sgemm"),
+    ("rung11", "11: + threads outside matmul"),
 ]
 
 
