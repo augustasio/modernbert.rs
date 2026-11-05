@@ -24,6 +24,7 @@ ROWS = [
     ("rung9", "9: + f32 exp"),
     ("rung10", "10: + attention in sgemm"),
     ("rung11", "11: + threads outside matmul"),
+    ("rung12", "12: + f32 erf, norms, softmax sum"),
 ]
 
 
