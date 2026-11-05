@@ -39,6 +39,26 @@ pub fn layer_norm_into(input: &Matrix, weight: &[f32], eps: f32, out: &mut Matri
 
 /// One row of [`layer_norm`].
 pub fn layer_norm_row(x: &[f32], weight: &[f32], eps: f32, y: &mut [f32]) {
+    #[cfg(feature = "f32-math")]
+    {
+        // Rung 12: the same two passes in f32, with lane sums.
+        // `f32math` says why a plain f32 sum would not do.
+        use crate::f32math::lane_sum;
+        let n = x.len() as f32;
+        let mean = lane_sum(x, |v| v) / n;
+        let variance = lane_sum(x, |v| (v - mean) * (v - mean)) / n;
+        let scale = 1.0 / (variance + eps).sqrt();
+        for i in 0..x.len() {
+            y[i] = (x[i] - mean) * scale * weight[i];
+        }
+    }
+    #[cfg(not(feature = "f32-math"))]
+    layer_norm_row_f64(x, weight, eps, y);
+}
+
+/// Rungs 6 to 11's [`layer_norm_row`], with the statistics in f64.
+#[cfg_attr(feature = "f32-math", allow(dead_code))]
+fn layer_norm_row_f64(x: &[f32], weight: &[f32], eps: f32, y: &mut [f32]) {
     let n = x.len() as f32;
 
     // Accumulate in f64. The sums run over 1024 values, and f32
@@ -118,7 +138,9 @@ pub fn linear_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
 /// every run, because a silently missing Accelerate link would turn the rung
 /// 6 to rung 7 comparison into a comparison of nothing.
 pub fn backend() -> &'static str {
-    if cfg!(feature = "threads") {
+    if cfg!(feature = "f32-math") {
+        "accelerate-fused-expf-attention-sgemm-threads-f32math"
+    } else if cfg!(feature = "threads") {
         "accelerate-fused-expf-attention-sgemm-threads"
     } else if cfg!(feature = "attention-sgemm") {
         "accelerate-fused-expf-attention-sgemm"
@@ -220,6 +242,10 @@ pub fn add_in_place(a: &mut Matrix, b: &Matrix) {
 /// candle's `gelu()` is the tanh approximation and its `gelu_erf()` is this
 /// one, so rungs 4 and 5 have the same trap waiting.
 pub fn gelu_erf(x: f32) -> f32 {
+    if cfg!(feature = "f32-math") {
+        // Rung 12: PyTorch's f32 form, `x * 0.5 * (1 + erf(x * M_SQRT1_2))`.
+        return x * 0.5 * (1.0 + crate::f32math::erf_f32(x * std::f32::consts::FRAC_1_SQRT_2));
+    }
     x * 0.5 * (1.0 + erf(x as f64 / std::f64::consts::SQRT_2) as f32)
 }
 
@@ -276,6 +302,19 @@ pub fn softmax_in_place(values: &mut [f32]) {
     if !max.is_finite() {
         // Every entry is masked. Leave zeros rather than produce NaN.
         values.fill(0.0);
+        return;
+    }
+    if cfg!(feature = "f32-math") {
+        // Rung 12: the total in f32, with lane sums, as PyTorch keeps an f32
+        // vector accumulator.
+        for v in values.iter_mut() {
+            *v = crate::expf::exp_f32(*v - max);
+        }
+        let total = crate::f32math::lane_sum(values, |v| v);
+        let inv = 1.0 / total;
+        for v in values.iter_mut() {
+            *v *= inv;
+        }
         return;
     }
     let mut total = 0.0f64;

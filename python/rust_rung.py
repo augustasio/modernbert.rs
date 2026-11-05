@@ -45,6 +45,7 @@ EXPECTED_BACKEND = {
     9: "accelerate-fused-expf",
     10: "accelerate-fused-expf-attention-sgemm",
     11: "accelerate-fused-expf-attention-sgemm-threads",
+    12: "accelerate-fused-expf-attention-sgemm-threads-f32math",
 }
 DESCRIPTION = {
     4: "candle-transformers encoder with a mask-only head, candle CPU (gemm) matmul",
@@ -55,6 +56,7 @@ DESCRIPTION = {
     9: "rung 8 with f32 polynomial exp in the softmax and erf, instead of f64 libm exp",
     10: "rung 9 with both attention products in cblas_sgemm, per head",
     11: "rung 10 with attention, the norms, the adds and GELU split across threads",
+    12: "rung 11 with erf, the LayerNorm statistics and the softmax total in f32",
 }
 
 

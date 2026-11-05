@@ -645,3 +645,12 @@ Changes to the plan made after seeing data, with the reason.
   the heads' columns of the context interleave. The arithmetic is rung 10's: every layer
   is bit-identical to rung 10's at 1, 3 and 4 threads, and all 7,600 Tier 3 logits are
   bit-identical to rung 10's.
+- **Rung 12 moves the arithmetic still in f64 to f32.** That is `erf` in GELU (the same
+  Abramowitz and Stegun formula, now `x * 0.5 * (1 + erf(x * M_SQRT1_2))` in f32, as
+  PyTorch writes it), the LayerNorm mean and variance, and the softmax total (feature
+  `f32-math`, `f32math.rs`). One variable, the precision of the non-matmul arithmetic,
+  so not split into two rungs. The sums keep 16 lane totals added pairwise at the end,
+  because the residual stream reaches about 28,000 and a plain f32 sum would lose the
+  small terms; PyTorch's `RowwiseMoments` cascades in the same spirit. Tier 2: worst stack
+  error 1.16e-4 of peak (rung 11: 8.2e-5; bound 3e-4), worst verbalizer gap 4.6e-5.
+  Tier 3: 7600/7600 agreement, max logit difference 7.0e-4 (rung 11: 4.6e-4; bound 1e-3).

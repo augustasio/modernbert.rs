@@ -29,3 +29,7 @@ attention-sgemm = ["expf"]
 # as PyTorch splits it across its OpenMP pool. Built on rung 10, with the
 # same arithmetic.
 threads = ["attention-sgemm"]
+# Rung 12: the arithmetic still in f64 (erf in GELU, the LayerNorm mean and
+# variance, the softmax total) moves to f32, as PyTorch computes it, with lane
+# sums so that large values do not swamp small ones. Built on rung 11.
+f32-math = ["threads"]

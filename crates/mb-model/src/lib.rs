@@ -23,6 +23,7 @@ pub mod attention;
 pub mod config;
 pub mod embeddings;
 pub mod expf;
+pub mod f32math;
 pub mod fused;
 pub mod head;
 pub mod mlp;
