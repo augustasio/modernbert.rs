@@ -5,8 +5,9 @@ off. Each row is 5 replicates (separate processes) of 30 cycles of 64 examples, 
 as the ruler in every cycle. Rung 6 is 5 replicates of 8 cycles of 2 examples. Rung 8
 was added later, on 2026-11-02, 21:01 to 22:05 UTC, at commit 693078e, in the same
 setup. Rung 9 was added on 2026-11-04 in two sittings, 08:02 to 08:36 and 19:21 to
-19:43 UTC, at commit 3133da8, with the resumable runner. All 50 replicates passed the
-in-run correctness check. Intervals are 95%, from the two-stage
+19:43 UTC, at commit 3133da8, with the resumable runner. Rung 10 was added on
+2026-11-05, 00:31 to 01:26 UTC, at commit e3b9a66. All 55 replicates passed the in-run
+correctness check. Intervals are 95%, from the two-stage
 bootstrap in `python/analyze_bench.py`. The table comes from `python/bench_table.py`.
 
 Speedup is rung 0 time over the variant's time: above 1 is faster than rung 0. The energy
@@ -24,6 +25,7 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 | 7: our Rust + Accelerate | 0.408 [0.397, 0.421] | 338 [336, 341] | 601 [581, 630] | 0.476 [0.452, 0.5] | 3.97 [3.94, 3.99] | 0.389 [0.385, 0.392] (13) |
 | 8: + fusion, no allocation | 0.681 [0.677, 0.685] | 220 [216, 223] | 339 [324, 348] | 0.668 [0.661, 0.676] | 3.68 [3.62, 3.75] | 0.651 [0.646, 0.657] (11) |
 | 9: + f32 exp | 0.734 [0.715, 0.756] | 189 [185, 199] | 320 [272, 374] | 0.838 [0.817, 0.859] | 3.9 [3.76, 3.98] | 0.725 [0.71, 0.742] (123) |
+| 10: + attention in sgemm | 0.969 [0.951, 0.997] | 146 [144, 151] | 364 [219, 682] | 1.14 [1.1, 1.17] | 3.88 [3.74, 3.95] | 0.954 [0.942, 0.967] (18) |
 
 ## Notes
 
@@ -47,6 +49,13 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
   cycles of 30), which widens the interval; its speedup, 0.772, is the highest of the
   five, and the other four give 0.703 to 0.748. Rung 9 still takes 1.36x as long as
   rung 0.
+- **Rung 10 is 1.32x faster than rung 9, and nearly level with rung 0.** The speedup
+  is 0.969 [0.951, 0.997], p50 146 ms against the ruler's 141 ms. Energy per example
+  is 1.14x lower than rung 0's, so rung 10 already uses less energy. The change moves
+  the attention products into `cblas_sgemm` (`PLAN.md`, changelog). Replicate 1 ran
+  while the Mac was still busy (ruler p50 154 ms against 133 to 146 ms); it gives 1.00,
+  and the other four give 0.948 to 0.983. Its p99 interval, [219, 682] ms, is wide for
+  the same reason.
 - **Rungs 6 and 7 do not use 4 threads.** The naive loop is single-threaded, and
   rung 7's P-cluster clock (3.97 GHz, near the maximum) suggests Accelerate ran it on
   about one core. Rung 4's 2.85 GHz is the one rung loading all 4 cores.

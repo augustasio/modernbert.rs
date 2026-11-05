@@ -1,11 +1,14 @@
 # Session t1: batch 1, 1 thread
 
-Run in two parts, on AC power, Low Power Mode off, with the worker builds of session t4.
-Part 1: 2026-11-02 22:38 to 2026-11-03 07:02 UTC, the A/A floor and rungs 8, 7, 5, 4,
-and one replicate of rung 1. It was stopped because the Mac had to sleep. Part 2:
-2026-11-03 23:03 to 2026-11-04 02:15 UTC, the rest of rung 1 and rungs 3, 2, 6, with the
-resumable runner (f5dd712). All 45 replicates passed the in-run correctness check. No
-replicate was discarded for sleep. Each row is 5 replicates of 30 cycles of 64 examples,
+Run in three parts, on AC power, Low Power Mode off, with the worker builds of session t4.
+Part 1: 2026-11-02 22:38 to 2026-11-03 07:02 UTC, rungs 7, 5, 4, and one replicate of
+rung 1. It was stopped because the Mac had to sleep. Part 2: 2026-11-03 23:03 to
+2026-11-04 02:15 UTC, the rest of rung 1 and rungs 3, 2, 6, with the resumable runner
+(f5dd712). Part 3: 2026-11-05 00:25 to 04:16 UTC, overnight with the Mac idle, the A/A
+floor and rungs 8, 9, 10. The A/A floor and rung 8 from part 1 ran while the Mac was
+disturbed, so part 3 reran them; the old runs are in `results/bench/t1_disturbed/`. All
+60 replicates in the table passed the in-run correctness check. No replicate was
+discarded for sleep. Each row is 5 replicates of 30 cycles of 64 examples,
 rung 0 as the ruler in every cycle; rung 6 is 5 replicates of 8 cycles of 2 examples.
 Intervals are 95%, from the two-stage bootstrap in `python/analyze_bench.py`. The table
 comes from `python/bench_table.py`.
@@ -15,7 +18,7 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 
 | Rung | Speedup vs rung 0 | Variant p50 ms | Variant p99 ms | Energy ratio | P-cluster GHz | Speedup, nominal slices only (cycles) |
 |---|---|---|---|---|---|---|
-| A/A: rung 0 against itself | 0.996 [0.952, 1.04] | 171 [160, 185] | 668 [375, 1.06e+03] | 1.01 [0.963, 1.05] | 3.51 [3.24, 3.77] | 0.999 [0.972, 1.02] (36) |
+| A/A: rung 0 against itself | 1 [0.993, 1.01] | 157 [156, 158] | 347 [299, 397] | 0.999 [0.985, 1.01] | 3.95 [3.94, 3.95] | 1 [0.998, 1.01] (129) |
 | 1: HF, head at the mask only | 1.12 [1.1, 1.14] | 140 [137, 145] | 354 [247, 491] | 1.14 [1.1, 1.18] | 3.89 [3.81, 3.94] | 1.13 [1.11, 1.15] (79) |
 | 2: + torch.compile | 1.11 [1.11, 1.11] | 140 [139, 140] | 211 [206, 220] | 1.11 [1.11, 1.12] | 3.95 [3.95, 3.95] | 1.11 [1.11, 1.11] (150) |
 | 3: ONNX Runtime | 0.832 [0.826, 0.838] | 188 [186, 190] | 327 [302, 371] | 1.05 [1.04, 1.07] | 3.96 [3.96, 3.96] | 0.832 [0.826, 0.838] (148) |
@@ -23,26 +26,27 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 | 5: candle + Accelerate | 0.879 [0.877, 0.881] | 175 [174, 175] | 263 [250, 269] | 0.926 [0.922, 0.93] | 3.97 [3.97, 3.97] | 0.879 [0.877, 0.881] (148) |
 | 6: our Rust, naive matmul | 0.0099 [0.00881, 0.0112] | 2.39e+04 [2.34e+04, 2.47e+04] | 3.11e+04 [2.7e+04, 3.55e+04] | n/a | n/a | 0.0099 [0.00881, 0.0112] (40) |
 | 7: our Rust + Accelerate | 0.454 [0.452, 0.456] | 341 [339, 343] | 593 [585, 608] | 0.492 [0.488, 0.496] | 4 [3.99, 4] | 0.454 [0.452, 0.456] (134) |
-| 8: + fusion, no allocation | 0.745 [0.74, 0.75] | 230 [211, 247] | 405 [354, 461] | 0.727 [0.72, 0.736] | 3.7 [3.42, 3.96] | 0.743 [0.734, 0.752] (12) |
+| 8: + fusion, no allocation | 0.758 [0.751, 0.765] | 211 [209, 214] | 367 [337, 402] | 0.737 [0.726, 0.748] | 3.97 [3.95, 3.98] | 0.76 [0.752, 0.767] (113) |
+| 9: + f32 exp | 0.827 [0.824, 0.83] | 191 [191, 192] | 303 [292, 319] | 0.837 [0.832, 0.843] | 3.97 [3.97, 3.97] | 0.827 [0.824, 0.83] (150) |
+| 10: + attention in sgemm | 1.07 [1.07, 1.07] | 147 [146, 147] | 224 [217, 240] | 1.13 [1.12, 1.14] | 3.95 [3.95, 3.95] | 1.07 [1.07, 1.07] (136) |
 
 ## Notes
 
-- **The A/A floor and rung 8 ran while the Mac was disturbed.** From 22:49 to 00:55 UTC
-  on 2026-11-02, the rung 0 ruler slowed from 152 ms to 168 to 192 ms p50, and almost no
-  cycle started at "nominal" (2 to 4 of 30 per replicate, against about 30 elsewhere).
-  The PyTorch source-reading session ran until 23:01, and something unknown ran after
-  that. So the A/A interval, [0.952, 1.04], is
-  about 4 times wider than session t4's, and the A/A and rung 8 p50, p99 and GHz figures
-  are inflated. The rung 8 **speedup** holds: its 5 replicates give 0.741 to 0.751,
-  because each example is paired with the ruler in the same cycle. From rung 7 on the
-  ruler is steady at 151 to 156 ms. Both rows should be rerun with the next batch of
-  1-thread runs.
-- **Threading is a small part of rung 8's gap.** With 1 thread, rung 0 takes about
-  151 ms p50, against 137 ms with 4 threads, so its 4 threads gain only about 1.1x. Rung 8
-  is 0.745 of rung 0 with 1 thread and 0.681 with 4. So with both on one core, rung 8 is
-  still 1.34x slower. Most of the gap is per-core work: the f64 `exp` and `erf`, and
-  the attention products outside sgemm (`notes/pytorch_cpu_research.md`, rungs 10 to 12).
-- **Rung 7 to rung 8 is 1.64x**, close to the 1.67x of session t4.
+- **Rung 10 is faster than rung 0 with 1 thread: 1.07 [1.07, 1.07].** p50 is 147 ms,
+  against 157 ms for the ruler, and energy per example is 1.13x lower. All 5 replicates
+  give 1.067 to 1.073. Rung 1 (HF with the head at the mask only) is still 1.12, so
+  rung 10 is about 4% behind it.
+- **Rung 9 is 1.09x faster than rung 8, and rung 10 is 1.29x faster than rung 9.**
+  Moving the attention products into sgemm is the biggest single step since rung 8.
+- **The A/A floor is about ±1% again**: 1.00 [0.993, 1.01], with the ruler at 156 to
+  158 ms p50 in every replicate. The disturbed part 1 run gave [0.952, 1.04].
+- **The rerun moves rung 8 a little**: 0.758 [0.751, 0.765], against 0.745 [0.74, 0.75]
+  while the Mac was disturbed. The pairing held most of the speedup, but not all.
+- **Rung 10 gains nothing from 4 threads; rung 0 gains 1.15x.** Rung 10's p50 is 147 ms
+  with 1 thread and 146 ms with 4. Rung 0's is 157 ms and 137 ms. So at 4 threads our
+  remaining gap to rung 0 is threading, not per-core work. The non-matmul loops are
+  single-threaded, and the per-head sgemm calls are too small for Accelerate to split.
+- **Rung 7 to rung 8 is 1.67x**, the same as in session t4.
 - **Rung 5 is closer to rung 0 here (0.88 against 0.78 at 4 threads)**, and ONNX
   Runtime falls further behind (0.83 against 0.98). Candle CPU (rung 4) is 0.14, against
   0.24 at 4 threads, so it is the rung that uses the threads most.
