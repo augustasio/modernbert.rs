@@ -179,51 +179,77 @@ impl ModernBert {
 
 /// Rung 10's scatter and attention, a run of heads per thread.
 ///
-/// Each thread gets its heads' blocks of Q, K, V and the per-head context,
-/// and a `[seq, seq]` score buffer of its own.
+/// One unit of work is one head of one sequence. The units are numbered
+/// sequence by sequence and head by head within a sequence, which is also the
+/// order of their blocks in Q, K, V and the per-head context: sequence `s`
+/// takes `heads * len(s) * head_dim` floats, head `h` the `h`th
+/// `len(s) * head_dim` of them. So a run of units is a run of memory, and each
+/// thread gets a contiguous run. With one sequence a unit is a head, and the
+/// split is rung 11's.
+///
+/// Each thread also gets a score buffer of its own, sized for the longest
+/// sequence.
 fn attend_by_head(ws: &mut Workspace, rope: &RopeTable, window: Option<usize>, scale: f32) {
     let (heads, hd) = (ws.num_heads, ws.head_dim);
-    let seq = ws.qkv.rows;
+    let longest = ws.longest();
     assert!(
-        seq <= rope.max_positions(),
-        "{seq} positions, but the RoPE table covers only {}",
+        longest <= rope.max_positions(),
+        "{longest} positions, but the RoPE table covers only {}",
         rope.max_positions()
     );
-    let per_thread = heads.div_ceil(ws.threads.max(1));
-    let head_block = per_thread * seq * hd;
+    let units = ws.segments.len() * heads;
+    let per_thread = units.div_ceil(ws.threads.max(1));
+    let segments = &ws.segments;
     let qkv = &ws.qkv;
+    let unit_floats = |u: usize| segments[u / heads].len() * hd;
 
-    let blocks = ws
-        .query
-        .chunks_mut(head_block)
-        .zip(ws.key.chunks_mut(head_block))
-        .zip(ws.value.chunks_mut(head_block))
-        .zip(ws.context_heads.chunks_mut(head_block))
-        .zip(ws.scores.chunks_mut(seq * seq))
-        .enumerate();
-    in_parallel(blocks, |(b, ((((q, k), v), out), scores))| {
-        let per_head = seq * hd;
-        for i in 0..q.len() / per_head {
-            let head = b * per_thread + i;
-            let part = i * per_head..(i + 1) * per_head;
+    // Cut each buffer into the threads' runs, front to back.
+    let (mut q, mut k, mut v, mut out) = (
+        &mut ws.query[..],
+        &mut ws.key[..],
+        &mut ws.value[..],
+        &mut ws.context_heads[..],
+    );
+    let runs = (0..units).step_by(per_thread.max(1)).map(move |first| {
+        let last = (first + per_thread).min(units);
+        let floats: usize = (first..last).map(unit_floats).sum();
+        let (q_run, q_rest) = std::mem::take(&mut q).split_at_mut(floats);
+        let (k_run, k_rest) = std::mem::take(&mut k).split_at_mut(floats);
+        let (v_run, v_rest) = std::mem::take(&mut v).split_at_mut(floats);
+        let (out_run, out_rest) = std::mem::take(&mut out).split_at_mut(floats);
+        (q, k, v, out) = (q_rest, k_rest, v_rest, out_rest);
+        (first..last, q_run, k_run, v_run, out_run)
+    });
+    let blocks = runs.zip(ws.scores.chunks_mut((longest * longest).max(1)));
+    in_parallel(blocks, |((run, q, k, v, out), scores)| {
+        let mut at = 0;
+        for unit in run {
+            let rows = segments[unit / heads].clone();
+            let head = unit % heads;
+            let part = at..at + rows.len() * hd;
+            at = part.end;
             let (q, k, v) = (
                 &mut q[part.clone()],
                 &mut k[part.clone()],
                 &mut v[part.clone()],
             );
-            scatter_head(qkv, rope, head, hd, q, k, v);
+            let seq = rows.len();
+            scatter_head(qkv, rows, rope, head, hd, q, k, v);
             attend_head(q, k, v, &mut out[part], scores, window, scale, seq, hd);
         }
     });
 }
 
-/// One head of rung 10's `scatter_heads`: Q and V `[seq, head_dim]`, K
-/// transposed, `[head_dim, seq]`, with Q and K rotated.
+/// One head of rung 10's `scatter_heads`, for the sequence in `rows` of
+/// `qkv`: Q and V `[seq, head_dim]`, K transposed, `[head_dim, seq]`, with Q
+/// and K rotated. Positions count from the sequence's own first token.
 ///
 /// The rotation is the arithmetic of [`crate::rope::apply_rope`], term for
 /// term, so it rounds the same.
+#[allow(clippy::too_many_arguments)]
 fn scatter_head(
     qkv: &Matrix,
+    rows: std::ops::Range<usize>,
     rope: &RopeTable,
     head: usize,
     hd: usize,
@@ -232,11 +258,11 @@ fn scatter_head(
     v: &mut [f32],
 ) {
     let hidden = qkv.cols / 3;
-    let seq = qkv.rows;
+    let seq = rows.len();
     let half = hd / 2;
     let src = head * hd;
     for t in 0..seq {
-        let fused = qkv.row(t);
+        let fused = qkv.row(rows.start + t);
         let cos = rope.cos_row(t);
         let sin = rope.sin_row(t);
 
@@ -291,15 +317,19 @@ fn attend_head(
 }
 
 /// Copy each head's `[seq, head_dim]` block into its columns of the `[seq,
-/// hidden]` context. A copy, so it changes no value.
+/// hidden]` context, sequence by sequence. A copy, so it changes no value.
 fn gather_heads(ws: &mut Workspace) {
     let (heads, hd) = (ws.num_heads, ws.head_dim);
-    let seq = ws.qkv.rows;
-    for t in 0..seq {
-        let row = ws.context.row_mut(t);
-        for head in 0..heads {
-            let from = (head * seq + t) * hd;
-            row[head * hd..(head + 1) * hd].copy_from_slice(&ws.context_heads[from..from + hd]);
+    let mut region = 0;
+    for rows in &ws.segments {
+        let seq = rows.len();
+        for t in 0..seq {
+            let row = ws.context.row_mut(rows.start + t);
+            for head in 0..heads {
+                let from = region + (head * seq + t) * hd;
+                row[head * hd..(head + 1) * hd].copy_from_slice(&ws.context_heads[from..from + hd]);
+            }
         }
+        region += heads * seq * hd;
     }
 }

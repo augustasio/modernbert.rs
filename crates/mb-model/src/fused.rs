@@ -42,7 +42,14 @@
 //! projection lands in its own buffer, rounded on its own, and is then added,
 //! as PyTorch does.
 //!
-//! One sequence, no padding: this is the batch-1 path the benchmark runs.
+//! **Batches, without padding (rung 14).** [`ModernBert::logits_batch_fused`]
+//! puts several sequences one after another in the same rows, as
+//! ModernBERT's own unpadding does. Every matmul, norm, add and GELU works row
+//! by row, so it runs on all the rows at once and gets one large matmul
+//! instead of several small ones. Only attention and RoPE need to know where
+//! a sequence starts: each sequence attends to itself alone, with its own
+//! positions and its own local window. No row is padding, so no work is
+//! wasted. A batch of one is exactly the single-sequence path.
 
 use crate::config::Config;
 use crate::model::ModernBert;
@@ -116,6 +123,9 @@ pub struct Workspace {
     decoder_rows: Matrix,
     /// `[1, tokens]`.
     logits: Matrix,
+    /// Where each sequence of the batch lives in the rows: one range per
+    /// sequence, in order, covering all the rows. One range for a batch of one.
+    segments: Vec<std::ops::Range<usize>>,
     num_heads: usize,
     head_dim: usize,
     /// How many threads rung 11 splits the work across. Earlier rungs
@@ -148,6 +158,9 @@ impl Workspace {
             // Four verbalizers for AG News.
             decoder_rows: Matrix::zeros(4, hidden),
             logits: Matrix::zeros(1, 4),
+            // Room for a batch of 256 sequences, so a batch never allocates
+            // here.
+            segments: Vec::with_capacity(256),
             num_heads: config.num_attention_heads,
             head_dim: config.head_dim(),
             threads: 1,
@@ -156,9 +169,17 @@ impl Workspace {
         ws
     }
 
-    /// Size every per-token buffer for `seq` tokens. Within the capacity
-    /// already reached, this allocates nothing.
+    /// Size the buffers for one sequence of `seq` tokens.
     fn set_seq_len(&mut self, seq: usize) {
+        self.segments.clear();
+        self.segments.push(0..seq);
+        self.set_rows(seq, seq);
+    }
+
+    /// Size every per-token buffer for `rows` tokens in all, the longest
+    /// sequence being `longest`. Within the capacity already reached, this
+    /// allocates nothing.
+    fn set_rows(&mut self, seq: usize, longest: usize) {
         for m in [
             &mut self.h,
             &mut self.normed,
@@ -174,8 +195,11 @@ impl Workspace {
         self.query.resize(per_head, 0.0);
         self.key.resize(per_head, 0.0);
         self.value.resize(per_head, 0.0);
+        // The scores are per sequence, so they are sized by the longest one,
+        // not by all the rows: a batch of 64 prompts would otherwise ask for
+        // gigabytes.
         let scores = if cfg!(feature = "threads") {
-            self.threads * seq * seq
+            self.threads * longest * longest
         } else if cfg!(feature = "attention-sgemm") {
             seq * seq
         } else {
@@ -193,7 +217,25 @@ impl Workspace {
     pub fn set_threads(&mut self, threads: usize) {
         assert!(threads >= 1, "at least one thread");
         self.threads = threads;
-        self.set_seq_len(self.h.rows);
+        let longest = self.longest();
+        self.set_rows(self.h.rows, longest);
+    }
+
+    /// The longest sequence in the current batch.
+    fn longest(&self) -> usize {
+        self.segments.iter().map(|s| s.len()).max().unwrap_or(0)
+    }
+
+    /// Lay out a batch: one range of rows per sequence, one after another.
+    fn set_batch(&mut self, batch: &[&[u32]]) {
+        self.segments.clear();
+        let mut start = 0;
+        for ids in batch {
+            self.segments.push(start..start + ids.len());
+            start += ids.len();
+        }
+        let longest = self.longest();
+        self.set_rows(start, longest);
     }
 
     /// Put `h` in the residual stream, for a test that runs one layer on
@@ -224,23 +266,44 @@ impl ModernBert {
         &self,
         ids: &[u32],
         ws: &mut Workspace,
+        observe: impl FnMut(Point, &Matrix),
+    ) -> Result<(), TensorError> {
+        self.encode_batch_fused(&[ids], ws, observe)
+    }
+
+    /// [`ModernBert::encode_fused`] for several sequences at once, one after
+    /// another in the rows of `ws`, without padding.
+    pub fn encode_batch_fused(
+        &self,
+        batch: &[&[u32]],
+        ws: &mut Workspace,
         mut observe: impl FnMut(Point, &Matrix),
     ) -> Result<(), TensorError> {
         let c = &self.config;
-        ws.set_seq_len(ids.len());
+        // Only rung 11's threaded layer knows where each sequence starts.
+        assert!(
+            batch.len() == 1 || cfg!(feature = "threads"),
+            "a batch of {} needs the threaded layer of rung 11 or later",
+            batch.len()
+        );
+        ws.set_batch(batch);
 
         // The embedding lookup goes into `normed` and is normed into `h`,
         // which is where the residual stream starts.
         let table = &self.embeddings.weight;
-        for (row, &id) in ids.iter().enumerate() {
-            let id = id as usize;
-            if id >= table.rows {
-                return Err(TensorError::new(format!(
-                    "token id {id} at position {row} is outside the vocabulary of {}",
-                    table.rows
-                )));
+        let mut row = 0;
+        for ids in batch {
+            for (position, &id) in ids.iter().enumerate() {
+                let id = id as usize;
+                if id >= table.rows {
+                    return Err(TensorError::new(format!(
+                        "token id {id} at position {position} is outside the vocabulary of {}",
+                        table.rows
+                    )));
+                }
+                ws.normed.row_mut(row).copy_from_slice(table.row(id));
+                row += 1;
             }
-            ws.normed.row_mut(row).copy_from_slice(table.row(id));
         }
         norm_rows(
             &ws.normed,
@@ -277,35 +340,67 @@ impl ModernBert {
         ws: &mut Workspace,
         out: &mut [f32],
     ) -> Result<(), TensorError> {
-        assert_eq!(out.len(), token_ids.len(), "one output slot per token id");
-        assert!(
-            position < ids.len(),
-            "position {position} is outside the {} tokens",
-            ids.len()
-        );
-        self.encode_fused(ids, ws, |_, _| {})?;
+        self.logits_batch_fused(&[ids], &[position], token_ids, ws, out)
+    }
 
-        // The head's `transform`, on the mask row only, as in rung 1.
+    /// [`ModernBert::logits_for_tokens_fused`] for a batch: sequence `b`'s
+    /// mask is at `positions[b]`, and its logits land in
+    /// `out[b * token_ids.len()..]`.
+    pub fn logits_batch_fused(
+        &self,
+        batch: &[&[u32]],
+        positions: &[usize],
+        token_ids: &[u32],
+        ws: &mut Workspace,
+        out: &mut [f32],
+    ) -> Result<(), TensorError> {
+        let n = token_ids.len();
+        assert_eq!(
+            positions.len(),
+            batch.len(),
+            "one mask position per sequence"
+        );
+        assert_eq!(
+            out.len(),
+            batch.len() * n,
+            "one output slot per token id per sequence"
+        );
+        for (ids, &position) in batch.iter().zip(positions) {
+            assert!(
+                position < ids.len(),
+                "position {position} is outside the {} tokens",
+                ids.len()
+            );
+        }
+        self.encode_batch_fused(batch, ws, |_, _| {})?;
+
+        // The head's `transform`, on the mask rows only, as in rung 1: one
+        // row per sequence.
         let head = &self.head;
-        ws.head_in
-            .row_mut(0)
-            .copy_from_slice(ws.normed.row(position));
+        ws.head_in.resize_rows(batch.len());
+        for (b, &position) in positions.iter().enumerate() {
+            let row = ws.segments[b].start + position;
+            ws.head_in.row_mut(b).copy_from_slice(ws.normed.row(row));
+        }
         // Trap 3: no bias on `head.dense`.
         linear_into(&ws.head_in, &head.dense, &mut ws.head_dense);
         for v in ws.head_dense.data.iter_mut() {
             *v = gelu_erf(*v);
         }
-        layer_norm_row(
-            ws.head_dense.row(0),
-            &head.norm_weight,
-            head.eps,
-            ws.head_normed.row_mut(0),
-        );
+        ws.head_normed.resize_rows(batch.len());
+        for b in 0..batch.len() {
+            layer_norm_row(
+                ws.head_dense.row(b),
+                &head.norm_weight,
+                head.eps,
+                ws.head_normed.row_mut(b),
+            );
+        }
 
         // The decoder is the tied embedding matrix. Gather the requested
         // rows and project onto them, as `MlmHead::logits_for_tokens` does.
         let decoder = &self.embeddings.weight;
-        ws.decoder_rows.resize_rows(token_ids.len());
+        ws.decoder_rows.resize_rows(n);
         for (slot, &id) in token_ids.iter().enumerate() {
             let id = id as usize;
             assert!(
@@ -317,13 +412,15 @@ impl ModernBert {
                 .row_mut(slot)
                 .copy_from_slice(decoder.row(id));
         }
-        if ws.logits.cols != token_ids.len() {
-            ws.logits = Matrix::zeros(1, token_ids.len());
+        if ws.logits.cols != n {
+            ws.logits = Matrix::zeros(1, n);
         }
         linear_into(&ws.head_normed, &ws.decoder_rows, &mut ws.logits);
-        for (slot, &id) in token_ids.iter().enumerate() {
-            // Trap 2: the bias is indexed by token id, not by slot.
-            out[slot] = ws.logits.data[slot] + head.decoder_bias[id as usize];
+        for b in 0..batch.len() {
+            for (slot, &id) in token_ids.iter().enumerate() {
+                // Trap 2: the bias is indexed by token id, not by slot.
+                out[b * n + slot] = ws.logits.row(b)[slot] + head.decoder_bias[id as usize];
+            }
         }
         Ok(())
     }

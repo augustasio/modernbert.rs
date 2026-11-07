@@ -523,3 +523,56 @@ fn the_threaded_layer_is_bit_identical_to_rung_10s() {
         }
     }
 }
+
+/// Rung 14: a batch of sequences, laid one after another in the rows without
+/// padding, gives each sequence the logits it gets alone.
+///
+/// Every row-wise step is the same code on the same row. What can differ is
+/// the matmul: one `cblas_sgemm` over all the rows may block the work
+/// differently from one over a single sequence, which changes the summation
+/// order. So the bound is a small tolerance, not bit-identity. The eight
+/// fixtures run from 3 to 963 tokens, so the batch mixes sequences shorter
+/// and longer than the local window, and 3 threads do not divide its
+/// 8 x 16 units of work evenly.
+#[test]
+#[cfg(feature = "threads")]
+fn a_batch_gives_each_sequence_its_own_logits() {
+    let (fixtures, verbalizers) = fixtures();
+    let m = model();
+    let n = verbalizers.len();
+    let batch: Vec<&[u32]> = fixtures.iter().map(|f| f.token_ids.as_slice()).collect();
+    let positions: Vec<usize> = fixtures.iter().map(|f| f.mask_position).collect();
+    for threads in [1, 3, 4] {
+        let mut ws = Workspace::new(m.config(), 1024);
+        ws.set_threads(threads);
+        let mut together = vec![0.0f32; batch.len() * n];
+        m.logits_batch_fused(&batch, &positions, &verbalizers, &mut ws, &mut together)
+            .expect("the batch must run");
+        for (b, f) in fixtures.iter().enumerate() {
+            let mut alone = vec![0.0f32; n];
+            m.logits_for_tokens_fused(
+                &f.token_ids,
+                f.mask_position,
+                &verbalizers,
+                &mut ws,
+                &mut alone,
+            )
+            .expect("the sequence must run alone");
+            let worst = alone
+                .iter()
+                .zip(&together[b * n..(b + 1) * n])
+                .map(|(a, t)| (a - t).abs())
+                .fold(0.0f32, f32::max);
+            eprintln!(
+                "{} ({} tokens), {threads} threads: worst gap {worst:.2e}",
+                f.name,
+                f.token_ids.len()
+            );
+            assert!(
+                worst <= 1e-4,
+                "{}, {threads} threads: batched logits differ from alone by {worst:.2e}",
+                f.name
+            );
+        }
+    }
+}

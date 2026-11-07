@@ -17,7 +17,9 @@
 //!     results/rung7_logits.npy
 //! ```
 //!
-//! Rung 11 reads `MB_THREADS` for its thread count, 1 if unset.
+//! Rung 11 reads `MB_THREADS` for its thread count, 1 if unset. Rung 14 reads
+//! `MB_BATCH`, 1 if unset: with more, it scores that many examples per forward
+//! pass, in file order, without padding, so Tier 3 checks the batched path too.
 
 use std::io::Write;
 use std::path::Path;
@@ -69,6 +71,27 @@ fn main() {
         Err(_) => 1,
     };
     workspace.set_threads(threads);
+    let batch: usize = match std::env::var("MB_BATCH") {
+        Ok(b) => b.parse().ok().filter(|&b| b >= 1).unwrap_or_else(|| {
+            eprintln!("MB_BATCH is {b:?}, not a batch size");
+            std::process::exit(2);
+        }),
+        Err(_) => 1,
+    };
+    if batch > 1 {
+        if !cfg!(feature = "threads") {
+            eprintln!("MB_BATCH needs rung 11 or later");
+            std::process::exit(2);
+        }
+        let logits = score_in_batches(&model, &mut workspace, &examples, batch);
+        write_npy(out_path, &logits, examples.len(), VERBALIZER_IDS.len());
+        write_sidecar(out_path, ids_path, &digest, examples.len(), 0.0);
+        eprintln!(
+            "wrote {} and its .json, batches of {batch}",
+            out_path.display()
+        );
+        return;
+    }
     let start = Instant::now();
     let mut logits = Vec::with_capacity(examples.len() * VERBALIZER_IDS.len());
     for (n, ids) in examples.iter().enumerate() {
@@ -115,6 +138,41 @@ fn main() {
         start.elapsed().as_secs_f64(),
     );
     eprintln!("wrote {} and its .json", out_path.display());
+}
+
+/// Rung 14: the four logits of every example, `batch` examples per forward
+/// pass.
+fn score_in_batches(
+    model: &ModernBert,
+    workspace: &mut Workspace,
+    examples: &[Vec<u32>],
+    batch: usize,
+) -> Vec<f32> {
+    let n = VERBALIZER_IDS.len();
+    let start = Instant::now();
+    let mut logits = vec![0.0f32; examples.len() * n];
+    for (chunk, group) in examples.chunks(batch).enumerate() {
+        let ids: Vec<&[u32]> = group.iter().map(Vec::as_slice).collect();
+        let masks: Vec<usize> = group
+            .iter()
+            .map(|ids| {
+                ids.iter()
+                    .rposition(|&id| id == MASK_ID)
+                    .unwrap_or_else(|| panic!("a prompt in batch {chunk} has no [MASK]"))
+            })
+            .collect();
+        let first = chunk * batch;
+        let out = &mut logits[first * n..(first + group.len()) * n];
+        model
+            .logits_batch_fused(&ids, &masks, &VERBALIZER_IDS, workspace, out)
+            .unwrap_or_else(|e| panic!("batch {chunk}: {e}"));
+        let done = first + group.len();
+        if done % 640 < batch || done == examples.len() {
+            let per = start.elapsed().as_secs_f64() / done as f64;
+            eprintln!("{done:5} / {}  {per:.4} s per example", examples.len());
+        }
+    }
+    logits
 }
 
 /// One line per example: index, gold label, space-separated token ids.
