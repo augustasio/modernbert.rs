@@ -1,10 +1,12 @@
 # Session t10: batch 1, 10 threads
 
-Run in two parts, on AC power, Low Power Mode off, with the worker builds of session t4.
+Run in three parts, on AC power, Low Power Mode off, with the worker builds of session t4.
 Part 1: 2026-11-05 22:19 to 2026-11-06 08:08 UTC, the A/A floor and rungs 12, 11, 10,
 9, 8. It was stopped during rung 7 because the Mac was needed; that replicate was
 discarded. Part 2: 2026-11-06 19:28 to 2026-11-07 03:41 UTC, rungs 7, 5, 4, 1, 3, 2, 6,
-with the resumable runner. Both at commit 289161d. All 65 replicates passed the in-run
+with the resumable runner. Part 3: 2026-11-07 04:09 to 05:59 UTC, a rerun of rungs 9 and
+8, because their part 1 runs were disturbed (see the notes). All three at commit 289161d.
+All 65 replicates in the table, and the 10 disturbed ones, passed the in-run
 correctness check. No replicate was discarded for sleep. Each row is 5 replicates of 30
 cycles of 64 examples, rung 0 as the ruler in every cycle; rung 6 is 5 replicates of 8
 cycles of 2 examples. Intervals are 95%, from the two-stage bootstrap in
@@ -23,22 +25,25 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 | 5: candle + Accelerate | 0.889 [0.874, 0.907] | 199 [191, 207] | 421 [365, 459] | 0.893 [0.88, 0.911] | 3.28 [3.17, 3.4] | 0.835 [0.819, 0.857] (7) |
 | 6: our Rust, naive matmul | 0.00963 [0.00871, 0.0105] | 2.41e+04 [2.28e+04, 2.48e+04] | 2.86e+04 [2.72e+04, 2.86e+04] | n/a | n/a | 0.00963 [0.00871, 0.0105] (40) |
 | 7: our Rust + Accelerate | 0.464 [0.45, 0.477] | 364 [357, 373] | 704 [665, 739] | 0.465 [0.451, 0.481] | 3.72 [3.62, 3.83] | 0.426 [0.416, 0.435] (18) |
-| 8: + fusion, no allocation | 0.855 [0.805, 0.908] | 589 [565, 609] | 867 [839, 898] | 0.882 [0.836, 0.93] | 3.63 [3.57, 3.68] | 0.687 [0.634, 0.728] (6) |
-| 9: + f32 exp | 0.909 [0.854, 0.968] | 459 [373, 507] | 754 [733, 779] | 0.926 [0.874, 0.977] | 3.74 [3.73, 3.76] | 0.78 [0.732, 0.832] (12) |
+| 8: + fusion, no allocation | 0.685 [0.683, 0.687] | 202 [201, 202] | 314 [300, 342] | 0.79 [0.787, 0.794] | 3.99 [3.99, 3.99] | 0.685 [0.683, 0.687] (150) |
+| 9: + f32 exp | 0.758 [0.755, 0.761] | 181 [180, 182] | 278 [269, 289] | 0.91 [0.904, 0.917] | 3.98 [3.98, 3.98] | 0.758 [0.755, 0.761] (150) |
 | 10: + attention in sgemm | 1.06 [1.03, 1.1] (no detectable difference) | 156 [154, 159] | 588 [548, 616] | 1.2 [1.14, 1.26] | 3.9 [3.89, 3.92] | 1.04 [1, 1.1] (43) |
 | 11: + threads outside matmul | 1.19 [1.14, 1.23] | 137 [134, 140] | 619 [586, 640] | 1.19 [1.13, 1.24] | 3.79 [3.77, 3.82] | 1.19 [1.13, 1.28] (23) |
 | 12: + f32 erf, norms, softmax sum | 1.24 [1.2, 1.28] | 133 [131, 137] | 620 [567, 1.09e+03] | 1.26 [1.2, 1.31] | 3.68 [3.49, 3.8] | 1.21 [1.16, 1.27] (15) |
 
 ## Notes
 
-- **Rungs 8 and 9 were disturbed; do not quote them.** In their replicates the ruler's
-  p50 is 258 to 603 ms, against 135 to 214 ms in every other row, and the P-cluster
-  clock is normal (3.6 to 3.8 GHz). So something else was using the cores, not heat.
-  Later, at 04:43 UTC, `mediaanalysisd` (the macOS photo-analysis daemon, which runs
-  when the Mac is idle) was using 115% CPU, and it is the likely cause. With 10 threads
-  every core is busy, so any other load lands on the benchmark. The pairing keeps the
-  ratio closer than the absolute times, but not close enough: rung 8 gives 0.79 to 0.93
-  across replicates. These two rows are to be rerun.
+- **Rungs 8 and 9 are from the part 3 rerun.** In part 1 their ruler p50 was 258 to
+  603 ms, against 135 to 214 ms in every other row, with a normal P-cluster clock, so
+  another process was using the cores. `mediaanalysisd` (the macOS photo-analysis
+  daemon, which runs when the Mac is idle) was seen at 115% CPU soon after, and is the
+  likely cause. With 10 threads every core is busy, so any other load lands on the
+  benchmark. The disturbed runs are kept in `results/bench/t10_disturbed/`; do not quote
+  them. In the rerun the ruler p50 is 135 to 136 ms in all 10 replicates and every cycle
+  is nominal, so these two rows are the quietest in the table.
+- **Rungs 8 and 9 are slower than rung 0 at 10 threads, as at 4: 0.685 and 0.758,**
+  against 0.681 and 0.734 at 4 threads. Their p50 is 202 and 181 ms here, against 220
+  and 189 ms at 4 threads. Rung 10 is the first of our rungs to pass rung 0.
 - **The A/A floor is wider here: 1.00 [0.973, 1.03].** Replicates 3 and 4 ran warmer
   and slower (ruler p50 183 and 165 ms, P-cluster 3.16 and 3.45 GHz); the other three
   give 138 to 149 ms. The nominal-only column is 1.00 [0.997, 1.01].
