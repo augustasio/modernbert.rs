@@ -1,0 +1,45 @@
+{
+  "config": "bench/configs/t10_rung8.json",
+  "replicates": [
+    {
+      "replicate": 0,
+      "seed": 10000,
+      "started_utc": "2026-11-06T05:17:33Z",
+      "cooldown_seconds": 30.0,
+      "exit_status": 0,
+      "result": "replicate_0.json"
+    },
+    {
+      "replicate": 1,
+      "seed": 10001,
+      "started_utc": "2026-11-06T05:49:38Z",
+      "cooldown_seconds": 60.0,
+      "exit_status": 0,
+      "result": "replicate_1.json"
+    },
+    {
+      "replicate": 2,
+      "seed": 10002,
+      "started_utc": "2026-11-06T06:26:29Z",
+      "cooldown_seconds": 30.1,
+      "exit_status": 0,
+      "result": "replicate_2.json"
+    },
+    {
+      "replicate": 3,
+      "seed": 10003,
+      "started_utc": "2026-11-06T07:01:22Z",
+      "cooldown_seconds": 30.0,
+      "exit_status": 0,
+      "result": "replicate_3.json"
+    },
+    {
+      "replicate": 4,
+      "seed": 10004,
+      "started_utc": "2026-11-06T07:35:46Z",
+      "cooldown_seconds": 30.0,
+      "exit_status": 0,
+      "result": "replicate_4.json"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "label": "10 threads: rung 0 ruler against rung2 (replicate 2)",
+  "ruler": {
+    "name": "rung0",
+    "command": [
+      "python/.venv/bin/python",
+      "python/worker.py",
+      "--rung",
+      "0"
+    ]
+  },
+  "variant": {
+    "name": "rung2",
+    "command": [
+      "python/.venv/bin/python",
+      "python/worker.py",
+      "--rung",
+      "2"
+    ]
+  },
+  "threads": 10,
+  "cycles": 30,
+  "examples_per_slice": 64,
+  "warmup_examples": 3,
+  "seed": 10002,
+  "weights": "weights/ModernBERT-Large-Instruct",
+  "prompt_ids": "data/agnews_test_prompt_ids.tsv",
+  "reference_logits": "results/rung0_logits.npy",
+  "thermal_helper": "target/tools/thermal_state",
+  "powermetrics": [
+    "sudo",
+    "-n",
+    "/usr/bin/powermetrics"
+  ]
+}
