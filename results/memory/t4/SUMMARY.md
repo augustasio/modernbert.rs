@@ -1,5 +1,8 @@
 # Memory session t4: batch 1, 4 threads
 
+**Superseded by `results/memory/t4_quiet/`**, which reran this session with the other
+apps closed. Quote that one. This one is kept as the record of the pressure effect.
+
 Run on 2026-11-07, 03:51 to 04:07 UTC, at commit afe4c38, on AC power, Low Power Mode
 off, with `python/memory_run.py`. Each row is 5 rounds. Each round is one fresh floor
 process, which exits before reading weights, and one fresh full process, which loads and
