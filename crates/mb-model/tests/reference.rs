@@ -102,7 +102,7 @@ fn embeddings() -> &'static Embeddings {
     EMBEDDINGS.get_or_init(|| {
         let dir = repo_root().join("weights/ModernBERT-Large-Instruct");
         let config = Config::from_file(dir.join("config.json")).expect("config must load");
-        let checkpoint = Checkpoint::load_subset(
+        let mut checkpoint = Checkpoint::load_subset(
             dir.join("model.safetensors"),
             &[
                 "model.embeddings.tok_embeddings.weight",
@@ -111,7 +111,7 @@ fn embeddings() -> &'static Embeddings {
         )
         .expect("the embedding tensors must load");
         Embeddings::load(
-            &checkpoint,
+            &mut checkpoint,
             config.vocab_size,
             config.hidden_size,
             config.norm_eps,
@@ -353,13 +353,13 @@ fn head() -> &'static MlmHead {
     HEAD.get_or_init(|| {
         let dir = repo_root().join("weights/ModernBERT-Large-Instruct");
         let config = Config::from_file(dir.join("config.json")).expect("config must load");
-        let checkpoint = Checkpoint::load_subset(
+        let mut checkpoint = Checkpoint::load_subset(
             dir.join("model.safetensors"),
             &["head.dense.weight", "head.norm.weight", "decoder.bias"],
         )
         .expect("the head tensors must load");
         MlmHead::load(
-            &checkpoint,
+            &mut checkpoint,
             config.hidden_size,
             config.vocab_size,
             config.norm_eps,

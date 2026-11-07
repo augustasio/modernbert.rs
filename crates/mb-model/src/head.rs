@@ -118,7 +118,7 @@ impl MlmHead {
     ///   would be silently unused while the head projected with the
     ///   embeddings instead.
     pub fn load(
-        checkpoint: &Checkpoint,
+        checkpoint: &mut Checkpoint,
         hidden_size: usize,
         vocab_size: usize,
         norm_eps: f32,
@@ -149,16 +149,16 @@ impl MlmHead {
 
         // Trap: the encoder tensors are prefixed `model.` and the head
         // tensors are not. `head.dense.weight`, not `model.head.dense.weight`.
-        let dense = checkpoint.require("head.dense.weight", &[hidden_size, hidden_size])?;
-        let norm = checkpoint.require("head.norm.weight", &[hidden_size])?;
+        let dense = checkpoint.take("head.dense.weight", &[hidden_size, hidden_size])?;
+        let norm = checkpoint.take("head.norm.weight", &[hidden_size])?;
         // Trap 2: required, never defaulted to zeros.
-        let decoder_bias = checkpoint.require("decoder.bias", &[vocab_size])?;
+        let decoder_bias = checkpoint.take("decoder.bias", &[vocab_size])?;
 
         Ok(MlmHead {
-            dense: Matrix::from_vec(hidden_size, hidden_size, dense.data.clone()),
-            norm_weight: norm.data.clone(),
+            dense: Matrix::from_vec(hidden_size, hidden_size, dense),
+            norm_weight: norm,
             eps: norm_eps,
-            decoder_bias: decoder_bias.data.clone(),
+            decoder_bias,
         })
     }
 
@@ -392,7 +392,7 @@ mod tests {
     /// A head with synthetic weights, plus a tied decoder matrix and a hidden
     /// state to run it on. `eps` is the model's real 1e-5 throughout.
     fn synthetic(hidden_size: usize, vocab_size: usize, seq: usize) -> (MlmHead, Matrix, Matrix) {
-        let checkpoint = checkpoint_of(&head_tensors(
+        let mut checkpoint = checkpoint_of(&head_tensors(
             (
                 vec![hidden_size, hidden_size],
                 spread(hidden_size * hidden_size, 11),
@@ -400,7 +400,7 @@ mod tests {
             (vec![hidden_size], spread(hidden_size, 22)),
             (vec![vocab_size], spread(vocab_size, 33)),
         ));
-        let head = MlmHead::load(&checkpoint, hidden_size, vocab_size, 1e-5)
+        let head = MlmHead::load(&mut checkpoint, hidden_size, vocab_size, 1e-5)
             .expect("the shapes are right");
 
         // The decoder weight is the token embedding matrix, which the caller
@@ -502,7 +502,7 @@ mod tests {
         let bias = spread(vocab_size, 63);
 
         let with_bias = MlmHead::load(
-            &checkpoint_of(&head_tensors(
+            &mut checkpoint_of(&head_tensors(
                 (vec![hidden_size, hidden_size], dense.clone()),
                 (vec![hidden_size], norm.clone()),
                 (vec![vocab_size], bias.clone()),
@@ -514,7 +514,7 @@ mod tests {
         .expect("the shapes are right");
 
         let without_bias = MlmHead::load(
-            &checkpoint_of(&head_tensors(
+            &mut checkpoint_of(&head_tensors(
                 (vec![hidden_size, hidden_size], dense),
                 (vec![hidden_size], norm),
                 (vec![vocab_size], vec![0.0; vocab_size]),
@@ -596,12 +596,12 @@ mod tests {
     ///   tests on [`crate::ops::gelu_erf`] instead of here.
     #[test]
     fn the_hand_computed_case() {
-        let checkpoint = checkpoint_of(&head_tensors(
+        let mut checkpoint = checkpoint_of(&head_tensors(
             (vec![2, 2], vec![1.0, 0.0, 0.0, 1.0]),
             (vec![2], vec![1.0, 1.0]),
             (vec![3], vec![0.5, -0.25, 2.0]),
         ));
-        let head = MlmHead::load(&checkpoint, 2, 3, 1e-5).expect("the shapes are right");
+        let head = MlmHead::load(&mut checkpoint, 2, 3, 1e-5).expect("the shapes are right");
 
         let decoder_weight = Matrix::from_vec(3, 2, vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
         let hidden = Matrix::from_vec(1, 2, vec![1.0, 2.0]);
@@ -645,7 +645,7 @@ mod tests {
         );
         tensors.push(("head.dense.bias".to_string(), vec![2], vec![0.1, 0.2]));
 
-        let message = match MlmHead::load(&checkpoint_of(&tensors), 2, 3, 1e-5) {
+        let message = match MlmHead::load(&mut checkpoint_of(&tensors), 2, 3, 1e-5) {
             Err(error) => error.to_string(),
             Ok(_) => panic!("a checkpoint with head.dense.bias must not load"),
         };
@@ -675,7 +675,7 @@ mod tests {
             vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0],
         ));
 
-        let message = match MlmHead::load(&checkpoint_of(&tensors), 2, 3, 1e-5) {
+        let message = match MlmHead::load(&mut checkpoint_of(&tensors), 2, 3, 1e-5) {
             Err(error) => error.to_string(),
             Ok(_) => panic!("a checkpoint with decoder.weight must not load"),
         };
@@ -693,7 +693,7 @@ mod tests {
     /// harmless and is correct 172 times out of 173.
     #[test]
     fn a_missing_decoder_bias_is_reported() {
-        let checkpoint = checkpoint_of(&[
+        let mut checkpoint = checkpoint_of(&[
             (
                 "head.dense.weight".to_string(),
                 vec![2, 2],
@@ -702,7 +702,7 @@ mod tests {
             ("head.norm.weight".to_string(), vec![2], vec![1.0, 1.0]),
         ]);
 
-        let message = match MlmHead::load(&checkpoint, 2, 3, 1e-5) {
+        let message = match MlmHead::load(&mut checkpoint, 2, 3, 1e-5) {
             Err(error) => error.to_string(),
             Ok(_) => panic!("a checkpoint with no decoder.bias must not load"),
         };

@@ -312,6 +312,28 @@ impl Checkpoint {
         self.tensors.is_empty()
     }
 
+    /// Hand a tensor's values to the model, checking its shape as
+    /// [`Self::require`] does.
+    ///
+    /// Rung 13 (feature `owned-weights`) moves the values out of the
+    /// checkpoint, so the model's copy is the only one, and a loaded
+    /// checkpoint is empty. Before rung 13 the values are cloned and the
+    /// checkpoint keeps its own copy until it drops. That is two f32 copies
+    /// of the weights at once, 3.1 GiB at the peak, and macOS's allocator
+    /// then keeps about 0.9 GiB of the freed copy cached in the process
+    /// (`results/memory/t4_quiet/SUMMARY.md`).
+    pub fn take(&mut self, name: &str, shape: &[usize]) -> Result<Vec<f32>, TensorError> {
+        let tensor = self.require(name, shape)?;
+        if !cfg!(feature = "owned-weights") {
+            return Ok(tensor.data.clone());
+        }
+        let tensor = self
+            .tensors
+            .remove(name)
+            .expect("require has just found it");
+        Ok(tensor.data)
+    }
+
     /// Fetch a tensor and check its shape, naming both when it is wrong.
     pub fn require(&self, name: &str, shape: &[usize]) -> Result<&RawTensor, TensorError> {
         let tensor = self.tensors.get(name).ok_or_else(|| {
@@ -432,4 +454,44 @@ fn read_f32(raw: &[u8], count: usize) -> Result<Vec<f32>, String> {
         out.push(f32::from_le_bytes([quad[0], quad[1], quad[2], quad[3]]));
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A checkpoint holding one f32 tensor, `w`, of shape `[2]`.
+    fn one_tensor() -> Checkpoint {
+        let header = r#"{"w":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+        let mut bytes = (header.len() as u64).to_le_bytes().to_vec();
+        bytes.extend_from_slice(header.as_bytes());
+        bytes.extend_from_slice(&1.5f32.to_le_bytes());
+        bytes.extend_from_slice(&(-2.0f32).to_le_bytes());
+        Checkpoint::from_bytes(&bytes).expect("the synthetic checkpoint must parse")
+    }
+
+    #[test]
+    fn take_moves_the_tensor_out_only_in_rung_13() {
+        let mut checkpoint = one_tensor();
+        assert_eq!(
+            checkpoint.take("w", &[2]).expect("the shape is right"),
+            [1.5, -2.0]
+        );
+        // Rung 13 leaves nothing behind; before it the checkpoint keeps its copy.
+        assert_eq!(checkpoint.is_empty(), cfg!(feature = "owned-weights"));
+    }
+
+    #[test]
+    fn take_checks_the_shape_and_keeps_the_tensor_when_it_is_wrong() {
+        let mut checkpoint = one_tensor();
+        let message = match checkpoint.take("w", &[3]) {
+            Ok(_) => panic!("a wrong shape must be refused"),
+            Err(e) => e.to_string(),
+        };
+        assert!(
+            message.contains("w: shape is [2], expected [3]"),
+            "{message}"
+        );
+        assert!(checkpoint.get("w").is_some());
+    }
 }

@@ -226,7 +226,7 @@ impl Attention {
     /// shapes rather than producing a wrongly shaped matrix that fails much
     /// later.
     pub fn load(
-        checkpoint: &Checkpoint,
+        checkpoint: &mut Checkpoint,
         layer: usize,
         hidden_size: usize,
         num_attention_heads: usize,
@@ -243,15 +243,15 @@ impl Attention {
 
         // Trap 1, stated as a shape: one fused projection with *three* rows
         // per output feature, in the order Q, K, V.
-        let wqkv = checkpoint.require(&wqkv_name, &[3 * hidden_size, hidden_size])?;
-        let wo = checkpoint.require(&wo_name, &[hidden_size, hidden_size])?;
+        let wqkv = checkpoint.take(&wqkv_name, &[3 * hidden_size, hidden_size])?;
+        let wo = checkpoint.take(&wo_name, &[hidden_size, hidden_size])?;
 
         // No bias is loaded, and none exists: `attention_bias` is false, so
         // the checkpoint holds no `attn.Wqkv.bias` or `attn.Wo.bias`. The
         // only bias in the whole file is `decoder.bias`.
         Ok(Attention {
-            wqkv: Matrix::from_vec(3 * hidden_size, hidden_size, wqkv.data.clone()),
-            wo: Matrix::from_vec(hidden_size, hidden_size, wo.data.clone()),
+            wqkv: Matrix::from_vec(3 * hidden_size, hidden_size, wqkv),
+            wo: Matrix::from_vec(hidden_size, hidden_size, wo),
             num_heads: num_attention_heads,
             head_dim: hidden_size / num_attention_heads,
         })
@@ -521,11 +521,11 @@ mod tests {
     /// `Wo`, so the output *is* the merged heads and nothing is hidden behind
     /// one more matmul.
     fn attention_with(wqkv: Vec<f32>, hidden: usize, heads: usize) -> Attention {
-        let checkpoint = layer_zero(
+        let mut checkpoint = layer_zero(
             (vec![3 * hidden, hidden], wqkv),
             (vec![hidden, hidden], identity(hidden)),
         );
-        Attention::load(&checkpoint, 0, hidden, heads).expect("the shapes are right")
+        Attention::load(&mut checkpoint, 0, hidden, heads).expect("the shapes are right")
     }
 
     fn identity(n: usize) -> Vec<f32> {
@@ -1198,9 +1198,9 @@ mod tests {
         // `Wqkv` must have 3 * hidden_size rows. Two blocks instead of three
         // is the mistake someone makes by forgetting that V shares the
         // projection.
-        let checkpoint = layer_zero((vec![8, 4], spread(32, 61)), (vec![4, 4], identity(4)));
+        let mut checkpoint = layer_zero((vec![8, 4], spread(32, 61)), (vec![4, 4], identity(4)));
 
-        let message = match Attention::load(&checkpoint, 0, 4, 2) {
+        let message = match Attention::load(&mut checkpoint, 0, 4, 2) {
             Err(error) => error.to_string(),
             Ok(_) => panic!("a Wqkv with 8 rows must not load"),
         };
@@ -1215,8 +1215,9 @@ mod tests {
 
         // And the same for `Wo`, which is the squarer and therefore easier to
         // get wrong without noticing.
-        let checkpoint = layer_zero((vec![12, 4], spread(48, 62)), (vec![4, 8], spread(32, 63)));
-        let message = match Attention::load(&checkpoint, 0, 4, 2) {
+        let mut checkpoint =
+            layer_zero((vec![12, 4], spread(48, 62)), (vec![4, 8], spread(32, 63)));
+        let message = match Attention::load(&mut checkpoint, 0, 4, 2) {
             Err(error) => error.to_string(),
             Ok(_) => panic!("a Wo of [4, 8] must not load"),
         };
@@ -1228,7 +1229,7 @@ mod tests {
         // A missing tensor names the layer it was looking for, so a loader
         // pointed at the wrong layer index says so rather than reporting a
         // shape problem.
-        let message = match Attention::load(&checkpoint, 3, 4, 2) {
+        let message = match Attention::load(&mut checkpoint, 3, 4, 2) {
             Err(error) => error.to_string(),
             Ok(_) => panic!("layer 3 is not in this checkpoint"),
         };

@@ -24,20 +24,20 @@ pub struct Embeddings {
 
 impl Embeddings {
     pub fn load(
-        checkpoint: &Checkpoint,
+        checkpoint: &mut Checkpoint,
         vocab_size: usize,
         hidden_size: usize,
         eps: f32,
     ) -> Result<Self, TensorError> {
-        let table = checkpoint.require(
+        let table = checkpoint.take(
             "model.embeddings.tok_embeddings.weight",
             &[vocab_size, hidden_size],
         )?;
-        let norm = checkpoint.require("model.embeddings.norm.weight", &[hidden_size])?;
+        let norm = checkpoint.take("model.embeddings.norm.weight", &[hidden_size])?;
 
         Ok(Embeddings {
-            weight: Matrix::from_vec(vocab_size, hidden_size, table.data.clone()),
-            norm_weight: norm.data.clone(),
+            weight: Matrix::from_vec(vocab_size, hidden_size, table),
+            norm_weight: norm,
             eps,
         })
     }

@@ -83,17 +83,32 @@ pub struct ModernBert {
 impl ModernBert {
     /// Load from a directory holding `config.json` and `model.safetensors`.
     ///
-    /// Peak memory is about 3.2 GB: the checkpoint's 1.58 GB of f32 plus the
-    /// copies the components take, until the checkpoint drops at the end of
-    /// this function. The resident model afterwards is 1.58 GB.
+    /// Before rung 13, peak memory is about 3.2 GB: the checkpoint's 1.58 GB
+    /// of f32 plus the copies the components take, until the checkpoint drops
+    /// at the end of this function, and macOS's allocator keeps about 0.9 GB
+    /// of the freed copy afterwards. Rung 13 (`owned-weights`) moves each
+    /// tensor instead, so the peak is the 1.58 GB of weights plus one
+    /// tensor's raw bytes while it decodes.
     pub fn load(dir: impl AsRef<Path>) -> Result<Self, LoadError> {
         let dir = dir.as_ref();
         let config = Config::from_file(dir.join("config.json"))?;
-        let checkpoint = Checkpoint::from_file(dir.join("model.safetensors"))?;
-        Self::from_checkpoint(config, &checkpoint)
+        let mut checkpoint = Checkpoint::from_file(dir.join("model.safetensors"))?;
+        let model = Self::from_checkpoint(config, &mut checkpoint)?;
+        // Rung 13 moves every tensor out, so anything left was never read:
+        // a checkpoint with a tensor this model does not know about.
+        if cfg!(feature = "owned-weights") && !checkpoint.is_empty() {
+            let mut left: Vec<&str> = checkpoint.names().collect();
+            left.sort();
+            return Err(TensorError::new(format!(
+                "the model did not read {} tensor(s) from the checkpoint: {left:?}",
+                left.len()
+            ))
+            .into());
+        }
+        Ok(model)
     }
 
-    pub fn from_checkpoint(config: Config, checkpoint: &Checkpoint) -> Result<Self, LoadError> {
+    pub fn from_checkpoint(config: Config, checkpoint: &mut Checkpoint) -> Result<Self, LoadError> {
         let c = &config;
         let embeddings = Embeddings::load(checkpoint, c.vocab_size, c.hidden_size, c.norm_eps)?;
 
@@ -112,25 +127,19 @@ impl ModernBert {
                 None
             } else {
                 let name = format!("model.layers.{i}.attn_norm.weight");
-                Some(checkpoint.require(&name, &[c.hidden_size])?.data.clone())
+                Some(checkpoint.take(&name, &[c.hidden_size])?)
             };
             let mlp_norm_name = format!("model.layers.{i}.mlp_norm.weight");
             layers.push(Layer {
                 attn_norm,
                 attn: Attention::load(checkpoint, i, c.hidden_size, c.num_attention_heads)?,
-                mlp_norm: checkpoint
-                    .require(&mlp_norm_name, &[c.hidden_size])?
-                    .data
-                    .clone(),
+                mlp_norm: checkpoint.take(&mlp_norm_name, &[c.hidden_size])?,
                 mlp: Mlp::load(checkpoint, i, c.hidden_size, c.intermediate_size)?,
                 is_global: c.is_global_layer(i),
             });
         }
 
-        let final_norm = checkpoint
-            .require("model.final_norm.weight", &[c.hidden_size])?
-            .data
-            .clone();
+        let final_norm = checkpoint.take("model.final_norm.weight", &[c.hidden_size])?;
         let head = MlmHead::load(checkpoint, c.hidden_size, c.vocab_size, c.norm_eps)?;
 
         let head_dim = c.head_dim();

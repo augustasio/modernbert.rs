@@ -55,7 +55,7 @@ impl Mlp {
     /// the tensor and both shapes rather than producing a wrongly shaped
     /// matrix that fails much later.
     pub fn load(
-        checkpoint: &Checkpoint,
+        checkpoint: &mut Checkpoint,
         layer: usize,
         hidden_size: usize,
         intermediate_size: usize,
@@ -65,15 +65,15 @@ impl Mlp {
 
         // Trap 2, stated as a shape: `Wi` has *two* rows per intermediate
         // feature, one for each half of the GLU.
-        let wi = checkpoint.require(&wi_name, &[2 * intermediate_size, hidden_size])?;
-        let wo = checkpoint.require(&wo_name, &[hidden_size, intermediate_size])?;
+        let wi = checkpoint.take(&wi_name, &[2 * intermediate_size, hidden_size])?;
+        let wo = checkpoint.take(&wo_name, &[hidden_size, intermediate_size])?;
 
         // No bias is loaded, and none exists: `mlp_bias` is false, so the
         // checkpoint holds no `mlp.Wi.bias` or `mlp.Wo.bias`. The only bias
         // in the whole file is `decoder.bias`.
         Ok(Mlp {
-            wi: Matrix::from_vec(2 * intermediate_size, hidden_size, wi.data.clone()),
-            wo: Matrix::from_vec(hidden_size, intermediate_size, wo.data.clone()),
+            wi: Matrix::from_vec(2 * intermediate_size, hidden_size, wi),
+            wo: Matrix::from_vec(hidden_size, intermediate_size, wo),
             intermediate_size,
         })
     }
@@ -193,14 +193,15 @@ mod tests {
         let hidden = 1024;
         let intermediate = 2624;
 
-        let checkpoint = layer_zero(
+        let mut checkpoint = layer_zero(
             (
                 vec![2 * intermediate, hidden],
                 spread(2 * intermediate * hidden, 1),
             ),
             (vec![hidden, intermediate], spread(hidden * intermediate, 2)),
         );
-        let mlp = Mlp::load(&checkpoint, 0, hidden, intermediate).expect("the shapes are right");
+        let mlp =
+            Mlp::load(&mut checkpoint, 0, hidden, intermediate).expect("the shapes are right");
 
         let x = Matrix::from_vec(3, hidden, spread(3 * hidden, 3));
         let y = mlp.forward(&x);
@@ -221,14 +222,15 @@ mod tests {
         let hidden = 3;
         let intermediate = 2;
 
-        let checkpoint = layer_zero(
+        let mut checkpoint = layer_zero(
             (
                 vec![2 * intermediate, hidden],
                 spread(2 * intermediate * hidden, 7),
             ),
             (vec![hidden, intermediate], spread(hidden * intermediate, 8)),
         );
-        let mlp = Mlp::load(&checkpoint, 0, hidden, intermediate).expect("the shapes are right");
+        let mlp =
+            Mlp::load(&mut checkpoint, 0, hidden, intermediate).expect("the shapes are right");
 
         let y = mlp.forward(&Matrix::zeros(4, hidden));
 
@@ -271,11 +273,11 @@ mod tests {
     /// mass 0.9544997361.
     #[test]
     fn the_hand_computed_case() {
-        let checkpoint = layer_zero(
+        let mut checkpoint = layer_zero(
             (vec![4, 2], vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.5]),
             (vec![2, 2], vec![1.0, 0.0, 1.0, 1.0]),
         );
-        let mlp = Mlp::load(&checkpoint, 0, 2, 2).expect("the shapes are right");
+        let mlp = Mlp::load(&mut checkpoint, 0, 2, 2).expect("the shapes are right");
 
         let y = mlp.forward(&Matrix::from_vec(1, 2, vec![1.0, 2.0]));
 
@@ -315,8 +317,8 @@ mod tests {
     /// units and the difference hides in the noise.
     #[test]
     fn the_activation_goes_on_the_first_half() {
-        let checkpoint = layer_zero((vec![2, 1], vec![0.5, 1.5]), (vec![1, 1], vec![1.0]));
-        let mlp = Mlp::load(&checkpoint, 0, 1, 1).expect("the shapes are right");
+        let mut checkpoint = layer_zero((vec![2, 1], vec![0.5, 1.5]), (vec![1, 1], vec![1.0]));
+        let mlp = Mlp::load(&mut checkpoint, 0, 1, 1).expect("the shapes are right");
 
         let y = mlp.forward(&Matrix::from_vec(1, 1, vec![2.0]));
 
@@ -334,12 +336,12 @@ mod tests {
     fn a_wrong_shaped_weight_names_the_tensor() {
         // `Wi` must have 2 * intermediate_size rows. Three rows is the
         // mistake someone makes by forgetting the GLU doubling.
-        let checkpoint = layer_zero(
+        let mut checkpoint = layer_zero(
             (vec![3, 2], vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0]),
             (vec![2, 2], vec![1.0, 0.0, 0.0, 1.0]),
         );
 
-        let message = match Mlp::load(&checkpoint, 0, 2, 2) {
+        let message = match Mlp::load(&mut checkpoint, 0, 2, 2) {
             Err(error) => error.to_string(),
             Ok(_) => panic!("a Wi with 3 rows must not load"),
         };
@@ -376,11 +378,11 @@ mod tests {
     /// ```
     #[test]
     fn the_halves_are_contiguous() {
-        let checkpoint = layer_zero(
+        let mut checkpoint = layer_zero(
             (vec![4, 1], vec![1.0, 0.0, 2.0, 3.0]),
             (vec![1, 2], vec![1.0, 1.0]),
         );
-        let mlp = Mlp::load(&checkpoint, 0, 1, 2).expect("the shapes are right");
+        let mlp = Mlp::load(&mut checkpoint, 0, 1, 2).expect("the shapes are right");
 
         let y = mlp.forward(&Matrix::from_vec(1, 1, vec![1.0]));
 
@@ -410,8 +412,8 @@ mod tests {
     /// apart.
     #[test]
     fn the_activation_is_erf_and_not_tanh() {
-        let checkpoint = layer_zero((vec![2, 1], vec![2.0, 1.0]), (vec![1, 1], vec![1.0]));
-        let mlp = Mlp::load(&checkpoint, 0, 1, 1).expect("the shapes are right");
+        let mut checkpoint = layer_zero((vec![2, 1], vec![2.0, 1.0]), (vec![1, 1], vec![1.0]));
+        let mlp = Mlp::load(&mut checkpoint, 0, 1, 1).expect("the shapes are right");
 
         let y = mlp.forward(&Matrix::from_vec(1, 1, vec![1.0]));
 

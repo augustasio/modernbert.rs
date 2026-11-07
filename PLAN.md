@@ -654,3 +654,14 @@ Changes to the plan made after seeing data, with the reason.
   small terms; PyTorch's `RowwiseMoments` cascades in the same spirit. Tier 2: worst stack
   error 1.16e-4 of peak (rung 11: 8.2e-5; bound 3e-4), worst verbalizer gap 4.6e-5.
   Tier 3: 7600/7600 agreement, max logit difference 7.0e-4 (rung 11: 4.6e-4; bound 1e-3).
+- **Rung 13 moves the weights into the model instead of copying them.** Until rung 12,
+  each component's loader cloned its tensors out of the `Checkpoint`, which then dropped
+  at the end of `ModernBert::load`. So two f32 copies of the weights (1,507 MiB each)
+  existed at once, and the peak was about 3,160 MiB, the highest of any rung. The memory
+  session also showed 750 to 1,040 MiB more than the weights still resident after load.
+  `vmmap` names it: 911 to 963 MiB of dirty "Malloc Large (empty)", which is macOS's
+  allocator keeping the freed checkpoint copy cached in the process. Rung 13 (feature
+  `owned-weights`, `Checkpoint::take`) removes each tensor from the checkpoint and moves
+  its values into the model, so only one copy ever exists, and `ModernBert::load` now
+  refuses a checkpoint with any tensor left unread. One variable, the load path; the
+  forward pass is rung 12's. All 7,600 Tier 3 logits are bit-identical to rung 12's.

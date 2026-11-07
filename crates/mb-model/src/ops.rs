@@ -138,7 +138,9 @@ pub fn linear_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
 /// every run, because a silently missing Accelerate link would turn the rung
 /// 6 to rung 7 comparison into a comparison of nothing.
 pub fn backend() -> &'static str {
-    if cfg!(feature = "f32-math") {
+    if cfg!(feature = "owned-weights") {
+        "accelerate-fused-expf-attention-sgemm-threads-f32math-owned"
+    } else if cfg!(feature = "f32-math") {
         "accelerate-fused-expf-attention-sgemm-threads-f32math"
     } else if cfg!(feature = "threads") {
         "accelerate-fused-expf-attention-sgemm-threads"

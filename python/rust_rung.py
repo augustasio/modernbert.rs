@@ -46,6 +46,7 @@ EXPECTED_BACKEND = {
     10: "accelerate-fused-expf-attention-sgemm",
     11: "accelerate-fused-expf-attention-sgemm-threads",
     12: "accelerate-fused-expf-attention-sgemm-threads-f32math",
+    13: "accelerate-fused-expf-attention-sgemm-threads-f32math-owned",
 }
 DESCRIPTION = {
     4: "candle-transformers encoder with a mask-only head, candle CPU (gemm) matmul",
@@ -57,6 +58,7 @@ DESCRIPTION = {
     10: "rung 9 with both attention products in cblas_sgemm, per head",
     11: "rung 10 with attention, the norms, the adds and GELU split across threads",
     12: "rung 11 with erf, the LayerNorm statistics and the softmax total in f32",
+    13: "rung 12 loaded by moving each tensor into the model, with no second copy",
 }
 
 

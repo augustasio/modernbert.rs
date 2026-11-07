@@ -1,12 +1,14 @@
-//! The benchmark worker for rungs 6 to 12. See `crates/mb-harness/PROTOCOL.md`.
+//! The benchmark worker for rungs 6 to 13. See `crates/mb-harness/PROTOCOL.md`.
 //!
-//! One binary serves all seven. Built normally it is rung 6, the naive loop;
+//! One binary serves all eight. Built normally it is rung 6, the naive loop;
 //! built with `--features accelerate` it is rung 7; with `--features fused`
 //! it is rung 8, the fused forward pass; with `--features expf` it is rung 9,
 //! rung 8 with f32 `exp`; with `--features attention-sgemm` it is rung 10,
 //! rung 9 with the attention products in `cblas_sgemm`; with `--features
 //! threads` it is rung 11, rung 10 split across `MB_THREADS` threads; with
-//! `--features f32-math` it is rung 12, rung 11 with its f64 arithmetic in f32. It names itself from the backend it
+//! `--features f32-math` it is rung 12, rung 11 with its f64 arithmetic in f32;
+//! with `--features owned-weights` it is rung 13, rung 12 loaded without a
+//! second copy of the weights. It names itself from the backend it
 //! was compiled with, so the harness records which one it ran.
 
 use std::io::{BufRead, Write};
@@ -29,6 +31,7 @@ fn main() {
 
     let variant = match backend() {
         "accelerate-fused-expf-attention-sgemm-threads-f32math" => "rung12",
+        "accelerate-fused-expf-attention-sgemm-threads-f32math-owned" => "rung13",
         "accelerate-fused-expf-attention-sgemm-threads" => "rung11",
         "accelerate-fused-expf-attention-sgemm" => "rung10",
         "accelerate-fused-expf" => "rung9",
