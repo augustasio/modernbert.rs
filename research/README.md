@@ -8,6 +8,13 @@ check, not a result.
   cheaper in energy, ranked for this setting (batch 1, M4 Air, CPU).
 - `fine_tuning_on_m4.md`: whether fine-tuning ModernBERT on this Mac is feasible and
   worth it, and how it would fit the write-up (a separate track, not a rung).
+- `serving.md`: dynamic batching designs, off-the-shelf servers that run ModernBERT, and
+  how to load-test a server fairly (open-loop, Poisson arrivals).
+- `cloud_hardware.md`: AWS instance families, their bf16 and int8 matrix throughput, and
+  estimated cost per million classifications.
+
+Direction since 2026-11-07: CPU first, with optimizations that transfer to cloud CPUs
+(x86 with AMX, Graviton). No Mac-only work. GPUs come later.
 
 ## A correction that applies to both
 
