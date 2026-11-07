@@ -25,6 +25,7 @@ ROWS = [
     ("rung10", "10: + attention in sgemm"),
     ("rung11", "11: + threads outside matmul"),
     ("rung12", "12: + f32 erf, norms, softmax sum"),
+    ("rung13", "13: + weights moved, not copied"),
 ]
 
 

@@ -20,6 +20,7 @@ target folder per rung, because mb-model and mb-candle both name their binary `w
     cargo build --release -p mb-model --features attention-sgemm --bin worker --target-dir target/bench/rung10
     cargo build --release -p mb-model --features threads --bin worker --target-dir target/bench/rung11
     cargo build --release -p mb-model --features f32-math --bin worker --target-dir target/bench/rung12
+    cargo build --release -p mb-model --features owned-weights --bin worker --target-dir target/bench/rung13
 """
 
 import json
@@ -43,6 +44,7 @@ VARIANTS = {
     "rung10": ("rung10", ["target/bench/rung10/release/worker"]),
     "rung11": ("rung11", ["target/bench/rung11/release/worker"]),
     "rung12": ("rung12", ["target/bench/rung12/release/worker"]),
+    "rung13": ("rung13", ["target/bench/rung13/release/worker"]),
 }
 
 
