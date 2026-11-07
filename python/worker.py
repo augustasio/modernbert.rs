@@ -194,6 +194,24 @@ def build_rung3(threads: int):
 # --------------------------------------------------------------------------------------
 
 
+def stop_before_load(rung: int, threads: int) -> None:
+    """The memory runner's floor measurement (python/memory_run.py): import everything the
+    rung imports, set its threads, then report and exit before reading any weights. So the
+    process's peak RSS is the runtime alone. Timing runs never set MB_STOP_BEFORE_LOAD."""
+    if rung == 3:
+        import numpy  # noqa: F401, PLC0415
+        import onnxruntime  # noqa: F401, PLC0415
+    else:
+        import torch  # noqa: PLC0415
+        import transformers  # noqa: F401, PLC0415
+
+        torch.set_num_threads(threads)
+        if rung in (1, 2):
+            import ladder  # noqa: F401, PLC0415
+    send({"floor": True, "variant": f"rung{rung}"})
+    sys.exit(0)
+
+
 def parse_run(request: dict) -> tuple[int, int, list[int]]:
     """example, mask and ids from a run request, checked before anything is timed."""
     example, mask, ids = request.get("example"), request.get("mask"), request.get("ids")
@@ -224,6 +242,8 @@ def main() -> None:
         os.environ.setdefault("TORCHINDUCTOR_COMPILE_THREADS", "1")
 
     ready = {"ready": True, "variant": f"rung{args.rung}", "threads": threads}
+    if os.environ.get("MB_STOP_BEFORE_LOAD"):
+        stop_before_load(args.rung, threads)
     started = time.perf_counter()
     try:
         if args.rung == 3:

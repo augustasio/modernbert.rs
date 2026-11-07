@@ -30,6 +30,8 @@ fn main() {
         ));
     }
 
+    stop_before_load_if_asked();
+
     let start = Instant::now();
     let model = CandleModernBert::load(&weights, &VERBALIZER_IDS)
         .unwrap_or_else(|e| fail(&format!("load: {e}")));
@@ -79,6 +81,19 @@ fn main() {
             Some("quit") => return,
             other => fail(&format!("unknown command {other:?}")),
         }
+    }
+}
+
+/// The memory runner's floor measurement (`python/memory_run.py`): with
+/// `MB_STOP_BEFORE_LOAD` set, report and exit before reading any weights, so
+/// the process's peak RSS is the runtime alone. Timing runs never set it.
+fn stop_before_load_if_asked() {
+    if std::env::var_os("MB_STOP_BEFORE_LOAD").is_some() {
+        send(
+            &mut std::io::stdout().lock(),
+            &json!({ "floor": true, "variant": variant() }),
+        );
+        std::process::exit(0);
     }
 }
 

@@ -27,10 +27,6 @@ fn main() {
         .and_then(|t| t.parse().ok())
         .unwrap_or_else(|| fail("MB_THREADS is not set to a number"));
 
-    let start = Instant::now();
-    let model = ModernBert::load(&weights).unwrap_or_else(|e| fail(&format!("load: {e}")));
-    let load_seconds = start.elapsed().as_secs_f64();
-
     let variant = match backend() {
         "accelerate-fused-expf-attention-sgemm-threads-f32math" => "rung12",
         "accelerate-fused-expf-attention-sgemm-threads" => "rung11",
@@ -40,6 +36,12 @@ fn main() {
         "accelerate" => "rung7",
         _ => "rung6",
     };
+    stop_before_load_if_asked(variant);
+
+    let start = Instant::now();
+    let model = ModernBert::load(&weights).unwrap_or_else(|e| fail(&format!("load: {e}")));
+    let load_seconds = start.elapsed().as_secs_f64();
+
     // Rung 8's buffers. Built once here, outside any timed call, and sized
     // past the longest AG News prompt so no request grows them.
     let mut workspace = Workspace::new(model.config(), 512);
@@ -108,6 +110,19 @@ fn forward(
         logits.copy_from_slice(&model.logits_for_tokens(ids, mask, &VERBALIZER_IDS)?);
     }
     Ok(logits)
+}
+
+/// The memory runner's floor measurement (`python/memory_run.py`): with
+/// `MB_STOP_BEFORE_LOAD` set, report and exit before reading any weights, so
+/// the process's peak RSS is the runtime alone. Timing runs never set it.
+fn stop_before_load_if_asked(variant: &str) {
+    if std::env::var_os("MB_STOP_BEFORE_LOAD").is_some() {
+        send(
+            &mut std::io::stdout().lock(),
+            &json!({ "floor": true, "variant": variant }),
+        );
+        std::process::exit(0);
+    }
 }
 
 fn send(out: &mut impl Write, message: &Value) {

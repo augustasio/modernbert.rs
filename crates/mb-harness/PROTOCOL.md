@@ -29,6 +29,19 @@ When the model is loaded and ready, the worker prints exactly one line:
 `backend` names the matmul library actually in use, so a silently missing Accelerate link
 shows up in the results instead of hiding in them.
 
+### The floor, for memory runs only
+
+`python/memory_run.py` also starts each worker once with `MB_STOP_BEFORE_LOAD` set. The
+worker then imports what its rung imports and sets its threads, prints one line and exits
+with status 0, before it reads any weights:
+
+```json
+{"floor": true, "variant": "rung7"}
+```
+
+The process's peak RSS is then the runtime alone, PLAN.md's floor RSS. The benchmark
+harness never sets this variable.
+
 ## Run one example
 
 ```json
