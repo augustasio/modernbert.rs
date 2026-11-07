@@ -64,6 +64,28 @@ The worker answers:
   The harness checks them against rung 0 during the benchmarked run (hard rule 5), so a
   variant cannot get fast by computing something else.
 
+## Run a batch
+
+Only rung 0 (`python/worker.py --rung 0`) and rung 14 (`--features batch`) accept this.
+Any other worker fails on it as an unknown command.
+
+```json
+{"cmd": "run_batch", "examples": [1659, 20], "masks": [152, 140], "ids": [[50281, ...], [50281, ...]]}
+```
+
+The worker answers with one row of four logits per example, in the request's order, and
+one time for the whole batch:
+
+```json
+{"examples": [1659, 20], "seconds": 0.9301, "logits": [[22.24, 20.30, 16.03, 19.05], [...]]}
+```
+
+`seconds` covers the forward pass of the whole batch, as for `run`. Rung 0 pads the batch on
+the right to its longest prompt, with an attention mask, as HF batches. Rung 14 lays the
+prompts one after another without padding. The harness sends a slice as batches of the
+config's `batch_size`, the same groups to both workers, so each batch is a pair; it checks
+every example's logits against rung 0 as for `run`.
+
 ## Stop
 
 ```json

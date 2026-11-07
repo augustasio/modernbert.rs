@@ -91,6 +91,52 @@ impl Worker {
         })
     }
 
+    /// One `run_batch` request: one reply per example, all carrying the
+    /// batch's one timing.
+    pub fn run_batch(
+        &mut self,
+        examples: &[usize],
+        masks: &[usize],
+        ids: &[&[u32]],
+    ) -> Result<Vec<Reply>, String> {
+        let request =
+            json!({ "cmd": "run_batch", "examples": examples, "masks": masks, "ids": ids });
+        let t = Instant::now();
+        self.send(&request)?;
+        let reply = self.receive()?;
+        let roundtrip_seconds = t.elapsed().as_secs_f64();
+
+        if reply["examples"] != json!(examples) {
+            return Err(format!(
+                "{}: asked for examples {examples:?}, got {}",
+                self.name, reply["examples"]
+            ));
+        }
+        let worker_seconds = reply["seconds"]
+            .as_f64()
+            .ok_or_else(|| format!("{}: no seconds in the batch reply", self.name))?;
+        let rows = reply["logits"]
+            .as_array()
+            .filter(|rows| rows.len() == examples.len())
+            .ok_or_else(|| format!("{}: not one logit row per example", self.name))?;
+        rows.iter()
+            .map(|row| {
+                let logits = row
+                    .as_array()
+                    .ok_or_else(|| format!("{}: a logit row is not a list", self.name))?
+                    .iter()
+                    .map(|v| v.as_f64().map(|x| x as f32))
+                    .collect::<Option<Vec<f32>>>()
+                    .ok_or_else(|| format!("{}: a logit is not a number", self.name))?;
+                Ok(Reply {
+                    worker_seconds,
+                    roundtrip_seconds,
+                    logits,
+                })
+            })
+            .collect()
+    }
+
     pub fn quit(mut self) -> Result<(), String> {
         self.send(&json!({ "cmd": "quit" }))?;
         let status = self

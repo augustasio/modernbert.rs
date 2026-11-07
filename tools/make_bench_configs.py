@@ -21,6 +21,10 @@ target folder per rung, because mb-model and mb-candle both name their binary `w
     cargo build --release -p mb-model --features threads --bin worker --target-dir target/bench/rung11
     cargo build --release -p mb-model --features f32-math --bin worker --target-dir target/bench/rung12
     cargo build --release -p mb-model --features owned-weights --bin worker --target-dir target/bench/rung13
+    cargo build --release -p mb-model --features batch --bin worker --target-dir target/bench/rung14
+
+Rung 14 also gets the batch sweep: t<threads>_b<size>_rung14.json for each size in
+BATCH_SIZES, with rung 0 as the ruler at the same batch size (padded, as HF batches).
 """
 
 import json
@@ -45,12 +49,21 @@ VARIANTS = {
     "rung11": ("rung11", ["target/bench/rung11/release/worker"]),
     "rung12": ("rung12", ["target/bench/rung12/release/worker"]),
     "rung13": ("rung13", ["target/bench/rung13/release/worker"]),
+    "rung14": ("rung14", ["target/bench/rung14/release/worker"]),
 }
 
+# Each divides the 64 examples of a slice.
+BATCH_SIZES = (4, 16, 64)
 
-def config(threads: int, name: str) -> dict:
+
+def config(threads: int, name: str, batch_size: int = 1) -> dict:
     variant_name, command = VARIANTS[name]
     slow = name == "rung6"
+    batched = {}
+    if batch_size > 1:
+        # The warm-up is one full batch, so the first measured batch finds its
+        # buffers already grown.
+        batched = {"batch_size": batch_size, "warmup_examples": batch_size}
     return {
         "label": f"{threads} threads: rung 0 ruler against {variant_name}",
         "ruler": {"name": "rung0", "command": [*PY, "0"]},
@@ -65,7 +78,7 @@ def config(threads: int, name: str) -> dict:
         "reference_logits": "results/rung0_logits.npy",
         "thermal_helper": "target/tools/thermal_state",
         "powermetrics": ["sudo", "-n", "/usr/bin/powermetrics"],
-    }
+    } | batched
 
 
 def main() -> None:
@@ -73,6 +86,12 @@ def main() -> None:
     for name in VARIANTS:
         path = REPO / "bench" / "configs" / f"t{threads}_{name}.json"
         path.write_text(json.dumps(config(threads, name), indent=2) + "\n")
+        print(path.relative_to(REPO))
+    for size in BATCH_SIZES:
+        path = REPO / "bench" / "configs" / f"t{threads}_b{size}_rung14.json"
+        body = config(threads, "rung14", size)
+        body["label"] = f"{threads} threads, batches of {size}: rung 0 ruler against rung14"
+        path.write_text(json.dumps(body, indent=2) + "\n")
         print(path.relative_to(REPO))
 
 

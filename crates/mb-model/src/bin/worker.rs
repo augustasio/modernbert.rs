@@ -1,6 +1,6 @@
-//! The benchmark worker for rungs 6 to 13. See `crates/mb-harness/PROTOCOL.md`.
+//! The benchmark worker for rungs 6 to 14. See `crates/mb-harness/PROTOCOL.md`.
 //!
-//! One binary serves all eight. Built normally it is rung 6, the naive loop;
+//! One binary serves all nine. Built normally it is rung 6, the naive loop;
 //! built with `--features accelerate` it is rung 7; with `--features fused`
 //! it is rung 8, the fused forward pass; with `--features expf` it is rung 9,
 //! rung 8 with f32 `exp`; with `--features attention-sgemm` it is rung 10,
@@ -8,7 +8,8 @@
 //! threads` it is rung 11, rung 10 split across `MB_THREADS` threads; with
 //! `--features f32-math` it is rung 12, rung 11 with its f64 arithmetic in f32;
 //! with `--features owned-weights` it is rung 13, rung 12 loaded without a
-//! second copy of the weights. It names itself from the backend it
+//! second copy of the weights; with `--features batch` it is rung 14, rung 13
+//! answering `run_batch` requests through the batched forward pass. It names itself from the backend it
 //! was compiled with, so the harness records which one it ran.
 
 use std::io::{BufRead, Write};
@@ -32,6 +33,7 @@ fn main() {
     let variant = match backend() {
         "accelerate-fused-expf-attention-sgemm-threads-f32math" => "rung12",
         "accelerate-fused-expf-attention-sgemm-threads-f32math-owned" => "rung13",
+        "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch" => "rung14",
         "accelerate-fused-expf-attention-sgemm-threads" => "rung11",
         "accelerate-fused-expf-attention-sgemm" => "rung10",
         "accelerate-fused-expf" => "rung9",
@@ -92,6 +94,30 @@ fn main() {
                     &json!({ "example": example, "seconds": seconds, "logits": logits }),
                 );
             }
+            Some("run_batch") if cfg!(feature = "batch") => {
+                let (examples, masks, ids) = parse_batch(&request);
+                let batch: Vec<&[u32]> = ids.iter().map(Vec::as_slice).collect();
+                let mut logits = vec![0.0f32; batch.len() * VERBALIZER_IDS.len()];
+
+                // The forward pass alone. Parsing and replying are outside it.
+                let t = Instant::now();
+                model
+                    .logits_batch_fused(
+                        &batch,
+                        &masks,
+                        &VERBALIZER_IDS,
+                        &mut workspace,
+                        &mut logits,
+                    )
+                    .unwrap_or_else(|e| fail(&format!("batch {examples:?}: {e}")));
+                let seconds = t.elapsed().as_secs_f64();
+
+                let logits: Vec<&[f32]> = logits.chunks(VERBALIZER_IDS.len()).collect();
+                send(
+                    &mut out,
+                    &json!({ "examples": examples, "seconds": seconds, "logits": logits }),
+                );
+            }
             Some("quit") => return,
             other => fail(&format!("unknown command {other:?}")),
         }
@@ -113,6 +139,37 @@ fn forward(
         logits.copy_from_slice(&model.logits_for_tokens(ids, mask, &VERBALIZER_IDS)?);
     }
     Ok(logits)
+}
+
+/// The examples, mask positions and token ids of a `run_batch` request.
+fn parse_batch(request: &Value) -> (Vec<u64>, Vec<usize>, Vec<Vec<u32>>) {
+    let list = |key: &str| {
+        request[key]
+            .as_array()
+            .unwrap_or_else(|| fail(&format!("run_batch: no {key}")))
+    };
+    let examples: Vec<u64> = list("examples")
+        .iter()
+        .map(|v| v.as_u64().unwrap_or_else(|| fail("a non-integer example")))
+        .collect();
+    let masks: Vec<usize> = list("masks")
+        .iter()
+        .map(|v| v.as_u64().unwrap_or_else(|| fail("a non-integer mask")) as usize)
+        .collect();
+    let ids: Vec<Vec<u32>> = list("ids")
+        .iter()
+        .map(|row| {
+            row.as_array()
+                .unwrap_or_else(|| fail("ids must be a list of lists"))
+                .iter()
+                .map(|v| v.as_u64().unwrap_or_else(|| fail("a non-integer id")) as u32)
+                .collect()
+        })
+        .collect();
+    if examples.is_empty() || masks.len() != examples.len() || ids.len() != examples.len() {
+        fail("run_batch: examples, masks and ids must be non-empty and the same length");
+    }
+    (examples, masks, ids)
 }
 
 /// The memory runner's floor measurement (`python/memory_run.py`): with

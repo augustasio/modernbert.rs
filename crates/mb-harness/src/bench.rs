@@ -36,6 +36,10 @@ pub struct Config {
     pub threads: u32,
     pub cycles: usize,
     pub examples_per_slice: usize,
+    /// Examples per request. 1, the default, sends one `run` per example;
+    /// more sends `run_batch` requests of this many, to both workers alike, so
+    /// each request is still a pair. `examples_per_slice` must be a multiple.
+    pub batch_size: usize,
     pub warmup_examples: usize,
     pub seed: u64,
     pub weights: PathBuf,
@@ -93,6 +97,14 @@ impl Config {
             threads: number("threads")? as u32,
             cycles: number("cycles")? as usize,
             examples_per_slice: number("examples_per_slice")? as usize,
+            batch_size: match &v["batch_size"] {
+                Value::Null => 1,
+                b => b
+                    .as_u64()
+                    .filter(|&b| b >= 1)
+                    .ok_or("config: batch_size must be a positive integer")?
+                    as usize,
+            },
             warmup_examples: number("warmup_examples")? as usize,
             seed: number("seed")?,
             weights: text("weights")?.into(),
@@ -219,6 +231,12 @@ pub fn run(config: &Config) -> Result<Value, String> {
         None => None,
     };
 
+    if config.batch_size > 1 && config.examples_per_slice % config.batch_size != 0 {
+        return Err(format!(
+            "examples_per_slice {} is not a multiple of batch_size {}",
+            config.examples_per_slice, config.batch_size
+        ));
+    }
     let environment = environment();
     let cycles = schedule::plan(
         examples.len(),
@@ -260,21 +278,32 @@ pub fn run(config: &Config) -> Result<Value, String> {
         let start_seconds = origin.elapsed().as_secs_f64();
         let mut worker_seconds = Vec::with_capacity(picks.len());
         let mut roundtrip_seconds = Vec::with_capacity(picks.len());
-        for &e in picks {
-            let ex = &examples[e];
-            let reply = worker.run(e, ex.mask, &ex.ids)?;
-            let c = integrity::check(reference.row(e), &reply.logits);
-            checked += 1;
-            worst_abs = worst_abs.max(c.max_abs);
-            if !c.passes() {
-                failures.push(json!({
-                    "worker": worker.name, "example": e,
-                    "argmax_agrees": c.argmax_agrees, "max_abs": c.max_abs,
-                    "logits": reply.logits, "reference": reference.row(e),
-                }));
+        // One request per group: one example, or a batch of `batch_size`.
+        // The groups are the same for both workers, so their timings pair.
+        for group in picks.chunks(config.batch_size) {
+            let replies = if config.batch_size == 1 {
+                let e = group[0];
+                vec![worker.run(e, examples[e].mask, &examples[e].ids)?]
+            } else {
+                let masks: Vec<usize> = group.iter().map(|&e| examples[e].mask).collect();
+                let ids: Vec<&[u32]> = group.iter().map(|&e| examples[e].ids.as_slice()).collect();
+                worker.run_batch(group, &masks, &ids)?
+            };
+            for (&e, reply) in group.iter().zip(&replies) {
+                let c = integrity::check(reference.row(e), &reply.logits);
+                checked += 1;
+                worst_abs = worst_abs.max(c.max_abs);
+                if !c.passes() {
+                    failures.push(json!({
+                        "worker": worker.name, "example": e,
+                        "argmax_agrees": c.argmax_agrees, "max_abs": c.max_abs,
+                        "logits": reply.logits, "reference": reference.row(e),
+                    }));
+                }
             }
-            worker_seconds.push(reply.worker_seconds);
-            roundtrip_seconds.push(reply.roundtrip_seconds);
+            // A batch is one request with one time.
+            worker_seconds.push(replies[0].worker_seconds);
+            roundtrip_seconds.push(replies[0].roundtrip_seconds);
         }
         let end_seconds = origin.elapsed().as_secs_f64();
         let thermal_after = thermal::read(&config.thermal_helper)?;
@@ -352,6 +381,7 @@ pub fn run(config: &Config) -> Result<Value, String> {
             "ruler_command": config.ruler.command, "variant_command": config.variant.command,
             "threads": config.threads, "cycles": config.cycles,
             "examples_per_slice": config.examples_per_slice,
+            "batch_size": config.batch_size,
             "warmup_examples": config.warmup_examples, "seed": config.seed,
             "prompt_ids": config.prompt_ids, "reference_logits": config.reference_logits,
         },

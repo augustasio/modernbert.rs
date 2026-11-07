@@ -69,12 +69,13 @@ def load(paths: list[str]) -> list[dict]:
         with opener(p, "rt") as handle:
             runs.append(json.load(handle))
     first = runs[0]["config"]
-    same = ("ruler", "variant", "threads", "cycles", "examples_per_slice")
+    same = ("ruler", "variant", "threads", "cycles", "examples_per_slice", "batch_size")
     for path, run in zip(paths, runs, strict=True):
         if not run["valid"]:
             raise SystemExit(f"{path} is not a valid run: {run['invalid_because']}")
         for key in same:
-            if run["config"][key] != first[key]:
+            # Runs from before batching have no batch_size: they ran batches of 1.
+            if run["config"].get(key, 1) != first.get(key, 1):
                 raise SystemExit(f"{path}: {key} is {run['config'][key]}, expected {first[key]}")
     return runs
 
@@ -125,9 +126,12 @@ def cycles_of(run: dict, nominal_only: bool) -> list[dict]:
             raise SystemExit(f"cycle {c}: the two slices ran different examples")
         if nominal_only and not (is_nominal(pair["ruler"]) and is_nominal(pair["variant"])):
             continue
+        # One time per request: per example, or per batch when batch_size > 1. The
+        # two roles send the same groups, so the times still pair.
         cycle = {
             "ruler": np.array(pair["ruler"]["worker_seconds"]),
             "variant": np.array(pair["variant"]["worker_seconds"]),
+            "examples": len(pair["ruler"]["examples"]),
         }
         long_enough = measured and all(
             pair[role]["end_seconds"] - pair[role]["start_seconds"] >= MIN_ENERGY_SLICE_SECONDS
@@ -154,9 +158,12 @@ def statistics(cycles_per_replicate: list[list[dict]]) -> dict:
     ruler = np.concatenate(ruler)
     variant = np.concatenate(variant)
     out = {"speedup": float(np.exp(np.concatenate(log_ratios).mean()))}
+    examples = sum(c["examples"] for cs in cycles_per_replicate for c in cs)
     for name, values in (("ruler", ruler), ("variant", variant)):
+        # Per request: with batches, this is a batch's latency.
         for q in (50, 90, 99):
             out[f"{name}_p{q}_ms"] = float(np.percentile(values, q) * 1000)
+        out[f"{name}_examples_per_s"] = float(examples / values.sum())
 
     cycles = [c for cs in cycles_per_replicate for c in cs]
     if all("ruler_mj" in c for c in cycles):

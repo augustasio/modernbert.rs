@@ -105,6 +105,26 @@ def build_rung0(weights: str):
         seconds = time.perf_counter() - started
         return seconds, picked.tolist()
 
+    pad_id = model.config.pad_token_id
+
+    def forward_batch(ids_list, masks):
+        """The stock batched call: pad on the right to the longest prompt, with the
+        attention mask marking the padding, as the tokenizer does for a batch."""
+        longest = max(len(ids) for ids in ids_list)
+        input_ids = torch.full((len(ids_list), longest), pad_id, dtype=torch.int64)
+        attention_mask = torch.zeros_like(input_ids)
+        for b, ids in enumerate(ids_list):
+            input_ids[b, : len(ids)] = torch.tensor(ids, dtype=torch.int64)
+            attention_mask[b, : len(ids)] = 1
+        rows = torch.arange(len(ids_list))
+        started = time.perf_counter()
+        with torch.inference_mode():
+            logits = model(input_ids=input_ids, attention_mask=attention_mask).logits
+            picked = logits[rows, torch.tensor(masks)][:, verbalizer_ids]
+        seconds = time.perf_counter() - started
+        return seconds, picked.tolist()
+
+    forward.batch = forward_batch
     return forward
 
 
@@ -226,6 +246,18 @@ def parse_run(request: dict) -> tuple[int, int, list[int]]:
     return example, mask, ids
 
 
+def parse_batch(request: dict) -> tuple[list[int], list[int], list[list[int]]]:
+    """examples, masks and ids from a run_batch request, each checked as parse_run does."""
+    examples, masks, ids = request.get("examples"), request.get("masks"), request.get("ids")
+    if not (isinstance(examples, list) and isinstance(masks, list) and isinstance(ids, list)):
+        fail(f"run_batch needs lists of examples, masks and ids: {request}")
+    if not examples or not len(examples) == len(masks) == len(ids):
+        fail("run_batch: examples, masks and ids must be non-empty and the same length")
+    for example, mask, row in zip(examples, masks, ids, strict=True):
+        parse_run({"example": example, "mask": mask, "ids": row})
+    return examples, masks, ids
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rung", type=int, choices=[0, 1, 2, 3], required=True)
@@ -284,6 +316,13 @@ def main() -> None:
             except Exception as error:  # noqa: BLE001  (same reason as at load)
                 fail(f"example {example}: {type(error).__name__}: {error}")
             send({"example": example, "seconds": seconds, "logits": logits})
+        elif command == "run_batch" and hasattr(forward, "batch"):
+            examples, masks, ids = parse_batch(request)
+            try:
+                seconds, logits = forward.batch(ids, masks)
+            except Exception as error:  # noqa: BLE001  (same reason as at load)
+                fail(f"batch {examples}: {type(error).__name__}: {error}")
+            send({"examples": examples, "seconds": seconds, "logits": logits})
         elif command == "quit":
             return
         else:

@@ -37,3 +37,7 @@ f32-math = ["threads"]
 # instead of cloning it, so only one f32 copy of the weights ever exists. The
 # forward pass is rung 12's. Built on rung 12.
 owned-weights = ["f32-math"]
+# Rung 14: the worker accepts batches, run through the batched forward pass
+# without padding (`ModernBert::logits_batch_fused`). A batch of one is rung
+# 13's path. Built on rung 13.
+batch = ["owned-weights"]
