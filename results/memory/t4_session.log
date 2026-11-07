@@ -1,0 +1,85 @@
+== rung0, 03:51:59Z
+  rung0 process 1 of 5: peak 1940 MiB, cold start 3.90 s
+  rung0 process 2 of 5: peak 2595 MiB, cold start 2.06 s
+  rung0 process 3 of 5: peak 2595 MiB, cold start 2.03 s
+  rung0 process 4 of 5: peak 2595 MiB, cold start 1.93 s
+  rung0 process 5 of 5: peak 2595 MiB, cold start 2.11 s
+== rung1, 03:52:29Z
+  rung1 process 1 of 5: peak 2668 MiB, cold start 2.18 s
+  rung1 process 2 of 5: peak 2668 MiB, cold start 2.21 s
+  rung1 process 3 of 5: peak 2668 MiB, cold start 2.23 s
+  rung1 process 4 of 5: peak 2668 MiB, cold start 2.18 s
+  rung1 process 5 of 5: peak 2668 MiB, cold start 2.17 s
+== rung2, 03:52:58Z
+  rung2 process 1 of 5: peak 2668 MiB, cold start 26.44 s
+  rung2 process 2 of 5: peak 2668 MiB, cold start 27.47 s
+  rung2 process 3 of 5: peak 2587 MiB, cold start 27.16 s
+  rung2 process 4 of 5: peak 2668 MiB, cold start 27.58 s
+  rung2 process 5 of 5: peak 2606 MiB, cold start 27.07 s
+== rung2-warm, 03:55:35Z
+  rung2-warm process 1 of 5: peak 2543 MiB, cold start 12.26 s
+  rung2-warm process 2 of 5: peak 2668 MiB, cold start 11.43 s
+  rung2-warm process 3 of 5: peak 2668 MiB, cold start 11.49 s
+  rung2-warm process 4 of 5: peak 2668 MiB, cold start 11.48 s
+  rung2-warm process 5 of 5: peak 2668 MiB, cold start 11.87 s
+== rung3, 03:57:23Z
+  rung3 process 1 of 5: peak 1491 MiB, cold start 7.73 s
+  rung3 process 2 of 5: peak 1484 MiB, cold start 0.78 s
+  rung3 process 3 of 5: peak 1484 MiB, cold start 0.76 s
+  rung3 process 4 of 5: peak 1484 MiB, cold start 0.77 s
+  rung3 process 5 of 5: peak 1484 MiB, cold start 0.85 s
+== rung4, 03:57:44Z
+  rung4 process 1 of 5: peak 2339 MiB, cold start 1.99 s
+  rung4 process 2 of 5: peak 2690 MiB, cold start 1.42 s
+  rung4 process 3 of 5: peak 2692 MiB, cold start 1.31 s
+  rung4 process 4 of 5: peak 2691 MiB, cold start 1.34 s
+  rung4 process 5 of 5: peak 2691 MiB, cold start 1.33 s
+== rung5, 03:58:27Z
+  rung5 process 1 of 5: peak 2691 MiB, cold start 0.69 s
+  rung5 process 2 of 5: peak 2691 MiB, cold start 0.65 s
+  rung5 process 3 of 5: peak 2690 MiB, cold start 0.64 s
+  rung5 process 4 of 5: peak 2691 MiB, cold start 0.64 s
+  rung5 process 5 of 5: peak 2690 MiB, cold start 0.67 s
+== rung6, 03:58:44Z
+  rung6 process 1 of 5: peak 3153 MiB, cold start 56.54 s
+  rung6 process 2 of 5: peak 2817 MiB, cold start 56.17 s
+  rung6 process 3 of 5: peak 1882 MiB, cold start 56.27 s
+  rung6 process 4 of 5: peak 1890 MiB, cold start 56.04 s
+  rung6 process 5 of 5: peak 2059 MiB, cold start 55.98 s
+== rung7, 04:05:31Z
+  rung7 process 1 of 5: peak 1910 MiB, cold start 2.96 s
+  rung7 process 2 of 5: peak 3145 MiB, cold start 1.85 s
+  rung7 process 3 of 5: peak 3063 MiB, cold start 2.27 s
+  rung7 process 4 of 5: peak 2777 MiB, cold start 2.38 s
+  rung7 process 5 of 5: peak 3141 MiB, cold start 2.17 s
+== rung8, 04:06:08Z
+  rung8 process 1 of 5: peak 3166 MiB, cold start 1.10 s
+  rung8 process 2 of 5: peak 3161 MiB, cold start 1.09 s
+  rung8 process 3 of 5: peak 3009 MiB, cold start 1.52 s
+  rung8 process 4 of 5: peak 3131 MiB, cold start 1.10 s
+  rung8 process 5 of 5: peak 3168 MiB, cold start 1.08 s
+== rung9, 04:06:29Z
+  rung9 process 1 of 5: peak 3159 MiB, cold start 1.03 s
+  rung9 process 2 of 5: peak 3167 MiB, cold start 1.01 s
+  rung9 process 3 of 5: peak 3170 MiB, cold start 1.00 s
+  rung9 process 4 of 5: peak 3170 MiB, cold start 1.00 s
+  rung9 process 5 of 5: peak 3162 MiB, cold start 0.99 s
+== rung10, 04:06:48Z
+  rung10 process 1 of 5: peak 3161 MiB, cold start 0.83 s
+  rung10 process 2 of 5: peak 3069 MiB, cold start 1.24 s
+  rung10 process 3 of 5: peak 3163 MiB, cold start 0.88 s
+  rung10 process 4 of 5: peak 3157 MiB, cold start 0.82 s
+  rung10 process 5 of 5: peak 3163 MiB, cold start 0.85 s
+== rung11, 04:07:04Z
+  rung11 process 1 of 5: peak 3127 MiB, cold start 0.83 s
+  rung11 process 2 of 5: peak 3165 MiB, cold start 0.76 s
+  rung11 process 3 of 5: peak 3158 MiB, cold start 0.74 s
+  rung11 process 4 of 5: peak 3064 MiB, cold start 1.24 s
+  rung11 process 5 of 5: peak 3108 MiB, cold start 1.23 s
+== rung12, 04:07:18Z
+  rung12 process 1 of 5: peak 3173 MiB, cold start 0.75 s
+  rung12 process 2 of 5: peak 3168 MiB, cold start 0.74 s
+  rung12 process 3 of 5: peak 3167 MiB, cold start 0.75 s
+  rung12 process 4 of 5: peak 3168 MiB, cold start 0.72 s
+  rung12 process 5 of 5: peak 3147 MiB, cold start 0.94 s
+== done, 04:07:30Z

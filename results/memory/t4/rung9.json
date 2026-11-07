@@ -1,0 +1,205 @@
+{
+ "name": "rung9",
+ "command": [
+  "target/mem/rung9/release/worker"
+ ],
+ "threads": 4,
+ "processes": 5,
+ "example_indices": [
+  5181,
+  6918,
+  3155,
+  6210,
+  7293,
+  3445,
+  331,
+  2121,
+  4188,
+  3980,
+  3317,
+  7523,
+  6421,
+  6799,
+  2484,
+  3904
+ ],
+ "logit_gate": 0.01,
+ "records": [
+  {
+   "process": 0,
+   "system_before": {
+    "free_bytes": 2924216320,
+    "compressed_bytes": 9958031360,
+    "swap_used_bytes": 7877951488
+   },
+   "floor": {
+    "variant": "rung9",
+    "exit_code": 0,
+    "peak_rss_bytes": 6045696,
+    "major_faults": 17,
+    "minor_faults": 598
+   },
+   "full": {
+    "variant": "rung9",
+    "backend": "accelerate-fused-expf",
+    "load_seconds": 0.486259917,
+    "compile_seconds": null,
+    "ready_seconds": 0.490635541966185,
+    "cold_start_seconds": 1.0346697919885628,
+    "post_load_rss_bytes": 2425241600,
+    "post_load_footprint_bytes": 2421721872,
+    "inference_peak_rss_bytes": 2429698048,
+    "inference_peak_footprint_bytes": 2426178368,
+    "activation_delta_bytes": 4456448,
+    "samples": 228,
+    "examples": 16,
+    "worst_logit_difference": 4.76837158203125e-05,
+    "exit_code": 0,
+    "peak_rss_bytes": 3312304128,
+    "major_faults": 7,
+    "minor_faults": 203579
+   }
+  },
+  {
+   "process": 1,
+   "system_before": {
+    "free_bytes": 3070001152,
+    "compressed_bytes": 10200973312,
+    "swap_used_bytes": 7877951488
+   },
+   "floor": {
+    "variant": "rung9",
+    "exit_code": 0,
+    "peak_rss_bytes": 6045696,
+    "major_faults": 0,
+    "minor_faults": 615
+   },
+   "full": {
+    "variant": "rung9",
+    "backend": "accelerate-fused-expf",
+    "load_seconds": 0.465696833,
+    "compile_seconds": null,
+    "ready_seconds": 0.4695727500366047,
+    "cold_start_seconds": 1.0109855839982629,
+    "post_load_rss_bytes": 2609922048,
+    "post_load_footprint_bytes": 2606517176,
+    "inference_peak_rss_bytes": 2614362112,
+    "inference_peak_footprint_bytes": 2610957288,
+    "activation_delta_bytes": 4440064,
+    "samples": 231,
+    "examples": 16,
+    "worst_logit_difference": 4.76837158203125e-05,
+    "exit_code": 0,
+    "peak_rss_bytes": 3320938496,
+    "major_faults": 2,
+    "minor_faults": 204111
+   }
+  },
+  {
+   "process": 2,
+   "system_before": {
+    "free_bytes": 3094134784,
+    "compressed_bytes": 10306224128,
+    "swap_used_bytes": 7877951488
+   },
+   "floor": {
+    "variant": "rung9",
+    "exit_code": 0,
+    "peak_rss_bytes": 6045696,
+    "major_faults": 0,
+    "minor_faults": 615
+   },
+   "full": {
+    "variant": "rung9",
+    "backend": "accelerate-fused-expf",
+    "load_seconds": 0.452775042,
+    "compile_seconds": null,
+    "ready_seconds": 0.4571294999914244,
+    "cold_start_seconds": 0.9972255000029691,
+    "post_load_rss_bytes": 2497232896,
+    "post_load_footprint_bytes": 2493713168,
+    "inference_peak_rss_bytes": 2501689344,
+    "inference_peak_footprint_bytes": 2498169664,
+    "activation_delta_bytes": 4456448,
+    "samples": 228,
+    "examples": 16,
+    "worst_logit_difference": 4.76837158203125e-05,
+    "exit_code": 0,
+    "peak_rss_bytes": 3324248064,
+    "major_faults": 0,
+    "minor_faults": 204316
+   }
+  },
+  {
+   "process": 3,
+   "system_before": {
+    "free_bytes": 3170172928,
+    "compressed_bytes": 10416668672,
+    "swap_used_bytes": 7877951488
+   },
+   "floor": {
+    "variant": "rung9",
+    "exit_code": 0,
+    "peak_rss_bytes": 6045696,
+    "major_faults": 4,
+    "minor_faults": 611
+   },
+   "full": {
+    "variant": "rung9",
+    "backend": "accelerate-fused-expf",
+    "load_seconds": 0.45810625,
+    "compile_seconds": null,
+    "ready_seconds": 0.4621262080036104,
+    "cold_start_seconds": 0.9993724579690024,
+    "post_load_rss_bytes": 2381971456,
+    "post_load_footprint_bytes": 2378402504,
+    "inference_peak_rss_bytes": 2386427904,
+    "inference_peak_footprint_bytes": 2382859000,
+    "activation_delta_bytes": 4456448,
+    "samples": 231,
+    "examples": 16,
+    "worst_logit_difference": 4.76837158203125e-05,
+    "exit_code": 0,
+    "peak_rss_bytes": 3323936768,
+    "major_faults": 2,
+    "minor_faults": 204295
+   }
+  },
+  {
+   "process": 4,
+   "system_before": {
+    "free_bytes": 3082043392,
+    "compressed_bytes": 10468442112,
+    "swap_used_bytes": 7877951488
+   },
+   "floor": {
+    "variant": "rung9",
+    "exit_code": 0,
+    "peak_rss_bytes": 6045696,
+    "major_faults": 0,
+    "minor_faults": 615
+   },
+   "full": {
+    "variant": "rung9",
+    "backend": "accelerate-fused-expf",
+    "load_seconds": 0.4454,
+    "compile_seconds": null,
+    "ready_seconds": 0.4493540420080535,
+    "cold_start_seconds": 0.9865410000202246,
+    "post_load_rss_bytes": 2677981184,
+    "post_load_footprint_bytes": 2674609128,
+    "inference_peak_rss_bytes": 2682421248,
+    "inference_peak_footprint_bytes": 2679049240,
+    "activation_delta_bytes": 4440064,
+    "samples": 226,
+    "examples": 16,
+    "worst_logit_difference": 4.76837158203125e-05,
+    "exit_code": 0,
+    "peak_rss_bytes": 3315597312,
+    "major_faults": 0,
+    "minor_faults": 203787
+   }
+  }
+ ],
+ "finished_utc": "2026-11-07T04:06:48Z"
+}
