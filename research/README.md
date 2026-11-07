@@ -16,7 +16,7 @@ check, not a result.
 Direction since 2026-11-07: CPU first, with optimizations that transfer to cloud CPUs
 (x86 with AMX, Graviton). No Mac-only work. GPUs come later.
 
-## A correction that applies to both
+## A correction that applies to all four
 
 The agents were told the prompts are about 60 tokens. That came from an early estimate in
 PLAN.md, and it is wrong. Measured from `data/agnews_test_prompt_ids.tsv`:
