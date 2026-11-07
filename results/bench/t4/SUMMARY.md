@@ -8,7 +8,8 @@ setup. Rung 9 was added on 2026-11-04 in two sittings, 08:02 to 08:36 and 19:21 
 19:43 UTC, at commit 3133da8, with the resumable runner. Rung 10 was added on
 2026-11-05, 00:31 to 01:26 UTC, at commit e3b9a66, and rung 11 the same day, 08:04 to
 08:50 UTC, at commit 9f46fbd. Rung 12 was added on 2026-11-05, 19:12 to 19:58 UTC,
-at commit 465c39e. All 65 replicates passed the in-run correctness check. Intervals are 95%, from the two-stage
+at commit 465c39e. Rung 13 was added on 2026-11-07, 14:02 to 14:42 UTC, at commit
+e05f371. All 70 replicates passed the in-run correctness check. Intervals are 95%, from the two-stage
 bootstrap in `python/analyze_bench.py`. The table comes from `python/bench_table.py`.
 
 Speedup is rung 0 time over the variant's time: above 1 is faster than rung 0. The energy
@@ -29,6 +30,7 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 | 10: + attention in sgemm | 0.969 [0.951, 0.997] | 146 [144, 151] | 364 [219, 682] | 1.14 [1.1, 1.17] | 3.88 [3.74, 3.95] | 0.954 [0.942, 0.967] (18) |
 | 11: + threads outside matmul | 1.14 [1.11, 1.16] | 116 [111, 120] | 323 [184, 486] | 1.13 [1.09, 1.16] | 3.81 [3.7, 3.91] | 1.12 [0.989, 1.16] (25) |
 | 12: + f32 erf, norms, softmax sum | 1.22 [1.2, 1.25] | 110 [107, 117] | 292 [180, 387] | 1.23 [1.21, 1.26] | 3.8 [3.7, 3.88] | 1.22 [1.2, 1.24] (30) |
+| 13: + weights moved, not copied | 1.22 [1.21, 1.23] | 105 [102, 110] | 139 [132, 142] | 1.21 [1.2, 1.22] | 3.86 [3.8, 3.92] | 1.22 [1.21, 1.23] (135) |
 
 ## Notes
 
@@ -73,6 +75,12 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
   145 ms against 127 to 135 ms); it gives 1.27, and the other four give 1.20 to 1.21.
   The gain over rung 11 is smaller here than with 1 thread (session t1), because at 4
   threads the work it speeds up is already split 4 ways.
+- **Rung 13 is 1.22 [1.21, 1.23], the same as rung 12, as expected.** It changes only
+  how the weights are loaded, so the forward pass is rung 12's and all 7,600 Tier 3
+  logits are bit-identical. Its gain is memory: see `results/memory/t4_quiet/`. Its p99
+  of 139 ms against rung 12's 292 ms is not from the change: 135 of its 150 cycles ran
+  at nominal, against 30 for rung 12, and its ruler's p50 fell from 137 to 123 ms
+  across the replicates. The paired speedup is steady through that, from 1.21 to 1.23.
 - **Rungs 6 and 7 do not use 4 threads.** The naive loop is single-threaded, and
   rung 7's P-cluster clock (3.97 GHz, near the maximum) suggests Accelerate ran it on
   about one core. Rung 4's 2.85 GHz is the one rung loading all 4 cores.

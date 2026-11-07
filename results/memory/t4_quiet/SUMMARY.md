@@ -4,7 +4,8 @@ Run on 2026-11-07, 12:23 to 12:37 UTC, at commit b6f742b (the memory code is unc
 since afe4c38), on AC power, Low Power Mode off, with `python/memory_run.py`. This is a
 rerun of session `t4`, which ran under memory pressure. Before this run Docker Desktop,
 Firefox and Cursor were quit: 3.6 GB was free, 4.2 GB inactive, the compressor held
-1.9 GB and 1.2 GB of swap was in use. No process was squeezed.
+1.9 GB and 1.2 GB of swap was in use. No process was squeezed. Rung 13 was added at 14:02 UTC, at commit e05f371,
+with the same apps closed (1.8 GB free, the compressor at 1.4 GB).
 
 Each row is 5 rounds. Each round is one fresh floor process, which exits before reading
 weights, and one fresh full process, which loads and answers 16 examples: the longest
@@ -28,6 +29,7 @@ Sizes are MiB. The table comes from `python/memory_table.py`.
 | 10: + attention in sgemm | 6 [6, 6] | 2365 [2339, 2495] | 3160 [3158, 3165] | 3 [3, 4] | 0 [0, 5] | 0.69 [0.68, 0.70] | 0 of 5 |
 | 11: + threads outside matmul | 6 [6, 6] | 2466 [2334, 2524] | 3162 [3160, 3168] | 4 [4, 4] | 0 [0, 8] | 0.61 [0.60, 0.61] | 0 of 5 |
 | 12: + f32 erf, norms, softmax sum | 6 [6, 6] | 2344 [2272, 2550] | 3164 [3157, 3169] | 4 [4, 4] | 0 [0, 8] | 0.60 [0.59, 0.60] | 0 of 5 |
+| 13: + weights moved, not copied | 6 [6, 6] | 1698 [1687, 1705] | 1701 [1690, 1708] | 3 [3, 3] | 0 [0, 2] | 0.54 [0.53, 0.89] | 0 of 5 |
 
 ## Notes
 
@@ -37,19 +39,25 @@ Sizes are MiB. The table comes from `python/memory_table.py`.
   floor, the peak and the Python rows agree with `t4` to within a few MiB.
 - **The floor: a Rust worker starts at 2 to 6 MiB.** Python with torch and transformers
   imported starts at 230 to 300 MiB, and ONNX Runtime at 45 MiB.
-- **Our Rust rungs have the highest peak: about 3,160 MiB, against 2,595 for rung 0.**
+- **Rungs 6 to 12 have the highest peak: about 3,160 MiB, against 2,595 for rung 0.**
   The peak comes during load, not while answering. The loader holds two f32 copies of
   the weights at once: `Checkpoint::from_file` decodes the whole file to f32 (1,507 MiB),
   and `ModernBert::from_checkpoint` then clones every tensor into the model before the
   checkpoint is dropped. PLAN.md names this hazard: "accidental weight duplication,
   which transiently doubles peak". Candle peaks at 2,690 MiB, and ONNX Runtime at 1,484.
-- **After load, our Rust rungs still hold 750 to 1,040 MiB more than the weights.** The
+- **Rung 13 removes the second copy: peak 1,701 MiB, against 3,164 for rung 12.** It
+  moves each tensor out of the checkpoint instead of cloning it. Post-load is 1,698 MiB,
+  so the process now holds less than rung 0 (1,840) both after load and at the peak.
+  Only ONNX Runtime is lower, at 1,484 MiB peak. Cold start drops from 0.60 to 0.54 s.
+  About 185 MiB above the weights remains after load; its cause is not checked. The
+  peak while decoding is the weights plus one tensor's raw bf16 bytes.
+- **After load, rungs 6 to 12 still hold 750 to 1,040 MiB more than the weights.** The
   weights are 1,507 MiB and the floor is 6, but post-load is 2,251 to 2,550 MiB, and the
   amount differs between processes of the same binary. The physical footprint matches
   the resident size to within 4 MiB, so this is memory the process still owns, not freed
-  pages that macOS has yet to reclaim. The cause is not verified. One candidate is that
-  the allocator keeps part of the dropped checkpoint copy instead of returning it to the
-  OS. Candle also holds 2,618 MiB after load, about 1.1 GiB above the weights.
+  pages that macOS has yet to reclaim. `vmmap` names it: 911 to 963 MiB of dirty
+  "Malloc Large (empty)" for rungs 7 and 12, which is macOS's allocator keeping the
+  freed checkpoint copy cached in the process. Candle also holds 2,618 MiB after load, about 1.1 GiB above the weights.
 - **Our Rust rungs need the least memory while answering: 3 to 4 MiB for rungs 8 to 12.**
   Rung 8 preallocates every buffer, so answering allocates almost nothing. Rungs 6 and 7
   allocate per pass and need 12 to 17 MiB. Candle needs 69 to 72 MiB, ONNX Runtime 100

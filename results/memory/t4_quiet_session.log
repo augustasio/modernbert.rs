@@ -83,3 +83,11 @@
   rung12 process 4 of 5: peak 3163 MiB, cold start 0.60 s
   rung12 process 5 of 5: peak 3168 MiB, cold start 0.60 s
 == done, 12:37:24Z
+== rung13 14:02:42Z, load { 2.83 8.59 11.25 }
+== rung13, 14:02:42Z
+  rung13 process 1 of 5: peak 1701 MiB, cold start 0.89 s
+  rung13 process 2 of 5: peak 1700 MiB, cold start 0.54 s
+  rung13 process 3 of 5: peak 1708 MiB, cold start 0.54 s
+  rung13 process 4 of 5: peak 1702 MiB, cold start 0.53 s
+  rung13 process 5 of 5: peak 1690 MiB, cold start 0.53 s
+== done, 14:02:54Z
