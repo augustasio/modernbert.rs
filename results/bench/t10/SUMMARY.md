@@ -1,13 +1,15 @@
 # Session t10: batch 1, 10 threads
 
-Run in three parts, on AC power, Low Power Mode off, with the worker builds of session t4.
+Run in four parts, on AC power, Low Power Mode off, with the worker builds of session t4.
 Part 1: 2026-11-05 22:19 to 2026-11-06 08:08 UTC, the A/A floor and rungs 12, 11, 10,
 9, 8. It was stopped during rung 7 because the Mac was needed; that replicate was
 discarded. Part 2: 2026-11-06 19:28 to 2026-11-07 03:41 UTC, rungs 7, 5, 4, 1, 3, 2, 6,
 with the resumable runner. Part 3: 2026-11-07 04:09 to 05:59 UTC, a rerun of rungs 9 and
-8, because their part 1 runs were disturbed (see the notes). All three at commit 289161d.
-All 65 replicates in the table, and the 10 disturbed ones, passed the in-run
-correctness check. No replicate was discarded for sleep. Each row is 5 replicates of 30
+8, because their part 1 runs were disturbed (see the notes). All three at commit 289161d. Part 4: 2026-11-07 18:50 to 22:04 UTC, rung 13, at commit
+c653da9; the Mac slept for 2 h 21 min during one replicate, which the runner discarded
+and ran again.
+All 70 replicates in the table, and the 10 disturbed ones, passed the in-run
+correctness check. Apart from that one, no replicate was discarded for sleep. Each row is 5 replicates of 30
 cycles of 64 examples, rung 0 as the ruler in every cycle; rung 6 is 5 replicates of 8
 cycles of 2 examples. Intervals are 95%, from the two-stage bootstrap in
 `python/analyze_bench.py`. The table comes from `python/bench_table.py`.
@@ -30,6 +32,7 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 | 10: + attention in sgemm | 1.06 [1.03, 1.1] (no detectable difference) | 156 [154, 159] | 588 [548, 616] | 1.2 [1.14, 1.26] | 3.9 [3.89, 3.92] | 1.04 [1, 1.1] (43) |
 | 11: + threads outside matmul | 1.19 [1.14, 1.23] | 137 [134, 140] | 619 [586, 640] | 1.19 [1.13, 1.24] | 3.79 [3.77, 3.82] | 1.19 [1.13, 1.28] (23) |
 | 12: + f32 erf, norms, softmax sum | 1.24 [1.2, 1.28] | 133 [131, 137] | 620 [567, 1.09e+03] | 1.26 [1.2, 1.31] | 3.68 [3.49, 3.8] | 1.21 [1.16, 1.27] (15) |
+| 13: + weights moved, not copied | 1.24 [1.23, 1.25] | 111 [109, 115] | 146 [138, 155] | 1.23 [1.22, 1.24] | 3.86 [3.75, 3.93] | 1.25 [1.24, 1.25] (92) |
 
 ## Notes
 
@@ -50,6 +53,10 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 - **Rung 12 is the fastest rung at 10 threads too: 1.24 [1.20, 1.28].** p50 is 133 ms.
   Rung 11 is 1.19, and rungs 1 and 2 are 1.12. Energy per example is 1.26x lower than
   rung 0's.
+- **Rung 13 is 1.24 [1.23, 1.25], the same as rung 12, as expected:** only the load path
+  changed. Its p50 (111 ms against 133) and p99 (146 ms against 620) are much lower than
+  rung 12's because the Mac was quieter: its ruler p50 was 134 to 144 ms, and 92 of its
+  150 cycles were nominal against 15 for rung 12. Do not read those as a gain.
 - **10 threads is slower than 4 for every fast rung.** Rung 12's p50 is 110 ms at 4
   threads and 133 ms at 10; rung 0's ruler is about 130 ms at 4 and 140 to 170 ms at 10.
   The 6 extra cores are efficiency cores, and the work waits for the slowest thread.

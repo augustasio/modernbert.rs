@@ -1,14 +1,15 @@
 # Session t1: batch 1, 1 thread
 
-Run in five parts, on AC power, Low Power Mode off, with the worker builds of session t4.
+Run in six parts, on AC power, Low Power Mode off, with the worker builds of session t4.
 Part 1: 2026-11-02 22:38 to 2026-11-03 07:02 UTC, rungs 7, 5, 4, and one replicate of
 rung 1. It was stopped because the Mac had to sleep. Part 2: 2026-11-03 23:03 to
 2026-11-04 02:15 UTC, the rest of rung 1 and rungs 3, 2, 6, with the resumable runner
 (f5dd712). Part 3: 2026-11-05 00:25 to 04:16 UTC, overnight with the Mac idle, the A/A
 floor and rungs 8, 9, 10. Part 4: 2026-11-05 08:50 to 09:41 UTC, rung 11. Part 5:
-2026-11-05 19:58 to 20:49 UTC, rung 12, at commit 465c39e. The A/A floor and rung 8 from part 1 ran while the Mac was
+2026-11-05 19:58 to 20:49 UTC, rung 12, at commit 465c39e. Part 6: 2026-11-07 18:03 to 18:50 UTC, rung 13, at commit
+c653da9. The A/A floor and rung 8 from part 1 ran while the Mac was
 disturbed, so part 3 reran them; the old runs are in `results/bench/t1_disturbed/`. All
-70 replicates in the table passed the in-run correctness check. No replicate was
+75 replicates in the table passed the in-run correctness check. No replicate was
 discarded for sleep. Each row is 5 replicates of 30 cycles of 64 examples,
 rung 0 as the ruler in every cycle; rung 6 is 5 replicates of 8 cycles of 2 examples.
 Intervals are 95%, from the two-stage bootstrap in `python/analyze_bench.py`. The table
@@ -32,6 +33,7 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 | 10: + attention in sgemm | 1.07 [1.07, 1.07] | 147 [146, 147] | 224 [217, 240] | 1.13 [1.12, 1.14] | 3.95 [3.95, 3.95] | 1.07 [1.07, 1.07] (136) |
 | 11: + threads outside matmul | 1.04 [1.04, 1.05] | 144 [143, 144] | 215 [213, 227] | 1.13 [1.12, 1.14] | 3.96 [3.96, 3.96] | 1.04 [1.04, 1.05] (150) |
 | 12: + f32 erf, norms, softmax sum | 1.22 [1.19, 1.24] | 126 [124, 128] | 337 [212, 517] | 1.21 [1.16, 1.24] | 3.9 [3.84, 3.94] | 1.22 [1.2, 1.25] (101) |
+| 13: + weights moved, not copied | 1.22 [1.22, 1.23] | 124 [124, 124] | 169 [168, 170] | 1.21 [1.2, 1.21] | 3.95 [3.95, 3.95] | 1.22 [1.22, 1.23] (150) |
 
 ## Notes
 
@@ -48,6 +50,9 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
   125 ms, against 144 ms for rung 11, so f32 arithmetic outside the matmuls is worth
   1.15x on one core. Four replicates give 1.22; replicate 2 gives 1.20. Its p99 is
   noisy (211 to 536 ms across replicates); p50 is steady.
+- **Rung 13 is 1.22 [1.22, 1.23] with 1 thread, the same as rung 12.** It changes only
+  the load path, so this is expected. Its p50 is 124 ms; every cycle ran at nominal, and
+  the five replicates agree to within 0.003.
 - **Rung 12 gains only 1.14x from 4 threads (125 ms to 110 ms); rung 0 gains 1.15x.**
   So rung 12 now scales with threads about as well as PyTorch does.
 - **Rung 9 is 1.09x faster than rung 8, and rung 10 is 1.29x faster than rung 9.**

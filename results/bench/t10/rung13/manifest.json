@@ -1,0 +1,56 @@
+{
+  "config": "bench/configs/t10_rung13.json",
+  "replicates": [
+    {
+      "replicate": 0,
+      "seed": 10000,
+      "started_utc": "2026-11-07T18:50:05Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_0.json"
+    },
+    {
+      "replicate": 1,
+      "seed": 10001,
+      "started_utc": "2026-11-07T18:59:13Z",
+      "cooldown_seconds": 30.0,
+      "exit_status": 0,
+      "result": "replicate_1.json"
+    },
+    {
+      "replicate": 2,
+      "seed": 10002,
+      "started_utc": "2026-11-07T21:39:57Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_2.json"
+    },
+    {
+      "replicate": 3,
+      "seed": 10003,
+      "started_utc": "2026-11-07T21:48:04Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_3.json"
+    },
+    {
+      "replicate": 4,
+      "seed": 10004,
+      "started_utc": "2026-11-07T21:56:24Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_4.json"
+    }
+  ],
+  "discarded": [
+    {
+      "replicate": 2,
+      "seed": 10002,
+      "started_utc": "2026-11-07T19:08:31Z",
+      "cooldown_seconds": 60.1,
+      "exit_status": 0,
+      "result": "replicate_2.json",
+      "slept_seconds": 8458
+    }
+  ]
+}
