@@ -8,18 +8,31 @@
 //! loop in `ops::linear_naive`) and rung 7 is mostly the matrix unit, not the
 //! language. That gap is the measurement this project is built around.
 //!
+//! Rung 16: on Linux the same `cblas_sgemm` comes from Intel MKL instead,
+//! the library PyTorch's x86 builds use for fp32 matmul. The CBLAS interface
+//! is a standard, so MKL takes the same enum values and, in its default LP64
+//! interface, the same 32-bit integers. Nothing else in the crate changes, so
+//! rung 16 is rung 15 on another platform. The module keeps its name because
+//! it is the one FFI boundary on both.
+//!
 //! Threads: Accelerate picks its own thread count. `VECLIB_MAXIMUM_THREADS`
 //! caps it, and the benchmark harness must set it explicitly per run, or rung
 //! 7 and PyTorch (which also calls Accelerate) are not run on equal terms.
+//! MKL reads `MKL_NUM_THREADS` the same way, and the harness sets both.
 
 use crate::tensor::Matrix;
 
-// CBLAS enum values, from Accelerate's `cblas.h`.
+// CBLAS enum values, from Accelerate's `cblas.h`. MKL's `mkl_cblas.h` has the
+// same ones.
 const CBLAS_ROW_MAJOR: i32 = 101;
 const CBLAS_NO_TRANS: i32 = 111;
 const CBLAS_TRANS: i32 = 112;
 
-#[link(name = "Accelerate", kind = "framework")]
+// `mkl_rt` is MKL's single dynamic library, which picks the CPU's code path
+// and the threading layer at run time. The harness asks for the GNU OpenMP
+// layer, the one PyTorch's Linux builds link.
+#[cfg_attr(target_os = "macos", link(name = "Accelerate", kind = "framework"))]
+#[cfg_attr(target_os = "linux", link(name = "mkl_rt"))]
 extern "C" {
     /// `C = alpha * op(A) @ op(B) + beta * C`.
     ///

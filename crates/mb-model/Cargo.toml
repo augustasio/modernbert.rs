@@ -46,3 +46,6 @@ batch = ["owned-weights"]
 # read by the head, so the attention output, `Wo`, the norm and the MLP run
 # on one row per sequence. Built on rung 14.
 mask-rows = ["batch"]
+# Rung 16 is no new feature: it is `mask-rows` built on Linux x86, where
+# `accelerate.rs` links Intel MKL's `cblas_sgemm` instead, as PyTorch does.
+# So on Linux every feature above that says Accelerate means MKL.

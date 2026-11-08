@@ -1,4 +1,4 @@
-//! The benchmark worker for rungs 6 to 14. See `crates/mb-harness/PROTOCOL.md`.
+//! The benchmark worker for rungs 6 to 16. See `crates/mb-harness/PROTOCOL.md`.
 //!
 //! One binary serves all nine. Built normally it is rung 6, the naive loop;
 //! built with `--features accelerate` it is rung 7; with `--features fused`
@@ -10,8 +10,9 @@
 //! with `--features owned-weights` it is rung 13, rung 12 loaded without a
 //! second copy of the weights; with `--features batch` it is rung 14, rung 13
 //! answering `run_batch` requests through the batched forward pass; with
-//! `--features mask-rows` it is rung 15, rung 14 with the last layer at the mask rows only. It names itself from the backend it
-//! was compiled with, so the harness records which one it ran.
+//! `--features mask-rows` it is rung 15, rung 14 with the last layer at the
+//! mask rows only. The same build on Linux, with MKL in place of Accelerate,
+//! is rung 16. It names itself from the backend it was compiled with, so the harness records which one it ran.
 
 use std::io::{BufRead, Write};
 use std::time::Instant;
@@ -36,6 +37,7 @@ fn main() {
         "accelerate-fused-expf-attention-sgemm-threads-f32math-owned" => "rung13",
         "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch" => "rung14",
         "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows" => "rung15",
+        "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows" => "rung16",
         "accelerate-fused-expf-attention-sgemm-threads" => "rung11",
         "accelerate-fused-expf-attention-sgemm" => "rung10",
         "accelerate-fused-expf" => "rung9",

@@ -176,6 +176,9 @@ fn environment() -> Value {
         "perf_cores": probe("sysctl", &["-n", "hw.perflevel0.physicalcpu"]),
         "efficiency_cores": probe("sysctl", &["-n", "hw.perflevel1.physicalcpu"]),
         "memory_bytes": probe("sysctl", &["-n", "hw.memsize"]),
+        // On Linux the sysctl probes above fail and these answer instead.
+        "linux_cpu": probe("sh", &["-c", "grep -m1 'model name' /proc/cpuinfo 2>/dev/null"]),
+        "linux_nproc": probe("sh", &["-c", "nproc 2>/dev/null"]),
         "power_source": probe("pmset", &["-g", "ps"]).lines().next().unwrap_or("").to_string(),
         "low_power_mode": probe("pmset", &["-g"]).lines()
             .find(|l| l.contains("lowpowermode")).unwrap_or("(not reported)").trim().to_string(),
@@ -190,6 +193,11 @@ fn worker_env(config: &Config, spec: &WorkerSpec) -> BTreeMap<String, String> {
     let mut env = BTreeMap::from([
         ("MB_THREADS".to_string(), threads.clone()),
         ("VECLIB_MAXIMUM_THREADS".to_string(), threads.clone()),
+        // MKL, on Linux (rung 16 and rung 0's PyTorch). The GNU OpenMP layer
+        // is the one PyTorch's Linux wheels link; mkl_rt would otherwise pick
+        // Intel's.
+        ("MKL_NUM_THREADS".to_string(), threads.clone()),
+        ("MKL_THREADING_LAYER".to_string(), "GNU".to_string()),
         ("OMP_NUM_THREADS".to_string(), threads),
         (
             "MB_WEIGHTS".to_string(),

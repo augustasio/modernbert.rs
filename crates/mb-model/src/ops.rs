@@ -138,24 +138,35 @@ pub fn linear_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
 /// every run, because a silently missing Accelerate link would turn the rung
 /// 6 to rung 7 comparison into a comparison of nothing.
 pub fn backend() -> &'static str {
+    // The matmul library is named first. On Linux it is MKL (rung 16), with
+    // the rest of the name unchanged, so a rung's name says both.
+    macro_rules! with_blas {
+        ($rest:literal) => {
+            if cfg!(target_os = "macos") {
+                concat!("accelerate", $rest)
+            } else {
+                concat!("mkl", $rest)
+            }
+        };
+    }
     if cfg!(feature = "mask-rows") {
-        "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows"
+        with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows")
     } else if cfg!(feature = "batch") {
-        "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch"
+        with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch")
     } else if cfg!(feature = "owned-weights") {
-        "accelerate-fused-expf-attention-sgemm-threads-f32math-owned"
+        with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned")
     } else if cfg!(feature = "f32-math") {
-        "accelerate-fused-expf-attention-sgemm-threads-f32math"
+        with_blas!("-fused-expf-attention-sgemm-threads-f32math")
     } else if cfg!(feature = "threads") {
-        "accelerate-fused-expf-attention-sgemm-threads"
+        with_blas!("-fused-expf-attention-sgemm-threads")
     } else if cfg!(feature = "attention-sgemm") {
-        "accelerate-fused-expf-attention-sgemm"
+        with_blas!("-fused-expf-attention-sgemm")
     } else if cfg!(feature = "expf") {
-        "accelerate-fused-expf"
+        with_blas!("-fused-expf")
     } else if cfg!(feature = "fused") {
-        "accelerate-fused"
+        with_blas!("-fused")
     } else if cfg!(feature = "accelerate") {
-        "accelerate"
+        with_blas!("")
     } else {
         "naive"
     }

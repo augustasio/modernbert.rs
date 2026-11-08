@@ -17,6 +17,10 @@ records as finished and valid, with its result file present (plain or gzipped). 
 replicate that was cut off is run again from the start. A replicate during which the Mac
 slept is discarded and run again, because its slices mix two thermal states; the
 manifest lists it under "discarded".
+
+On a Linux cloud host (rung 16 on) the thermal helper is tools/cpu_state_linux.sh, which
+reports a CPU clock and steal counters, not a thermal state. There is nothing to cool
+down to, so the wait is skipped.
 """
 
 import json
@@ -44,6 +48,8 @@ def thermal_state() -> str:
 def wait_for_nominal() -> float:
     """Wait until the thermal state is nominal. Returns the seconds waited."""
     started = time.monotonic()
+    if thermal_state().startswith("linux "):
+        return 0.0
     while (state := thermal_state()) != "nominal":
         waited = time.monotonic() - started
         if waited > MAX_COOLDOWN_SECONDS:
@@ -55,11 +61,16 @@ def wait_for_nominal() -> float:
     return time.monotonic() - started
 
 
+# A clock that stops while the machine sleeps: CLOCK_UPTIME_RAW on macOS, CLOCK_MONOTONIC
+# on Linux (which, unlike CLOCK_BOOTTIME, does not count suspend).
+AWAKE_CLOCK = getattr(time, "CLOCK_UPTIME_RAW", time.CLOCK_MONOTONIC)
+
+
 def run_harness(config_file: str, result_file: str) -> tuple[int, float]:
     """Run one replicate. Returns the exit status and the seconds the Mac slept meanwhile."""
-    wall, awake = time.time(), time.clock_gettime(time.CLOCK_UPTIME_RAW)
+    wall, awake = time.time(), time.clock_gettime(AWAKE_CLOCK)
     status = subprocess.run([*HARNESS, config_file, result_file], cwd=REPO, check=False).returncode
-    slept = (time.time() - wall) - (time.clock_gettime(time.CLOCK_UPTIME_RAW) - awake)
+    slept = (time.time() - wall) - (time.clock_gettime(AWAKE_CLOCK) - awake)
     return status, slept
 
 
