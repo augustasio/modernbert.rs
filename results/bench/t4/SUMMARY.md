@@ -9,7 +9,9 @@ setup. Rung 9 was added on 2026-11-04 in two sittings, 08:02 to 08:36 and 19:21 
 2026-11-05, 00:31 to 01:26 UTC, at commit e3b9a66, and rung 11 the same day, 08:04 to
 08:50 UTC, at commit 9f46fbd. Rung 12 was added on 2026-11-05, 19:12 to 19:58 UTC,
 at commit 465c39e. Rung 13 was added on 2026-11-07, 14:02 to 14:42 UTC, at commit
-e05f371. All 70 replicates passed the in-run correctness check. Intervals are 95%, from the two-stage
+e05f371. Rung 14 and its batched configs were added on 2026-11-07 and 08, 22:29 to
+01:09 UTC, at commit 5da6d1d (one restart at 23:28 resumed batch 4 from replicate 2).
+All 90 replicates passed the in-run correctness check. Intervals are 95%, from the two-stage
 bootstrap in `python/analyze_bench.py`. The table comes from `python/bench_table.py`.
 
 Speedup is rung 0 time over the variant's time: above 1 is faster than rung 0. The energy
@@ -31,6 +33,7 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 | 11: + threads outside matmul | 1.14 [1.11, 1.16] | 116 [111, 120] | 323 [184, 486] | 1.13 [1.09, 1.16] | 3.81 [3.7, 3.91] | 1.12 [0.989, 1.16] (25) |
 | 12: + f32 erf, norms, softmax sum | 1.22 [1.2, 1.25] | 110 [107, 117] | 292 [180, 387] | 1.23 [1.21, 1.26] | 3.8 [3.7, 3.88] | 1.22 [1.2, 1.24] (30) |
 | 13: + weights moved, not copied | 1.22 [1.21, 1.23] | 105 [102, 110] | 139 [132, 142] | 1.21 [1.2, 1.22] | 3.86 [3.8, 3.92] | 1.22 [1.21, 1.23] (135) |
+| 14: batched forward pass, batch 1 | 1.22 [1.22, 1.22] | 105 [104, 106] | 133 [132, 139] | 1.22 [1.22, 1.22] | 3.92 [3.91, 3.93] | 1.22 [1.21, 1.22] (92) |
 
 ## Notes
 
@@ -81,6 +84,8 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
   of 139 ms against rung 12's 292 ms is not from the change: 135 of its 150 cycles ran
   at nominal, against 30 for rung 12, and its ruler's p50 fell from 137 to 123 ms
   across the replicates. The paired speedup is steady through that, from 1.21 to 1.23.
+- **Rung 14 at batch 1 is 1.22 [1.22, 1.22], the same as rung 13.** The batched code
+  path with one sequence gives logits bit-identical to rung 13's.
 - **Rungs 6 and 7 do not use 4 threads.** The naive loop is single-threaded, and
   rung 7's P-cluster clock (3.97 GHz, near the maximum) suggests Accelerate ran it on
   about one core. Rung 4's 2.85 GHz is the one rung loading all 4 cores.
@@ -89,3 +94,34 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 - **Rung 6 has no energy figure.** Its ruler slices are 0.3 s, too short to hold whole
   power samples.
 - **The raw replicates are gzipped.** `analyze_bench.py` reads `.json.gz` directly.
+
+## Batched requests
+
+Each batch config sends the same groups of B examples to both workers, so each slice is
+a pair. Rung 0 pads each batch on the right to its longest prompt. Rung 14 packs the
+prompts into one set of rows with no padding: linears, norms and GELU run over all rows,
+and attention runs per sequence. Latency here is per batch, not per example. Throughput
+is examples over the summed slice time. The warmup is one batch.
+
+| Batch | Speedup vs rung 0 | Rung 0 examples/s | Rung 14 examples/s | Rung 14 batch p50 ms | Rung 14 batch p99 ms | Energy ratio | Speedup, nominal slices only (cycles) |
+|---|---|---|---|---|---|---|---|
+| 1 | 1.22 [1.22, 1.22] | 7.6 [7.55, 7.67] | 9.26 [9.2, 9.33] | 105 [104, 106] | 133 [132, 139] | 1.22 [1.22, 1.22] | 1.22 [1.21, 1.22] (92) |
+| 4 | 1.36 [1.35, 1.37] | 8.65 [8.34, 8.88] | 11.8 [11.4, 12.2] | 331 [325, 349] | 435 [406, 500] | 1.38 [1.37, 1.39] | 1.36 [1.35, 1.38] (30) |
+| 16 | 1.62 [1.59, 1.64] | 7.59 [7.43, 7.78] | 12.4 [12.3, 12.5] | 1.29e+03 [1.27e+03, 1.3e+03] | 1.42e+03 [1.4e+03, 1.43e+03] | 1.65 [1.62, 1.69] | 1.6 [1.53, 1.68] (22) |
+| 64 | 1.98 [1.92, 2.05] | 6.5 [6.17, 6.81] | 13.1 [12.6, 13.6] | 4.73e+03 [4.69e+03, 5.12e+03] | 6.31e+03 [5.36e+03, 6.88e+03] | 1.97 [1.9, 2.05] | 2.01 [1.75, 2.38] (18) |
+
+- **Rung 14 throughput rises with the batch: 9.3, 11.8, 12.4 and 13.1 examples/s** at
+  batch 1, 4, 16 and 64, so batch 64 gives 1.42x over batch 1. Most of the gain is
+  already there at batch 16.
+- **Rung 0 does not gain from batching.** It peaks at 8.6 examples/s at batch 4 and
+  falls to 6.5 at batch 64, because padding to the longest prompt (up to 348 tokens,
+  median 152) wastes more work as the batch grows. So the speedup rises to 1.98x at
+  batch 64, mostly from the padding that rung 14 skips.
+- **Batch latency grows about linearly with the batch.** At batch 16, p50 is 1.29 s;
+  at 64, 4.7 s. For a server, batch 16 keeps most of the throughput at a quarter of the
+  latency.
+- **Energy per example falls with the batch** for rung 14, from 1027 mJ at batch 1 to
+  743 mJ at batch 64.
+- **Few cycles ran at nominal thermal state** at the larger batches (30, 22 and 18 of
+  150). The nominal-only speedups agree with the all-slice figures, with wider
+  intervals.
