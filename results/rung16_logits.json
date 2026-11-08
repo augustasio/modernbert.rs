@@ -1,0 +1,10 @@
+{
+  "backend": "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows",
+  "prompt_ids_file": "data/agnews_test_prompt_ids.tsv",
+  "prompt_ids_bytes": 5383801,
+  "prompt_ids_sha256_expected": "e3d1fc109f91fabf5fff1cd6aab17e87026a6dda97e7776ad8a9d30b040f1886",
+  "examples": 7600,
+  "columns": ["Business", "World", "Sports", "Tech"],
+  "wall_clock_seconds": 0.0,
+  "note": "progress timing only, not a benchmark"
+}
