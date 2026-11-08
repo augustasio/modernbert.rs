@@ -17,7 +17,7 @@
   },
   "threads": 4,
   "cycles": 30,
-  "examples_per_slice": 64,
+  "examples_per_slice": 16,
   "warmup_examples": 3,
   "seed": 4000,
   "weights": "weights/ModernBERT-Large-Instruct",

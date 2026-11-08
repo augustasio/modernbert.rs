@@ -68,6 +68,11 @@ CLOUD = {
     "rung16": ("rung16", ["target/bench/rung16/release/worker"]),
 }
 CLOUD_BATCH_SIZES = (16,)
+# fp32 on 4 Genoa cores takes about 0.45 s an example (no matrix unit), so the Mac's
+# 64-example slices would last about 30 s and a replicate about 30 minutes. Slices are
+# long only for the energy samples, which Linux does not have, so 16 examples (one
+# batch of 16) keep each slice near 7 s and a replicate near 7 minutes.
+CLOUD_SLICE = {"examples_per_slice": 16}
 
 # The rungs that accept batches.
 BATCHED = ("rung14", "rung15")
@@ -117,13 +122,13 @@ def main() -> None:
             print(path.relative_to(REPO))
     for name in CLOUD:
         path = REPO / "bench" / "configs" / f"cloud_t{threads}_{name}.json"
-        body = config(threads, name, cloud=True)
+        body = config(threads, name, cloud=True) | CLOUD_SLICE
         body["label"] = f"cloud, {body['label']}"
         path.write_text(json.dumps(body, indent=2) + "\n")
         print(path.relative_to(REPO))
     for size in CLOUD_BATCH_SIZES:
         path = REPO / "bench" / "configs" / f"cloud_t{threads}_b{size}_rung16.json"
-        body = config(threads, "rung16", size, cloud=True)
+        body = config(threads, "rung16", size, cloud=True) | CLOUD_SLICE
         body["label"] = f"cloud, {threads} threads, batches of {size}: rung 0 ruler against rung16"
         path.write_text(json.dumps(body, indent=2) + "\n")
         print(path.relative_to(REPO))
