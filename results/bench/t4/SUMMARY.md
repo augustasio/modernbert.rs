@@ -11,7 +11,8 @@ setup. Rung 9 was added on 2026-11-04 in two sittings, 08:02 to 08:36 and 19:21 
 at commit 465c39e. Rung 13 was added on 2026-11-07, 14:02 to 14:42 UTC, at commit
 e05f371. Rung 14 and its batched configs were added on 2026-11-07 and 08, 22:29 to
 01:09 UTC, at commit 5da6d1d (one restart at 23:28 resumed batch 4 from replicate 2).
-All 90 replicates passed the in-run correctness check. Intervals are 95%, from the two-stage
+Rung 15 at batch 1, 16 and 64 was added on 2026-11-08, 19:40 to 21:37 UTC, at commit
+3192bf3. All 105 replicates passed the in-run correctness check. Intervals are 95%, from the two-stage
 bootstrap in `python/analyze_bench.py`. The table comes from `python/bench_table.py`.
 
 Speedup is rung 0 time over the variant's time: above 1 is faster than rung 0. The energy
@@ -34,6 +35,7 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 | 12: + f32 erf, norms, softmax sum | 1.22 [1.2, 1.25] | 110 [107, 117] | 292 [180, 387] | 1.23 [1.21, 1.26] | 3.8 [3.7, 3.88] | 1.22 [1.2, 1.24] (30) |
 | 13: + weights moved, not copied | 1.22 [1.21, 1.23] | 105 [102, 110] | 139 [132, 142] | 1.21 [1.2, 1.22] | 3.86 [3.8, 3.92] | 1.22 [1.21, 1.23] (135) |
 | 14: batched forward pass, batch 1 | 1.22 [1.22, 1.22] | 105 [104, 106] | 133 [132, 139] | 1.22 [1.22, 1.22] | 3.92 [3.91, 3.93] | 1.22 [1.21, 1.22] (92) |
+| 15: + last layer at the mask rows only | 1.24 [1.24, 1.24] | 104 [103, 104] | 132 [129, 135] | 1.25 [1.25, 1.25] | 3.89 [3.85, 3.93] | 1.24 [1.24, 1.25] (57) |
 
 ## Notes
 
@@ -86,6 +88,10 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
   across the replicates. The paired speedup is steady through that, from 1.21 to 1.23.
 - **Rung 14 at batch 1 is 1.22 [1.22, 1.22], the same as rung 13.** The batched code
   path with one sequence gives logits bit-identical to rung 13's.
+- **Rung 15 at batch 1 is 1.24 [1.24, 1.24], about 1.6% faster than rung 14.** The
+  last layer computes attention, its norm and its MLP only at the mask row, which is
+  about 3% of the forward pass. Its worst logit difference from rung 0 in the run is
+  7.1e-4, under the 1e-3 bound.
 - **Rungs 6 and 7 do not use 4 threads.** The naive loop is single-threaded, and
   rung 7's P-cluster clock (3.97 GHz, near the maximum) suggests Accelerate ran it on
   about one core. Rung 4's 2.85 GHz is the one rung loading all 4 cores.
@@ -100,15 +106,18 @@ ratio is rung 0 energy over the variant's, per example: above 1 uses less energy
 Each batch config sends the same groups of B examples to both workers, so each slice is
 a pair. Rung 0 pads each batch on the right to its longest prompt. Rung 14 packs the
 prompts into one set of rows with no padding: linears, norms and GELU run over all rows,
-and attention runs per sequence. Latency here is per batch, not per example. Throughput
+and attention runs per sequence. Rung 15 adds the last layer at the mask rows only. Latency here is per batch, not per example. Throughput
 is examples over the summed slice time. The warmup is one batch.
 
-| Batch | Speedup vs rung 0 | Rung 0 examples/s | Rung 14 examples/s | Rung 14 batch p50 ms | Rung 14 batch p99 ms | Energy ratio | Speedup, nominal slices only (cycles) |
-|---|---|---|---|---|---|---|---|
-| 1 | 1.22 [1.22, 1.22] | 7.6 [7.55, 7.67] | 9.26 [9.2, 9.33] | 105 [104, 106] | 133 [132, 139] | 1.22 [1.22, 1.22] | 1.22 [1.21, 1.22] (92) |
-| 4 | 1.36 [1.35, 1.37] | 8.65 [8.34, 8.88] | 11.8 [11.4, 12.2] | 331 [325, 349] | 435 [406, 500] | 1.38 [1.37, 1.39] | 1.36 [1.35, 1.38] (30) |
-| 16 | 1.62 [1.59, 1.64] | 7.59 [7.43, 7.78] | 12.4 [12.3, 12.5] | 1.29e+03 [1.27e+03, 1.3e+03] | 1.42e+03 [1.4e+03, 1.43e+03] | 1.65 [1.62, 1.69] | 1.6 [1.53, 1.68] (22) |
-| 64 | 1.98 [1.92, 2.05] | 6.5 [6.17, 6.81] | 13.1 [12.6, 13.6] | 4.73e+03 [4.69e+03, 5.12e+03] | 6.31e+03 [5.36e+03, 6.88e+03] | 1.97 [1.9, 2.05] | 2.01 [1.75, 2.38] (18) |
+| Rung | Batch | Speedup vs rung 0 | Rung 0 examples/s | Variant examples/s | Variant batch p50 ms | Variant batch p99 ms | Energy ratio | Speedup, nominal slices only (cycles) |
+|---|---|---|---|---|---|---|---|---|
+| 14 | 1 | 1.22 [1.22, 1.22] | 7.6 [7.55, 7.67] | 9.26 [9.2, 9.33] | 105 [104, 106] | 133 [132, 139] | 1.22 [1.22, 1.22] | 1.22 [1.21, 1.22] (92) |
+| 14 | 4 | 1.36 [1.35, 1.37] | 8.65 [8.34, 8.88] | 11.8 [11.4, 12.2] | 331 [325, 349] | 435 [406, 500] | 1.38 [1.37, 1.39] | 1.36 [1.35, 1.38] (30) |
+| 14 | 16 | 1.62 [1.59, 1.64] | 7.59 [7.43, 7.78] | 12.4 [12.3, 12.5] | 1.29e+03 [1.27e+03, 1.3e+03] | 1.42e+03 [1.4e+03, 1.43e+03] | 1.65 [1.62, 1.69] | 1.6 [1.53, 1.68] (22) |
+| 14 | 64 | 1.98 [1.92, 2.05] | 6.5 [6.17, 6.81] | 13.1 [12.6, 13.6] | 4.73e+03 [4.69e+03, 5.12e+03] | 6.31e+03 [5.36e+03, 6.88e+03] | 1.97 [1.9, 2.05] | 2.01 [1.75, 2.38] (18) |
+| 15 | 1 | 1.24 [1.24, 1.24] | 7.54 [7.5, 7.57] | 9.37 [9.3, 9.42] | 104 [103, 104] | 132 [129, 135] | 1.25 [1.25, 1.25] | 1.24 [1.24, 1.25] (57) |
+| 15 | 16 | 1.66 [1.64, 1.69] | 8.09 [7.88, 8.32] | 13.6 [13.4, 13.8] | 1.17e+03 [1.16e+03, 1.19e+03] | 1.31e+03 [1.29e+03, 1.32e+03] | 1.71 [1.68, 1.73] | 1.66 [1.58, 1.76] (22) |
+| 15 | 64 | 2.04 [1.96, 2.12] | 6.59 [6.31, 6.91] | 13.7 [13.3, 14] | 4.61e+03 [4.55e+03, 4.64e+03] | 7.15e+03 [5.09e+03, 8.27e+03] | 2.02 [1.95, 2.09] | 2.08 [1.8, 2.39] (22) |
 
 - **Rung 14 throughput rises with the batch: 9.3, 11.8, 12.4 and 13.1 examples/s** at
   batch 1, 4, 16 and 64, so batch 64 gives 1.42x over batch 1. Most of the gain is
@@ -125,3 +134,7 @@ is examples over the summed slice time. The warmup is one batch.
 - **Few cycles ran at nominal thermal state** at the larger batches (30, 22 and 18 of
   150). The nominal-only speedups agree with the all-slice figures, with wider
   intervals.
+- **Rung 15 gains more as the batch grows: 1.6%, 2.5% and 3% over rung 14** at batch
+  1, 16 and 64 (speedups 1.24, 1.66 and 2.04). At batch 64 the intervals overlap. Compare
+  the speedups, not the raw examples/s: rung 0 ran faster in the rung 15 batch-16
+  session (8.09 against 7.59 examples/s), so the raw rates mix in session drift.
