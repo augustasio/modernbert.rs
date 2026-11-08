@@ -84,6 +84,44 @@ def is_nominal(s: dict) -> bool:
     return s["thermal_before"] == "nominal" and s["thermal_after"] == "nominal"
 
 
+def linux_state(text: str) -> dict | None:
+    """The fields of a tools/cpu_state_linux.sh line, or None for a macOS thermal state."""
+    if not text.startswith("linux "):
+        return None
+    fields = dict(part.split("=", 1) for part in text.split()[1:])
+    return {k: float(v) for k, v in fields.items() if v != "unknown"}
+
+
+def cloud_cpu(runs: list[dict]) -> dict | None:
+    """Steal share and CPU clock per measured slice, for a run on a Linux cloud host.
+
+    A slice's steal share is the steal jiffies over all jiffies between its two
+    readings: the part of the whole VM's CPU time the hypervisor gave to other renters.
+    """
+    steal, mhz = {"ruler": [], "variant": []}, {"ruler": [], "variant": []}
+    for run in runs:
+        for s in run["slices"]:
+            before, after = linux_state(s["thermal_before"]), linux_state(s["thermal_after"])
+            if before is None or after is None or s["warmup"]:
+                continue
+            total = after["total"] - before["total"]
+            if total > 0:
+                steal[s["role"]].append((after["steal"] - before["steal"]) / total)
+            if "mhz" in before and "mhz" in after:
+                mhz[s["role"]].append((before["mhz"] + after["mhz"]) / 2)
+    if not steal["ruler"]:
+        return None
+    return {
+        role: {
+            "slices": len(steal[role]),
+            "steal_share_median": float(np.median(steal[role])),
+            "steal_share_max": float(np.max(steal[role])),
+            "mhz_median": float(np.median(mhz[role])) if mhz[role] else None,
+        }
+        for role in ("ruler", "variant")
+    }
+
+
 def slice_power(power: dict, start: float, end: float) -> dict:
     """The CPU energy and mean P-cluster clock of [start, end], from the samples inside it."""
     samples = power["samples"]
@@ -267,6 +305,9 @@ def main() -> None:
         "nominal_slices_only": summarize(runs, nominal_only=True),
         "warnings": [],
     }
+    cpu = cloud_cpu(runs)
+    if cpu is not None:
+        report["cloud_cpu"] = cpu
     if len(runs) < MIN_REPLICATES:
         report["warnings"].append(
             f"{len(runs)} replicate(s), fewer than {MIN_REPLICATES}: the interval reflects "
