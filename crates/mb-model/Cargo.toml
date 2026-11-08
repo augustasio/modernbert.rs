@@ -41,3 +41,8 @@ owned-weights = ["f32-math"]
 # without padding (`ModernBert::logits_batch_fused`). A batch of one is rung
 # 13's path. Built on rung 13.
 batch = ["owned-weights"]
+# Rung 15: the last layer runs only at the mask rows. It is global, so its
+# keys and values still come from every token, but only the mask query is
+# read by the head, so the attention output, `Wo`, the norm and the MLP run
+# on one row per sequence. Built on rung 14.
+mask-rows = ["batch"]

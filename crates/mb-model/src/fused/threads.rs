@@ -92,32 +92,131 @@ impl ModernBert {
     pub(super) fn layer_threaded(&self, index: usize, ws: &mut Workspace) {
         let c = &self.config;
         let layer = &self.layers[index];
-        let attn = &layer.attn;
-        let threads = ws.threads;
         let rope = if layer.is_global {
             &self.rope_global
         } else {
             &self.rope_local
         };
-
-        // Layer 0 has no attention norm (trap: it is `nn.Identity`, not a
-        // norm with unit weight), so its projection reads `h` itself.
-        let attn_in = match &layer.attn_norm {
-            Some(w) => {
-                layer_norm_rows(&ws.h, w, c.norm_eps, &mut ws.normed, threads);
-                &ws.normed
-            }
-            None => &ws.h,
-        };
-        crate::ops::linear_into(attn_in, &attn.wqkv, &mut ws.qkv);
-
+        self.project_qkv(index, ws);
         let window = if layer.is_global {
             None
         } else {
             Some(c.local_window_each_side())
         };
-        attend_by_head(ws, rope, window, 1.0 / (attn.head_dim as f32).sqrt());
+        attend_by_head(ws, rope, window, 1.0 / (layer.attn.head_dim as f32).sqrt());
         gather_heads(ws);
+        self.after_attention(index, ws);
+    }
+
+    /// The attention norm and the fused `Wqkv` projection of layer `index`,
+    /// on every row, into `ws.qkv`.
+    fn project_qkv(&self, index: usize, ws: &mut Workspace) {
+        let layer = &self.layers[index];
+        // Layer 0 has no attention norm (trap: it is `nn.Identity`, not a
+        // norm with unit weight), so its projection reads `h` itself.
+        let attn_in = match &layer.attn_norm {
+            Some(w) => {
+                layer_norm_rows(&ws.h, w, self.config.norm_eps, &mut ws.normed, ws.threads);
+                &ws.normed
+            }
+            None => &ws.h,
+        };
+        crate::ops::linear_into(attn_in, &layer.attn.wqkv, &mut ws.qkv);
+    }
+
+    /// Rung 15: the last layer, at the mask rows only.
+    ///
+    /// The last layer is global, so the mask query still attends to the keys
+    /// and values of every token, and `Wqkv` still runs on every row. But the
+    /// head reads only the mask row of the output, and after attention every
+    /// row is computed on its own: `Wo`, the residual add, the norm and the
+    /// MLP. So those run on one row per sequence, and only the mask query is
+    /// scored. That skips about three quarters of the last layer's matmul work.
+    ///
+    /// Afterwards `ws.h` holds one row per sequence, its mask row. The scores
+    /// are summed in a different order from rung 14's `sgemm`, so the logits
+    /// are not bit-identical to rung 14's; Tier 3 bounds the difference.
+    #[cfg(feature = "mask-rows")]
+    pub(super) fn last_layer_at_masks(&self, index: usize, positions: &[usize], ws: &mut Workspace) {
+        let layer = &self.layers[index];
+        // A local layer would need the window here; ModernBERT's last layer is
+        // global (layer 27, and 27 % 3 == 0), so this is checked, not handled.
+        assert!(
+            layer.is_global,
+            "rung 15 needs the last layer to be global, and layer {index} is local"
+        );
+        assert!(
+            ws.head_dim <= MAX_HEAD_DIM,
+            "head_dim {} is above the {MAX_HEAD_DIM} rung 15 has room for",
+            ws.head_dim
+        );
+        self.project_qkv(index, ws);
+
+        let batch = positions.len();
+        let hidden = ws.h.cols;
+        let longest = ws.longest();
+        ws.context.resize_rows(batch);
+        let scale = 1.0 / (layer.attn.head_dim as f32).sqrt();
+        let (rope, qkv, segments) = (&self.rope_global, &ws.qkv, &ws.segments);
+        let (heads, hd) = (ws.num_heads, ws.head_dim);
+
+        // One block of sequences per thread. Each sequence writes its own row
+        // of the context, so the blocks are runs of rows.
+        let per_thread = batch.div_ceil(ws.threads.max(1)).max(1);
+        let blocks = ws
+            .context
+            .data
+            .chunks_mut(per_thread * hidden)
+            .zip(ws.scores.chunks_mut(longest.max(1)))
+            .enumerate();
+        in_parallel(blocks, |(block, (context, scores))| {
+            for (i, row) in context.chunks_mut(hidden).enumerate() {
+                let b = block * per_thread + i;
+                let rows = segments[b].clone();
+                let mask = rows.start + positions[b];
+                for head in 0..heads {
+                    attend_mask_head(
+                        qkv,
+                        rows.clone(),
+                        mask,
+                        rope,
+                        head,
+                        hd,
+                        scale,
+                        &mut scores[..rows.len()],
+                        &mut row[head * hd..(head + 1) * hd],
+                    );
+                }
+            }
+        });
+
+        // Keep only the mask rows of the residual stream, in order. Row b
+        // moves up from row `mask(b)`, and mask(b) >= b, so no row is
+        // overwritten before it is read.
+        for (b, &position) in positions.iter().enumerate() {
+            let from = ws.segments[b].start + position;
+            ws.h.data
+                .copy_within(from * hidden..(from + 1) * hidden, b * hidden);
+        }
+        for m in [
+            &mut ws.h,
+            &mut ws.normed,
+            &mut ws.projection,
+            &mut ws.projected,
+            &mut ws.gated,
+        ] {
+            m.resize_rows(batch);
+        }
+        self.after_attention(index, ws);
+    }
+
+    /// Everything in layer `index` after attention, on every row of `ws.h`:
+    /// `Wo`, the residual add, the MLP norm, the MLP and its residual add.
+    fn after_attention(&self, index: usize, ws: &mut Workspace) {
+        let c = &self.config;
+        let layer = &self.layers[index];
+        let attn = &layer.attn;
+        let threads = ws.threads;
 
         // The projection gets its own buffer. See the `fused` module comment
         // for why it is not added onto h inside the matmul.
@@ -314,6 +413,60 @@ fn attend_head(
         row[end..].fill(0.0);
     }
     sgemm_strided(seq, hd, seq, 1.0, scores, seq, values, hd, out, hd);
+}
+
+/// The largest head the stack buffers of [`attend_mask_head`] take.
+#[cfg(feature = "mask-rows")]
+const MAX_HEAD_DIM: usize = 128;
+
+/// Rung 15: one head's attention for one query, the mask, into `out`
+/// (`head_dim` long). The sequence is `rows` of `qkv`, and the mask is row
+/// `mask`. Q and K are rotated as in [`scatter_head`], term for term, but K
+/// one row at a time instead of into a transposed block.
+#[cfg(feature = "mask-rows")]
+#[allow(clippy::too_many_arguments)]
+fn attend_mask_head(
+    qkv: &Matrix,
+    rows: std::ops::Range<usize>,
+    mask: usize,
+    rope: &RopeTable,
+    head: usize,
+    hd: usize,
+    scale: f32,
+    scores: &mut [f32],
+    out: &mut [f32],
+) {
+    let hidden = qkv.cols / 3;
+    let half = hd / 2;
+    let src = head * hd;
+    let rotate = |x: &[f32], t: usize, into: &mut [f32]| {
+        let (cos, sin) = (rope.cos_row(t), rope.sin_row(t));
+        for i in 0..half {
+            let (lo, hi) = (x[i], x[i + half]);
+            into[i] = lo * cos[i] - hi * sin[i];
+            into[i + half] = hi * cos[i] + lo * sin[i];
+        }
+    };
+
+    let mut q = [0.0f32; MAX_HEAD_DIM];
+    let q = &mut q[..hd];
+    rotate(&qkv.row(mask)[src..src + hd], mask - rows.start, q);
+    let mut k = [0.0f32; MAX_HEAD_DIM];
+    let k = &mut k[..hd];
+    for (t, score) in scores.iter_mut().enumerate() {
+        rotate(&qkv.row(rows.start + t)[hidden + src..hidden + src + hd], t, k);
+        let dot: f32 = q.iter().zip(k.iter()).map(|(a, b)| a * b).sum();
+        *score = dot * scale;
+    }
+    softmax_in_place(scores);
+
+    out.fill(0.0);
+    for (t, &p) in scores.iter().enumerate() {
+        let v = &qkv.row(rows.start + t)[2 * hidden + src..2 * hidden + src + hd];
+        for (o, x) in out.iter_mut().zip(v) {
+            *o += p * x;
+        }
+    }
 }
 
 /// Copy each head's `[seq, head_dim]` block into its columns of the `[seq,

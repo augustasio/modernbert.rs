@@ -734,3 +734,12 @@ Changes to the plan made after seeing data, with the reason.
   c6i. So bf16 and int8 target those, and the Mac stays the paired-benchmark machine.
   Matmul libraries follow PyTorch per platform: Accelerate on macOS, MKL and oneDNN on
   Linux x86. See "Phase 2".
+- **Rung 15 runs the last layer at the mask rows only** (feature `mask-rows`,
+  `ModernBert::last_layer_at_masks` in `fused/threads.rs`). The last layer is global, so
+  the attention norm and `Wqkv` still run on every row, for the keys and values. But only
+  the mask query is scored, and `Wo`, the residual add, the MLP norm and the MLP run on
+  one row per sequence: about three quarters of the last layer's matmul work, or about 3%
+  of the forward pass. The mask query's scores are dot products in a loop instead of an
+  `sgemm`, so the sums run in a different order: the logits differ from rung 14's by at
+  most 5.1e-5. Tier 2: worst verbalizer gap 4.9e-5. Tier 3: 7600/7600 agreement, max
+  logit difference 7.1e-4 (bound 1e-3).

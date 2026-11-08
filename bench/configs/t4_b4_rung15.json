@@ -1,0 +1,33 @@
+{
+  "label": "4 threads, batches of 4: rung 0 ruler against rung15",
+  "ruler": {
+    "name": "rung0",
+    "command": [
+      "python/.venv/bin/python",
+      "python/worker.py",
+      "--rung",
+      "0"
+    ]
+  },
+  "variant": {
+    "name": "rung15",
+    "command": [
+      "target/bench/rung15/release/worker"
+    ]
+  },
+  "threads": 4,
+  "cycles": 30,
+  "examples_per_slice": 64,
+  "warmup_examples": 4,
+  "seed": 4000,
+  "weights": "weights/ModernBERT-Large-Instruct",
+  "prompt_ids": "data/agnews_test_prompt_ids.tsv",
+  "reference_logits": "results/rung0_logits.npy",
+  "thermal_helper": "target/tools/thermal_state",
+  "powermetrics": [
+    "sudo",
+    "-n",
+    "/usr/bin/powermetrics"
+  ],
+  "batch_size": 4
+}

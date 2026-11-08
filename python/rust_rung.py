@@ -48,6 +48,7 @@ EXPECTED_BACKEND = {
     12: "accelerate-fused-expf-attention-sgemm-threads-f32math",
     13: "accelerate-fused-expf-attention-sgemm-threads-f32math-owned",
     14: "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch",
+    15: "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows",
 }
 DESCRIPTION = {
     4: "candle-transformers encoder with a mask-only head, candle CPU (gemm) matmul",
@@ -61,6 +62,7 @@ DESCRIPTION = {
     12: "rung 11 with erf, the LayerNorm statistics and the softmax total in f32",
     13: "rung 12 loaded by moving each tensor into the model, with no second copy",
     14: "rung 13 accepting batches, run without padding",
+    15: "rung 14 with the last layer at the mask rows only",
 }
 
 

@@ -22,9 +22,10 @@ target folder per rung, because mb-model and mb-candle both name their binary `w
     cargo build --release -p mb-model --features f32-math --bin worker --target-dir target/bench/rung12
     cargo build --release -p mb-model --features owned-weights --bin worker --target-dir target/bench/rung13
     cargo build --release -p mb-model --features batch --bin worker --target-dir target/bench/rung14
+    cargo build --release -p mb-model --features mask-rows --bin worker --target-dir target/bench/rung15
 
-Rung 14 also gets the batch sweep: t<threads>_b<size>_rung14.json for each size in
-BATCH_SIZES, with rung 0 as the ruler at the same batch size (padded, as HF batches).
+Rungs 14 and 15 also get the batch sweep: t<threads>_b<size>_<rung>.json for each size
+in BATCH_SIZES, with rung 0 as the ruler at the same batch size (padded, as HF batches).
 """
 
 import json
@@ -50,7 +51,11 @@ VARIANTS = {
     "rung12": ("rung12", ["target/bench/rung12/release/worker"]),
     "rung13": ("rung13", ["target/bench/rung13/release/worker"]),
     "rung14": ("rung14", ["target/bench/rung14/release/worker"]),
+    "rung15": ("rung15", ["target/bench/rung15/release/worker"]),
 }
+
+# The rungs that accept batches.
+BATCHED = ("rung14", "rung15")
 
 # Each divides the 64 examples of a slice.
 BATCH_SIZES = (4, 16, 64)
@@ -87,12 +92,13 @@ def main() -> None:
         path = REPO / "bench" / "configs" / f"t{threads}_{name}.json"
         path.write_text(json.dumps(config(threads, name), indent=2) + "\n")
         print(path.relative_to(REPO))
-    for size in BATCH_SIZES:
-        path = REPO / "bench" / "configs" / f"t{threads}_b{size}_rung14.json"
-        body = config(threads, "rung14", size)
-        body["label"] = f"{threads} threads, batches of {size}: rung 0 ruler against rung14"
-        path.write_text(json.dumps(body, indent=2) + "\n")
-        print(path.relative_to(REPO))
+    for name in BATCHED:
+        for size in BATCH_SIZES:
+            path = REPO / "bench" / "configs" / f"t{threads}_b{size}_{name}.json"
+            body = config(threads, name, size)
+            body["label"] = f"{threads} threads, batches of {size}: rung 0 ruler against {name}"
+            path.write_text(json.dumps(body, indent=2) + "\n")
+            print(path.relative_to(REPO))
 
 
 if __name__ == "__main__":

@@ -9,7 +9,8 @@
 //! `--features f32-math` it is rung 12, rung 11 with its f64 arithmetic in f32;
 //! with `--features owned-weights` it is rung 13, rung 12 loaded without a
 //! second copy of the weights; with `--features batch` it is rung 14, rung 13
-//! answering `run_batch` requests through the batched forward pass. It names itself from the backend it
+//! answering `run_batch` requests through the batched forward pass; with
+//! `--features mask-rows` it is rung 15, rung 14 with the last layer at the mask rows only. It names itself from the backend it
 //! was compiled with, so the harness records which one it ran.
 
 use std::io::{BufRead, Write};
@@ -34,6 +35,7 @@ fn main() {
         "accelerate-fused-expf-attention-sgemm-threads-f32math" => "rung12",
         "accelerate-fused-expf-attention-sgemm-threads-f32math-owned" => "rung13",
         "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch" => "rung14",
+        "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows" => "rung15",
         "accelerate-fused-expf-attention-sgemm-threads" => "rung11",
         "accelerate-fused-expf-attention-sgemm" => "rung10",
         "accelerate-fused-expf" => "rung9",

@@ -27,15 +27,15 @@ ROWS = [
     ("rung12", "12: + f32 erf, norms, softmax sum"),
     ("rung13", "13: + weights moved, not copied"),
     ("rung14", "14: batched forward pass, batch 1"),
+    ("rung15", "15: + last layer at the mask rows only"),
 ]
 
-# Batched configs: rung 0 pads each batch, rung 14 packs it without padding. Their
-# latency is per batch, not per example, so they get a table of their own.
+# Batched configs: rung 0 pads each batch, rungs 14 and 15 pack it without padding.
+# Their latency is per batch, not per example, so they get a table of their own.
 BATCH_ROWS = [
-    ("rung14", "1"),
-    ("b4_rung14", "4"),
-    ("b16_rung14", "16"),
-    ("b64_rung14", "64"),
+    (name if size == 1 else f"b{size}_{name}", name[4:], str(size))
+    for name in ("rung14", "rung15")
+    for size in (1, 4, 16, 64)
 ]
 
 
@@ -49,7 +49,7 @@ def interval(figure: dict | None, digits: int = 3) -> str:
 def main() -> None:
     session = sys.argv[1]
     analyses = {}
-    for name in {n for n, _ in ROWS + BATCH_ROWS}:
+    for name in {n for n, _ in ROWS} | {n for n, _, _ in BATCH_ROWS}:
         path = os.path.join(session, name, "analysis.json")
         if os.path.exists(path):  # a rung added after this session ran
             with open(path) as handle:
@@ -82,16 +82,16 @@ def main() -> None:
             f"| {interval(f.get('variant_p_cluster_ghz'))} | {nominal_speedup} |"
         )
 
-    if not any(name in analyses for name, _ in BATCH_ROWS):
+    if not any(name in analyses for name, _, _ in BATCH_ROWS):
         return
     print()
     print(
-        "| Batch | Speedup vs rung 0 | Rung 0 examples/s | Rung 14 examples/s "
-        "| Rung 14 batch p50 ms | Rung 14 batch p99 ms | Energy ratio "
+        "| Rung | Batch | Speedup vs rung 0 | Rung 0 examples/s | Variant examples/s "
+        "| Variant batch p50 ms | Variant batch p99 ms | Energy ratio "
         "| Speedup, nominal slices only (cycles) |"
     )
-    print("|---|---|---|---|---|---|---|---|")
-    for name, batch in BATCH_ROWS:
+    print("|---|---|---|---|---|---|---|---|---|")
+    for name, rung, batch in BATCH_ROWS:
         if name not in analyses:
             continue
         a = analyses[name]
@@ -103,7 +103,7 @@ def main() -> None:
             else "none nominal"
         )
         print(
-            f"| {batch} | {interval(f['speedup'])} "
+            f"| {rung} | {batch} | {interval(f['speedup'])} "
             f"| {interval(f.get('ruler_examples_per_s'))} "
             f"| {interval(f.get('variant_examples_per_s'))} "
             f"| {interval(f['variant_p50_ms'])} | {interval(f['variant_p99_ms'])} "

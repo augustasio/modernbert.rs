@@ -286,6 +286,28 @@ impl ModernBert {
             "a batch of {} needs the threaded layer of rung 11 or later",
             batch.len()
         );
+        self.embed_batch(batch, ws)?;
+        observe(Point::Embeddings, &ws.h);
+
+        for i in 0..self.layers.len() {
+            self.layer_fused(i, ws);
+            observe(Point::Layer(i), &ws.h);
+        }
+
+        norm_rows(
+            &ws.h,
+            &self.final_norm,
+            c.norm_eps,
+            &mut ws.normed,
+            ws.threads,
+        );
+        observe(Point::FinalNorm, &ws.normed);
+        Ok(())
+    }
+
+    /// Lay out `batch` in `ws` and start the residual stream: the embedding
+    /// lookup, normed into `h`.
+    fn embed_batch(&self, batch: &[&[u32]], ws: &mut Workspace) -> Result<(), TensorError> {
         ws.set_batch(batch);
 
         // The embedding lookup goes into `normed` and is normed into `h`,
@@ -312,21 +334,33 @@ impl ModernBert {
             &mut ws.h,
             ws.threads,
         );
-        observe(Point::Embeddings, &ws.h);
+        Ok(())
+    }
 
-        for i in 0..self.layers.len() {
+    /// Rung 15: [`ModernBert::encode_batch_fused`], with the last layer run
+    /// at the mask rows only. Afterwards row `b` of `ws.h` and of the
+    /// `final_norm` output is sequence `b`'s mask row, and the other rows are
+    /// gone. Every layer before the last is rung 14's.
+    #[cfg(feature = "mask-rows")]
+    fn encode_to_mask_rows(
+        &self,
+        batch: &[&[u32]],
+        positions: &[usize],
+        ws: &mut Workspace,
+    ) -> Result<(), TensorError> {
+        self.embed_batch(batch, ws)?;
+        let last = self.layers.len() - 1;
+        for i in 0..last {
             self.layer_fused(i, ws);
-            observe(Point::Layer(i), &ws.h);
         }
-
+        self.last_layer_at_masks(last, positions, ws);
         norm_rows(
             &ws.h,
             &self.final_norm,
-            c.norm_eps,
+            self.config.norm_eps,
             &mut ws.normed,
             ws.threads,
         );
-        observe(Point::FinalNorm, &ws.normed);
         Ok(())
     }
 
@@ -372,6 +406,11 @@ impl ModernBert {
                 ids.len()
             );
         }
+        // Rung 15 leaves sequence b's mask row in row b; before it, the mask
+        // row is at its position within the sequence's rows.
+        #[cfg(feature = "mask-rows")]
+        self.encode_to_mask_rows(batch, positions, ws)?;
+        #[cfg(not(feature = "mask-rows"))]
         self.encode_batch_fused(batch, ws, |_, _| {})?;
 
         // The head's `transform`, on the mask rows only, as in rung 1: one
@@ -379,7 +418,11 @@ impl ModernBert {
         let head = &self.head;
         ws.head_in.resize_rows(batch.len());
         for (b, &position) in positions.iter().enumerate() {
-            let row = ws.segments[b].start + position;
+            let row = if cfg!(feature = "mask-rows") {
+                b
+            } else {
+                ws.segments[b].start + position
+            };
             ws.head_in.row_mut(b).copy_from_slice(ws.normed.row(row));
         }
         // Trap 3: no bias on `head.dense`.
