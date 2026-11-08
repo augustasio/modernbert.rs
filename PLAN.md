@@ -524,14 +524,69 @@ python/                rungs 0 to 3, reference activation dumps, plots
 docs/research/         verified findings from the research pass, with sources
 ```
 
+## Phase 2: serving throughput on cloud CPUs
+
+Decided on 2026-11-07 and 08, after rung 14. The goal moves from batch-1 latency on this
+Mac to serving: an HTTP server with dynamic batching, where throughput per dollar matters
+most and some latency is fine. The target is a cloud CPU, not the Mac. GPUs are out of
+scope for now.
+
+**Rules for this phase.**
+
+- No Mac-only work: no own SME kernels, no Neural Engine, no Metal or MLX, no tuning that
+  only helps Accelerate. Every rung must also build and run on Linux x86.
+- One variable per rung still holds, and rung 0 stays the ruler and the oracle.
+- The Mac stays the machine for paired benchmarks, because it is the one quiet machine we
+  control. Cloud hosts give rough checks only (see below).
+
+**Target hosts.** A probe of RunPod hosts on 2026-11-08 found no AMX (Intel Sapphire
+Rapids or later). It found two CPUs worth targeting:
+
+| Host CPU | Matrix instructions | Same CPU on AWS |
+|---|---|---|
+| AMD EPYC 9254 (Zen 4, Genoa) | AVX-512 with bf16 and VNNI (int8) | c7a, m7a |
+| Intel Xeon Gold 6342 (Ice Lake) | AVX-512 with VNNI (int8), no bf16 | c6i, m6i |
+
+So bf16 is measured on Genoa, int8 on both. AMX (AWS c7i) is a later check, if an AWS
+host becomes available; the same bf16 and int8 code paths should use it through the
+library, with no change of ours.
+
+**Rough checks on cloud hosts.** A RunPod pod shares its host with other renters. There is
+no `thermalState` and no `powermetrics` on Linux. So a cloud run records, with each slice,
+the CPU clock from `/proc/cpuinfo` and the steal time from `/proc/stat` in place of hard
+rule 3's thermal state, and still pairs every slice with rung 0 in the same process. Its
+results are labelled rough checks, never mixed into the Mac tables.
+
+**Proposed rungs.** The order may change as data comes in.
+
+| # | Rung | Isolates |
+|---|---|---|
+| 15 | Last layer at the mask row only | work the head never reads: the last layer is global, so all keys are still needed, but only the mask query |
+| 16 | A portable BLAS in place of Accelerate, fp32 | the cost of leaving Accelerate; the first rung that builds on Linux |
+| 17 | bf16 weights and bf16 matmul, f32 accumulation | the precision of the matmuls |
+| 18 | int8 weights and activations, dynamic per-row scales | the precision again, one step further |
+| 19 | HTTP server with dynamic batching (max batch, max wait) | serving overhead; load-tested open-loop, with Poisson arrivals |
+
+Rung 16 will be slower on this Mac than rung 15, because Accelerate uses the M4's matrix
+unit and a portable library does not. That is the expected price of portability, measured
+rather than assumed. Rungs 17 and 18 change the numbers, so Tier 3 for them is the
+agreement rate with rung 0 and the accuracy, not a logit bound; the bound they must meet
+is set before they are measured.
+
+**Dependency, not yet decided.** Rung 16 needs a BLAS that runs on Linux, and rungs 17 and
+18 need bf16 and int8 matmul. The candidates are OpenBLAS (fp32 `sgemm`, and bf16
+`sbgemm` on AVX-512 bf16), and oneDNN (bf16 and int8, and AMX when present). Both are C
+libraries reached through FFI, as Accelerate is now. This needs agreement before it lands
+(CLAUDE.md, Dependencies).
+
 ## Open questions
 
-- **Benchmark machine.** The M4 Air is the target. Is the PC also in scope? x86 needs a
-  different BLAS (OpenBLAS or MKL) as the Accelerate equivalent.
-- **Batching.** Padding with an attention mask, or ModernBERT-style unpadding. The padding
-  waste measurement decides this rather than an argument. Start with padding.
-- **Precision.** fp32 first, from the upcast bf16 checkpoint. bf16 end to end later, as its
-  own rung, if it is worth it.
+- **Benchmark machine.** Answered for phase 2: the target is a cloud CPU, and the M4 Air
+  stays the measurement machine. See "Phase 2" above.
+- **Batching.** Answered by rung 14: unpadding. Rung 0 padded loses throughput above
+  batch 4, and rung 14 unpadded gains up to batch 64.
+- **Precision.** fp32 up to rung 16. bf16 and int8 are rungs 17 and 18, because on cloud
+  CPUs fp32 cannot use the matrix instructions.
 - **GitHub.** Local git now; push to `augustasio/modernbert.rs` once the tokenizer matches
   HF exactly, so the first public commit is not a skeleton.
 
@@ -665,3 +720,8 @@ Changes to the plan made after seeing data, with the reason.
   its values into the model, so only one copy ever exists, and `ModernBert::load` now
   refuses a checkpoint with any tensor left unread. One variable, the load path; the
   forward pass is rung 12's. All 7,600 Tier 3 logits are bit-identical to rung 12's.
+- **Phase 2: serving on cloud CPUs.** After rung 14 the goal moved from batch-1 latency
+  on this Mac to serving throughput on a cloud CPU. A RunPod probe found no AMX, but
+  found Zen 4 (AVX-512 bf16) and Ice Lake (AVX-512 VNNI) hosts, which match AWS c7a and
+  c6i. So bf16 and int8 target those, and the Mac stays the paired-benchmark machine.
+  See "Phase 2".
