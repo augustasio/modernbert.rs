@@ -562,22 +562,30 @@ results are labelled rough checks, never mixed into the Mac tables.
 | # | Rung | Isolates |
 |---|---|---|
 | 15 | Last layer at the mask row only | work the head never reads: the last layer is global, so all keys are still needed, but only the mask query |
-| 16 | A portable BLAS in place of Accelerate, fp32 | the cost of leaving Accelerate; the first rung that builds on Linux |
+| 16 | The same code on Linux x86, with MKL in place of Accelerate, fp32 | the platform; the first rung that builds on Linux |
 | 17 | bf16 weights and bf16 matmul, f32 accumulation | the precision of the matmuls |
 | 18 | int8 weights and activations, dynamic per-row scales | the precision again, one step further |
 | 19 | HTTP server with dynamic batching (max batch, max wait) | serving overhead; load-tested open-loop, with Poisson arrivals |
 
-Rung 16 will be slower on this Mac than rung 15, because Accelerate uses the M4's matrix
-unit and a portable library does not. That is the expected price of portability, measured
-rather than assumed. Rungs 17 and 18 change the numbers, so Tier 3 for them is the
+Rungs 17 and 18 change the numbers, so Tier 3 for them is the
 agreement rate with rung 0 and the accuracy, not a logit bound; the bound they must meet
 is set before they are measured.
 
-**Dependency, not yet decided.** Rung 16 needs a BLAS that runs on Linux, and rungs 17 and
-18 need bf16 and int8 matmul. The candidates are OpenBLAS (fp32 `sgemm`, and bf16
-`sbgemm` on AVX-512 bf16), and oneDNN (bf16 and int8, and AMX when present). Both are C
-libraries reached through FFI, as Accelerate is now. This needs agreement before it lands
-(CLAUDE.md, Dependencies).
+**Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
+uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
+libraries:
+
+| Platform | fp32 matmul | bf16 and int8 matmul |
+|---|---|---|
+| macOS (this Mac) | Accelerate, as now | (not measured here) |
+| Linux x86 (Genoa, Ice Lake) | Intel MKL, `cblas_sgemm` | oneDNN, which also uses AMX when present |
+
+Both are C libraries reached through FFI, as Accelerate is now. So rung 16 is the same
+code built for Linux with MKL, compared with rung 0 on the same host, which also uses MKL.
+Rungs 16 to 18 are measured only on cloud hosts, as rough checks: MKL does not run on
+Apple silicon, and oneDNN is weak there. One known bias: MKL has taken slower code paths
+on AMD CPUs. Rung 0 shares it, so the ratios stay fair, but absolute Genoa numbers may
+understate the CPU.
 
 ## Open questions
 
@@ -724,4 +732,5 @@ Changes to the plan made after seeing data, with the reason.
   on this Mac to serving throughput on a cloud CPU. A RunPod probe found no AMX, but
   found Zen 4 (AVX-512 bf16) and Ice Lake (AVX-512 VNNI) hosts, which match AWS c7a and
   c6i. So bf16 and int8 target those, and the Mac stays the paired-benchmark machine.
-  See "Phase 2".
+  Matmul libraries follow PyTorch per platform: Accelerate on macOS, MKL and oneDNN on
+  Linux x86. See "Phase 2".
