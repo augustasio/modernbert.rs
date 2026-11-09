@@ -12,7 +12,8 @@
 //! answering `run_batch` requests through the batched forward pass; with
 //! `--features mask-rows` it is rung 15, rung 14 with the last layer at the
 //! mask rows only. The same build on Linux, with MKL in place of Accelerate,
-//! is rung 16. It names itself from the backend it was compiled with, so the harness records which one it ran.
+//! is rung 16, and with `--features bf16` it is rung 17, rung 16 with bf16
+//! linear layers. It names itself from the backend it was compiled with, so the harness records which one it ran.
 
 use std::io::{BufRead, Write};
 use std::time::Instant;
@@ -38,6 +39,11 @@ fn main() {
         "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch" => "rung14",
         "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows" => "rung15",
         "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows" => "rung16",
+        "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16" => "rung17",
+        // Built on the Mac only to test it; rung 17 is measured on Linux.
+        "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16" => {
+            "rung17-macos"
+        }
         "accelerate-fused-expf-attention-sgemm-threads" => "rung11",
         "accelerate-fused-expf-attention-sgemm" => "rung10",
         "accelerate-fused-expf" => "rung9",

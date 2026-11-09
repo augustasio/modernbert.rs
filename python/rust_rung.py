@@ -50,6 +50,7 @@ EXPECTED_BACKEND = {
     14: "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch",
     15: "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows",
     16: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows",
+    17: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16",
 }
 DESCRIPTION = {
     4: "candle-transformers encoder with a mask-only head, candle CPU (gemm) matmul",
@@ -65,6 +66,7 @@ DESCRIPTION = {
     14: "rung 13 accepting batches, run without padding",
     15: "rung 14 with the last layer at the mask rows only",
     16: "rung 15 built on Linux x86, with MKL's cblas_sgemm in place of Accelerate's",
+    17: "rung 16 with the linear layers as bf16 matmuls through oneDNN, f32 sums",
 }
 
 

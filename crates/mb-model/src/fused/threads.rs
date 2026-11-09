@@ -137,7 +137,12 @@ impl ModernBert {
     /// are summed in a different order from rung 14's `sgemm`, so the logits
     /// are not bit-identical to rung 14's; Tier 3 bounds the difference.
     #[cfg(feature = "mask-rows")]
-    pub(super) fn last_layer_at_masks(&self, index: usize, positions: &[usize], ws: &mut Workspace) {
+    pub(super) fn last_layer_at_masks(
+        &self,
+        index: usize,
+        positions: &[usize],
+        ws: &mut Workspace,
+    ) {
         let layer = &self.layers[index];
         // A local layer would need the window here; ModernBERT's last layer is
         // global (layer 27, and 27 % 3 == 0), so this is checked, not handled.
@@ -454,7 +459,11 @@ fn attend_mask_head(
     let mut k = [0.0f32; MAX_HEAD_DIM];
     let k = &mut k[..hd];
     for (t, score) in scores.iter_mut().enumerate() {
-        rotate(&qkv.row(rows.start + t)[hidden + src..hidden + src + hd], t, k);
+        rotate(
+            &qkv.row(rows.start + t)[hidden + src..hidden + src + hd],
+            t,
+            k,
+        );
         let dot: f32 = q.iter().zip(k.iter()).map(|(a, b)| a * b).sum();
         *score = dot * scale;
     }

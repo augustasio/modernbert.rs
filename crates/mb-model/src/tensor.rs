@@ -21,6 +21,10 @@ pub struct Matrix {
     pub cols: usize,
     /// `rows * cols` values, row by row.
     pub data: Vec<f32>,
+    /// Rung 17: the same values in bf16, for a weight that goes through the
+    /// bf16 matmul (`onednn.rs`). Empty for every other matrix, which then
+    /// takes the f32 path.
+    pub bf16: Vec<u16>,
 }
 
 impl Matrix {
@@ -29,6 +33,7 @@ impl Matrix {
             rows,
             cols,
             data: vec![0.0; rows * cols],
+            bf16: Vec::new(),
         }
     }
 
@@ -40,7 +45,34 @@ impl Matrix {
             rows * cols,
             data.len()
         );
-        Matrix { rows, cols, data }
+        Matrix {
+            rows,
+            cols,
+            data,
+            bf16: Vec::new(),
+        }
+    }
+
+    /// Rung 17: keep a bf16 copy of this weight beside the f32 one.
+    ///
+    /// The checkpoint is bf16 and the f32 values are its exact upcast, so
+    /// the copy is exact too: this asserts that no value had low bits to
+    /// lose. The f32 copy stays, for the paths that still read it.
+    #[cfg(feature = "bf16")]
+    pub fn keep_bf16(&mut self) {
+        self.bf16 = self
+            .data
+            .iter()
+            .map(|&x| {
+                let bits = x.to_bits();
+                assert_eq!(
+                    bits & 0xFFFF,
+                    0,
+                    "{x} is not a bf16 value, so the copy would round it"
+                );
+                (bits >> 16) as u16
+            })
+            .collect();
     }
 
     /// Change the number of rows, keeping the buffer.

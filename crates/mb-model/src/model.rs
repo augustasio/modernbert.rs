@@ -93,7 +93,21 @@ impl ModernBert {
         let dir = dir.as_ref();
         let config = Config::from_file(dir.join("config.json"))?;
         let mut checkpoint = Checkpoint::from_file(dir.join("model.safetensors"))?;
-        let model = Self::from_checkpoint(config, &mut checkpoint)?;
+        #[allow(unused_mut)]
+        let mut model = Self::from_checkpoint(config, &mut checkpoint)?;
+        // Rung 17: every linear layer's weight gets its bf16 copy, so the
+        // bf16 matmul runs them. The verbalizer rows of the decoder stay f32:
+        // four rows, no measurable time.
+        #[cfg(feature = "bf16")]
+        {
+            for layer in &mut model.layers {
+                layer.attn.wqkv.keep_bf16();
+                layer.attn.wo.keep_bf16();
+                layer.mlp.wi.keep_bf16();
+                layer.mlp.wo.keep_bf16();
+            }
+            model.head.dense.keep_bf16();
+        }
         // Rung 13 moves every tensor out, so anything left was never read:
         // a checkpoint with a tensor this model does not know about.
         if cfg!(feature = "owned-weights") && !checkpoint.is_empty() {

@@ -49,3 +49,8 @@ mask-rows = ["batch"]
 # Rung 16 is no new feature: it is `mask-rows` built on Linux x86, where
 # `accelerate.rs` links Intel MKL's `cblas_sgemm` instead, as PyTorch does.
 # So on Linux every feature above that says Accelerate means MKL.
+# Rung 17: the linear layers (Wqkv, Wo, Wi, the MLP's Wo and head.dense) run
+# as bf16 matmuls through oneDNN (`onednn.rs`), with f32 sums. Only the
+# activations entering them are rounded; the weights are the checkpoint's own
+# bf16. Links `libdnnl`. Built on rung 15 (16 on Linux).
+bf16 = ["mask-rows"]

@@ -11,7 +11,7 @@ use std::time::Instant;
 
 use serde_json::{json, Value};
 
-use crate::integrity::{self, MAX_LOGIT_ABS};
+use crate::integrity::{self, Gate};
 use crate::npy;
 use crate::power::{self, Sampler};
 use crate::schedule::{self, Role};
@@ -50,6 +50,9 @@ pub struct Config {
     /// `["sudo", "-n", "/usr/bin/powermetrics"]`. Absent means energy and
     /// frequency are not measured, and the result says so.
     pub powermetrics: Option<Vec<String>>,
+    /// The in-run correctness gate. Absent means the fp32 default; see
+    /// `integrity::Gate`.
+    pub integrity: Gate,
 }
 
 impl Config {
@@ -121,6 +124,19 @@ impl Config {
                         .ok_or("config: powermetrics must hold strings")?,
                 ),
                 _ => return Err("config: powermetrics must be a list".to_string()),
+            },
+            integrity: match &v["integrity"] {
+                Value::Null => Gate::default(),
+                g => Gate {
+                    max_logit_abs: g["max_logit_abs"]
+                        .as_f64()
+                        .ok_or("config: integrity.max_logit_abs must be a number")?
+                        as f32,
+                    max_disagreement_rate: g["max_disagreement_rate"]
+                        .as_f64()
+                        .filter(|r| (0.0..=1.0).contains(r))
+                        .ok_or("config: integrity.max_disagreement_rate must be in [0, 1]")?,
+                },
             },
         })
     }
@@ -269,6 +285,8 @@ pub fn run(config: &Config) -> Result<Value, String> {
     let mut checked = 0usize;
     let mut worst_abs = 0.0f32;
     let mut failures: Vec<Value> = Vec::new();
+    // Per worker: replies checked, and how many changed the prediction.
+    let mut tallies: std::collections::BTreeMap<String, (usize, usize)> = Default::default();
 
     // Warm-up: the same examples on both, recorded and marked, never mixed
     // in with the measured slices.
@@ -301,7 +319,17 @@ pub fn run(config: &Config) -> Result<Value, String> {
                 let c = integrity::check(reference.row(e), &reply.logits);
                 checked += 1;
                 worst_abs = worst_abs.max(c.max_abs);
-                if !c.passes() {
+                let tally = tallies
+                    .entry(worker.name.clone())
+                    .or_insert((0usize, 0usize));
+                tally.0 += 1;
+                if !c.argmax_agrees {
+                    tally.1 += 1;
+                }
+                // With the default gate a changed prediction fails at once,
+                // as before. A looser gate counts them instead.
+                let strict = config.integrity.max_disagreement_rate == 0.0;
+                if !c.within(&config.integrity) || (strict && !c.argmax_agrees) {
                     failures.push(json!({
                         "worker": worker.name, "example": e,
                         "argmax_agrees": c.argmax_agrees, "max_abs": c.max_abs,
@@ -371,6 +399,17 @@ pub fn run(config: &Config) -> Result<Value, String> {
             failures.len()
         ));
     }
+    for (name, &(seen, changed)) in &tallies {
+        let rate = changed as f64 / seen.max(1) as f64;
+        if config.integrity.max_disagreement_rate > 0.0
+            && rate > config.integrity.max_disagreement_rate
+        {
+            reasons.push(format!(
+                "{name} changed {changed} of {seen} predictions, more than the gate's share {}",
+                config.integrity.max_disagreement_rate
+            ));
+        }
+    }
     let thermal_states: Vec<&str> = slices
         .iter()
         .flat_map(|s| [s["thermal_before"].as_str(), s["thermal_after"].as_str()])
@@ -397,7 +436,11 @@ pub fn run(config: &Config) -> Result<Value, String> {
         "workers": workers,
         "integrity": {
             "checked": checked,
-            "tolerance_max_abs": MAX_LOGIT_ABS,
+            "tolerance_max_abs": config.integrity.max_logit_abs,
+            "max_disagreement_rate": config.integrity.max_disagreement_rate,
+            "changed_predictions": tallies.iter()
+                .map(|(name, &(seen, changed))| (name.clone(), json!({"checked": seen, "changed": changed})))
+                .collect::<serde_json::Map<String, Value>>(),
             "worst_max_abs": worst_abs,
             "failures": failures,
         },

@@ -12,6 +12,30 @@
 /// and the argmax check stands beside it. See the PLAN.md changelog.
 pub const MAX_LOGIT_ABS: f32 = 1e-2;
 
+/// The in-run gate for one run. The default is the fp32 gate above, with
+/// every argmax required to agree.
+///
+/// A reduced-precision rung (17 on) cannot meet that: rounding moves some
+/// close calls. Its config sets a looser logit bound and a share of changed
+/// predictions it may not exceed, both taken from its own Tier 3 run before
+/// it is benchmarked (PLAN.md, rung 17's bound). A reply over the logit bound
+/// still fails at once; changed predictions fail the run when there are more
+/// of them than the share allows.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Gate {
+    pub max_logit_abs: f32,
+    pub max_disagreement_rate: f64,
+}
+
+impl Default for Gate {
+    fn default() -> Self {
+        Gate {
+            max_logit_abs: MAX_LOGIT_ABS,
+            max_disagreement_rate: 0.0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Check {
     pub argmax_agrees: bool,
@@ -21,6 +45,12 @@ pub struct Check {
 impl Check {
     pub fn passes(&self) -> bool {
         self.argmax_agrees && self.max_abs <= MAX_LOGIT_ABS
+    }
+
+    /// Within the gate's logit bound. Whether the argmax agrees is counted
+    /// separately, against the gate's share.
+    pub fn within(&self, gate: &Gate) -> bool {
+        self.max_abs <= gate.max_logit_abs
     }
 }
 
@@ -69,5 +99,17 @@ mod tests {
         let c = check(&[1.0, 5.0, 0.0, 0.0], &[1.0, 5.1, 0.0, 0.0]);
         assert!(c.argmax_agrees);
         assert!(!c.passes());
+    }
+
+    #[test]
+    fn a_looser_gate_admits_a_larger_difference() {
+        let c = check(&[1.0, 3.0, 2.0, 0.0], &[1.0, 3.05, 2.0, 0.0]);
+        assert!(!c.passes());
+        assert!(!c.within(&Gate::default()));
+        let loose = Gate {
+            max_logit_abs: 0.1,
+            max_disagreement_rate: 0.01,
+        };
+        assert!(c.within(&loose));
     }
 }

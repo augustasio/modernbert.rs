@@ -28,6 +28,8 @@ pub mod fused;
 pub mod head;
 pub mod mlp;
 pub mod model;
+#[cfg(feature = "bf16")]
+pub mod onednn;
 pub mod ops;
 pub mod rope;
 pub mod safetensors;
