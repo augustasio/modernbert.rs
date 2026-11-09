@@ -571,6 +571,16 @@ Rungs 17 and 18 change the numbers, so Tier 3 for them is the
 agreement rate with rung 0 and the accuracy, not a logit bound; the bound they must meet
 is set before they are measured.
 
+**Rung 17's bound, set on 2026-11-09 before any bf16 logit was seen.** Over all 7,600
+examples: agreement with rung 0 of at least 99.0% (at most 76 changed predictions), and
+calibrated accuracy within 1.0 point of rung 0's 84.78%. The logit differences are
+reported, with no bound. The design: the checkpoint is bf16, so bf16 weights are exactly
+the checkpoint's values and lose nothing; only the activations entering each linear
+layer are rounded to bf16 (round to nearest even, as PyTorch rounds), and the products
+accumulate in f32. The attention products, the norms, the softmax and GELU stay f32. The
+in-run gate (hard rule 5) for this rung is set from its Tier 3 run, as the fp32 gate
+was: 4x the worst logit difference seen, and at most twice the disagreement rate seen.
+
 **Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
 uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
 libraries:
