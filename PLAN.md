@@ -743,3 +743,11 @@ Changes to the plan made after seeing data, with the reason.
   `sgemm`, so the sums run in a different order: the logits differ from rung 14's by at
   most 5.1e-5. Tier 2: worst verbalizer gap 4.9e-5. Tier 3: 7600/7600 agreement, max
   logit difference 7.1e-4 (bound 1e-3).
+- **Rung 16 is rung 15 built on Linux x86 with MKL**, measured on a RunPod Genoa host
+  (`results/bench/cloud_genoa_t4/SUMMARY.md`). `accelerate.rs` links `mkl_rt` on Linux;
+  nothing else changes. Tier 3: 7600/7600 agreement, max logit difference 3.7e-4.
+  Rough check: 1.10x rung 0 at batch 1 and 1.51x at batch 16, against an A/A floor of
+  1.004 [1.000, 1.008]. Two harness facts learned there: cloud slices are 16 examples,
+  because fp32 takes about 0.5 s an example on 4 Genoa cores; and steal time is always
+  0, because a RunPod pod is a container on bare metal, so the paired design and the
+  A/A floor, not steal, are the defence against other renters' load.
