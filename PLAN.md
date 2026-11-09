@@ -527,9 +527,31 @@ docs/research/         verified findings from the research pass, with sources
 ## Phase 2: serving throughput on cloud CPUs
 
 Decided on 2026-11-07 and 08, after rung 14. The goal moves from batch-1 latency on this
-Mac to serving: an HTTP server with dynamic batching, where throughput per dollar matters
-most and some latency is fine. The target is a cloud CPU, not the Mac. GPUs are out of
-scope for now.
+Mac to serving: an HTTP server with dynamic batching on a cloud CPU, not the Mac. GPUs
+are out of scope for now.
+
+**The target metric, set on 2026-11-09.** The most examples per second per dollar while
+the p99 request latency stays at or under **200 ms**. A request's latency runs from its
+arrival at the server to its reply, so it includes the wait in the batching queue. Every
+cloud result is read against this budget. Throughput above the budget, for example at
+batch 16 or 64, is reported only as a ceiling, never as the result.
+
+Why it changed: the first Genoa rough checks (rung 16, 4 cores) took 460 ms per request
+at batch 1 and 6.0 s per batch at batch 16. Batch 16 and 64 are useless under any
+interactive budget, and on 4 cores even batch 1 in fp32 misses it.
+
+What follows from it:
+
+- **Small batches only.** Cloud runs sweep batch 1, 2, 4 and 8. Larger batches are run
+  once per host, as the ceiling.
+- **Cores per request are a lever.** Batch-1 latency falls as one request gets more
+  threads, until the matmuls are too small to split. So each host gets a thread sweep at
+  batch 1 (4, 8, 16, 32 threads) to find the fewest cores that meet the budget. The
+  serving question is then how many such workers fit on one box, and what that box costs.
+- **Precision matters more.** bf16 and int8 (rungs 17 and 18) shorten each request, and
+  that is what makes the budget reachable on few cores.
+- **Rung 19 is the judge.** Its load test raises the Poisson arrival rate until p99 passes
+  200 ms, and reports the throughput at the last rate that met it, and that per dollar.
 
 **Rules for this phase.**
 
@@ -551,6 +573,26 @@ So bf16 is measured on Genoa, int8 on both. AMX (AWS c7i) is a later check, if a
 host becomes available; the same bf16 and int8 code paths should use it through the
 library, with no change of ours.
 
+**The hosts after 2026-11-09.** Those two CPUs came on GPU pods, whose containers are capped
+near 5 CPUs, too few for the thread sweep. A probe of RunPod's CPU-only pods on
+2026-11-09 found:
+
+| RunPod flavor | Host CPU | Matrix instructions | Price, secure cloud |
+|---|---|---|---|
+| `cpu5c` (compute-optimized) | AMD EPYC 9575F (Zen 5, Turin) | AVX-512 with bf16 and VNNI, no AMX | $0.035 per vCPU-hour, up to 32 vCPUs ($1.12/h) |
+| `cpu3c` | AMD EPYC 7713 (Zen 3, Milan) | no AVX-512 | $0.03 per vCPU-hour |
+
+So `cpu5c` is the main host from here: a current server CPU (Zen 5 is the CPU of AWS
+c8a and GCP C4D), on the RunPod account and tools we already use, with no setup. `cpu3c`
+is skipped. A vCPU is likely a hardware thread, not a core; the first run records which.
+
+AMX (Intel Xeon 4th generation and later: AWS c7i and c8i, GCP C3 and C4) is not on
+RunPod. It is the second host, for one rough check of rungs 16 to 18 once they are done,
+on a spot instance. Aggregators put spot prices near $0.02 to $0.05 per vCPU-hour, close
+to RunPod's. It needs an AWS or GCP account, which only the user can set up. PyTorch's
+bf16 path also uses AMX through oneDNN, so rung 0 gains from it as well, and the
+ratios there may be smaller.
+
 **Rough checks on cloud hosts.** A RunPod pod shares its host with other renters. There is
 no `thermalState` and no `powermetrics` on Linux. So a cloud run records, with each slice,
 the CPU clock from `/proc/cpuinfo` and the steal time from `/proc/stat` in place of hard
@@ -565,7 +607,7 @@ results are labelled rough checks, never mixed into the Mac tables.
 | 16 | The same code on Linux x86, with MKL in place of Accelerate, fp32 | the platform; the first rung that builds on Linux |
 | 17 | bf16 weights and bf16 matmul, f32 accumulation | the precision of the matmuls |
 | 18 | int8 weights and activations, dynamic per-row scales | the precision again, one step further |
-| 19 | HTTP server with dynamic batching (max batch, max wait) | serving overhead; load-tested open-loop, with Poisson arrivals |
+| 19 | HTTP server with dynamic batching (max batch at most 8, max wait chosen to fit the 200 ms budget) | serving overhead; load-tested open-loop, with Poisson arrivals, judged by throughput at p99 of 200 ms |
 
 Rungs 17 and 18 change the numbers, so Tier 3 for them is the
 agreement rate with rung 0 and the accuracy, not a logit bound; the bound they must meet
@@ -602,7 +644,8 @@ understate the CPU.
 - **Benchmark machine.** Answered for phase 2: the target is a cloud CPU, and the M4 Air
   stays the measurement machine. See "Phase 2" above.
 - **Batching.** Answered by rung 14: unpadding. Rung 0 padded loses throughput above
-  batch 4, and rung 14 unpadded gains up to batch 64.
+  batch 4, and rung 14 unpadded gains up to batch 64. Under the 200 ms budget of phase 2,
+  only batches up to 8 count.
 - **Precision.** fp32 up to rung 16. bf16 and int8 are rungs 17 and 18, because on cloud
   CPUs fp32 cannot use the matrix instructions.
 - **GitHub.** Local git now; push to `augustasio/modernbert.rs` once the tokenizer matches
@@ -761,3 +804,13 @@ Changes to the plan made after seeing data, with the reason.
   because fp32 takes about 0.5 s an example on 4 Genoa cores; and steal time is always
   0, because a RunPod pod is a container on bare metal, so the paired design and the
   A/A floor, not steal, are the defence against other renters' load.
+- **Rung 17 passes its bound.** bf16 linear layers through oneDNN 3.13.3, on Genoa:
+  7598/7600 agreement, calibrated accuracy 84.72% against 84.78%, worst logit difference
+  0.179. The in-run gate is 0.72 and a share of 2 x 2/7600.
+- **Phase 2 gets a latency budget: p99 at or under 200 ms per request** (2026-11-09).
+  The goal was throughput with "some latency is fine". The Genoa rough checks showed
+  what that hides: 460 ms per request at batch 1 and 6.0 s per batch at batch 16, on 4
+  cores. So the target is now throughput per dollar within the budget; cloud runs sweep
+  batch 1 to 8 and threads per request; and the main host moves from GPU pods (about 5
+  CPUs) to RunPod CPU pods on Zen 5 (`cpu5c`, up to 32 vCPUs). AMX on AWS or GCP is a
+  later check that needs the user's account.
