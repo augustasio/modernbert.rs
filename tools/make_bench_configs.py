@@ -120,6 +120,15 @@ def config(threads: int, name: str, batch_size: int = 1, cloud: bool = False) ->
 
 def main() -> None:
     threads = int(sys.argv[1])
+    # --sweep: only the batch-1 cloud configs, for the thread sweep of PLAN.md's phase 2.
+    if "--sweep" in sys.argv:
+        for name in CLOUD:
+            path = REPO / "bench" / "configs" / f"cloud_t{threads}_{name}.json"
+            body = config(threads, name, cloud=True) | CLOUD_SLICE
+            body["label"] = f"cloud, {body['label']}"
+            path.write_text(json.dumps(body, indent=2) + "\n")
+            print(path.relative_to(REPO))
+        return
     for name in VARIANTS:
         path = REPO / "bench" / "configs" / f"t{threads}_{name}.json"
         path.write_text(json.dumps(config(threads, name), indent=2) + "\n")
