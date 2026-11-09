@@ -31,6 +31,11 @@ tools/cpu_state_linux.sh installed at target/tools/thermal_state. Build it there
 
     cargo build --release -p mb-model --features mask-rows --bin worker --target-dir target/bench/rung16
 
+Rung 17 (bf16 linear layers through oneDNN) gets the same cloud configs, with the
+in-run gate from GATES:
+
+    cargo build --release -p mb-model --features bf16 --bin worker --target-dir target/bench/rung17
+
 Rungs 14 and 15 also get the batch sweep: t<threads>_b<size>_<rung>.json for each size
 in BATCH_SIZES, with rung 0 as the ruler at the same batch size (padded, as HF batches).
 """
@@ -66,7 +71,12 @@ VARIANTS = {
 CLOUD = {
     "aa": VARIANTS["aa"],
     "rung16": ("rung16", ["target/bench/rung16/release/worker"]),
+    "rung17": ("rung17", ["target/bench/rung17/release/worker"]),
 }
+# The in-run gate of a reduced-precision rung, from its Tier 3 run (PLAN.md, rung 17's
+# bound): 4x the worst logit difference and twice the share of changed predictions.
+# Rung 17's Tier 3 run: worst |logit diff| 0.179, 2 of 7,600 predictions changed.
+GATES = {"rung17": {"max_logit_abs": 0.72, "max_disagreement_rate": 2 * 2 / 7600}}
 CLOUD_BATCH_SIZES = (16,)
 # fp32 on 4 Genoa cores takes about 0.45 s an example (no matrix unit), so the Mac's
 # 64-example slices would last about 30 s and a replicate about 30 minutes. Slices are
@@ -83,6 +93,7 @@ BATCH_SIZES = (4, 16, 64)
 
 def config(threads: int, name: str, batch_size: int = 1, cloud: bool = False) -> dict:
     variant_name, command = (CLOUD if cloud else VARIANTS)[name]
+    gate = {"integrity": GATES[name]} if name in GATES else {}
     slow = name == "rung6"
     batched = {}
     if batch_size > 1:
@@ -104,7 +115,7 @@ def config(threads: int, name: str, batch_size: int = 1, cloud: bool = False) ->
         "thermal_helper": "target/tools/thermal_state",
         # Linux has no powermetrics, so a cloud run reports energy as not measured.
         "powermetrics": None if cloud else ["sudo", "-n", "/usr/bin/powermetrics"],
-    } | batched
+    } | batched | gate
 
 
 def main() -> None:
@@ -126,12 +137,13 @@ def main() -> None:
         body["label"] = f"cloud, {body['label']}"
         path.write_text(json.dumps(body, indent=2) + "\n")
         print(path.relative_to(REPO))
-    for size in CLOUD_BATCH_SIZES:
-        path = REPO / "bench" / "configs" / f"cloud_t{threads}_b{size}_rung16.json"
-        body = config(threads, "rung16", size, cloud=True) | CLOUD_SLICE
-        body["label"] = f"cloud, {threads} threads, batches of {size}: rung 0 ruler against rung16"
-        path.write_text(json.dumps(body, indent=2) + "\n")
-        print(path.relative_to(REPO))
+    for name in ("rung16", "rung17"):
+        for size in CLOUD_BATCH_SIZES:
+            path = REPO / "bench" / "configs" / f"cloud_t{threads}_b{size}_{name}.json"
+            body = config(threads, name, size, cloud=True) | CLOUD_SLICE
+            body["label"] = f"cloud, {threads} threads, batches of {size}: rung 0 ruler against {name}"
+            path.write_text(json.dumps(body, indent=2) + "\n")
+            print(path.relative_to(REPO))
 
 
 if __name__ == "__main__":
