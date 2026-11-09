@@ -814,3 +814,8 @@ Changes to the plan made after seeing data, with the reason.
   batch 1 to 8 and threads per request; and the main host moves from GPU pods (about 5
   CPUs) to RunPod CPU pods on Zen 5 (`cpu5c`, up to 32 vCPUs). AMX on AWS or GCP is a
   later check that needs the user's account.
+- **Rung 17 rough check on Genoa, 4 threads** (`results/bench/cloud_genoa_t4_r17/SUMMARY.md`):
+  2.04x rung 0 at batch 1 and 3.10x at batch 16, against rung 16's 1.10x and 1.51x. No
+  prediction changed in the in-run check. Batch-1 p99 is 339 ms, so 4 cores miss the
+  200 ms budget even in bf16. The A/A floor on that pod was 0.993 [0.988, 0.998]: read
+  ratios within about 1% of 1 as no difference.

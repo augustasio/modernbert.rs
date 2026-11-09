@@ -1,0 +1,522 @@
+== rung17, 06:46:02Z
+replicate 1 of 5, seed 4000
+starting rung0 and rung17
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  40%|███▉      | 69/173 [00:00<00:00, 677.34it/s]Loading weights:  79%|███████▉  | 137/173 [00:00<00:00, 675.13it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 799.41it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/rung17/replicate_0.json. valid: true. checked 966 replies, worst logit difference 0.13370037078857422
+replicate 2 of 5, seed 4001
+starting rung0 and rung17
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  71%|███████   | 122/173 [00:00<00:00, 1219.54it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 912.27it/s] 
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/rung17/replicate_1.json. valid: true. checked 966 replies, worst logit difference 0.10391998291015625
+replicate 3 of 5, seed 4002
+starting rung0 and rung17
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  77%|███████▋  | 133/173 [00:00<00:00, 932.96it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 1085.42it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/rung17/replicate_2.json. valid: true. checked 966 replies, worst logit difference 0.14011573791503906
+replicate 4 of 5, seed 4003
+starting rung0 and rung17
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:03, 48.33it/s]Loading weights:  82%|████████▏ | 141/173 [00:00<00:00, 788.78it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 794.93it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/rung17/replicate_3.json. valid: true. checked 966 replies, worst logit difference 0.0772848129272461
+replicate 5 of 5, seed 4004
+starting rung0 and rung17
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  75%|███████▍  | 129/173 [00:00<00:00, 893.38it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 1079.05it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/rung17/replicate_4.json. valid: true. checked 966 replies, worst logit difference 0.11500930786132812
+done: 5 replicates in results/bench/cloud_genoa_t4_r17/rung17
+== b16_rung17, 07:16:43Z
+replicate 1 of 5, seed 4000
+starting rung0 and rung17
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  40%|███▉      | 69/173 [00:00<00:00, 677.67it/s]Loading weights:  79%|███████▉  | 137/173 [00:00<00:00, 678.94it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 794.60it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/b16_rung17/replicate_0.json. valid: true. checked 992 replies, worst logit difference 0.13370037078857422
+replicate 2 of 5, seed 4001
+starting rung0 and rung17
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  39%|███▊      | 67/173 [00:00<00:00, 659.33it/s]Loading weights:  77%|███████▋  | 133/173 [00:00<00:00, 658.45it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 775.66it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/b16_rung17/replicate_1.json. valid: true. checked 992 replies, worst logit difference 0.10392189025878906
+replicate 3 of 5, seed 4002
+starting rung0 and rung17
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  66%|██████▋   | 115/173 [00:00<00:00, 894.58it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 1106.76it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/b16_rung17/replicate_2.json. valid: true. checked 992 replies, worst logit difference 0.14011573791503906
+replicate 4 of 5, seed 4003
+starting rung0 and rung17
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   4%|▍         | 7/173 [00:00<00:02, 69.97it/s]Loading weights:  82%|████████▏ | 141/173 [00:00<00:00, 811.57it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 805.78it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/b16_rung17/replicate_3.json. valid: true. checked 992 replies, worst logit difference 0.07727909088134766
+replicate 5 of 5, seed 4004
+starting rung0 and rung17
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  54%|█████▍    | 93/173 [00:00<00:00, 909.01it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 616.31it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/b16_rung17/replicate_4.json. valid: true. checked 992 replies, worst logit difference 0.11500930786132812
+done: 5 replicates in results/bench/cloud_genoa_t4_r17/b16_rung17
+== aa, 07:47:54Z
+replicate 1 of 5, seed 4000
+starting rung0 and rung0-copy
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:03, 49.43it/s]Loading weights:  73%|███████▎  | 127/173 [00:00<00:00, 732.01it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 764.98it/s]
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  43%|████▎     | 75/173 [00:00<00:00, 674.39it/s]Loading weights:  91%|█████████ | 157/173 [00:00<00:00, 755.69it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 793.31it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/aa/replicate_0.json. valid: true. checked 966 replies, worst logit difference 0.00018787384033203125
+replicate 2 of 5, seed 4001
+starting rung0 and rung0-copy
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  63%|██████▎   | 109/173 [00:00<00:00, 1087.77it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 905.17it/s] 
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  57%|█████▋    | 99/173 [00:00<00:00, 824.96it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 1178.11it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/aa/replicate_1.json. valid: true. checked 966 replies, worst logit difference 0.0000514984130859375
+replicate 3 of 5, seed 4002
+starting rung0 and rung0-copy
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  64%|██████▍   | 111/173 [00:00<00:00, 715.42it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 668.44it/s]
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  50%|█████     | 87/173 [00:00<00:00, 754.53it/s]Loading weights:  94%|█████████▍| 163/173 [00:00<00:00, 757.46it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 787.11it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/aa/replicate_2.json. valid: true. checked 966 replies, worst logit difference 0.0000514984130859375
+replicate 4 of 5, seed 4003
+starting rung0 and rung0-copy
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:   3%|▎         | 5/173 [00:00<00:03, 49.85it/s]Loading weights:  84%|████████▍ | 145/173 [00:00<00:00, 832.98it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 799.85it/s]
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  57%|█████▋    | 99/173 [00:00<00:00, 978.35it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 866.18it/s]
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/aa/replicate_3.json. valid: true. checked 966 replies, worst logit difference 0.00007343292236328125
+replicate 5 of 5, seed 4004
+starting rung0 and rung0-copy
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  46%|████▌     | 80/173 [00:00<00:00, 799.91it/s]Loading weights:  92%|█████████▏| 160/173 [00:00<00:00, 763.65it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 800.51it/s]
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights:  64%|██████▎   | 110/173 [00:00<00:00, 1099.65it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 877.36it/s] 
+cycle 1 of 30 done
+cycle 2 of 30 done
+cycle 3 of 30 done
+cycle 4 of 30 done
+cycle 5 of 30 done
+cycle 6 of 30 done
+cycle 7 of 30 done
+cycle 8 of 30 done
+cycle 9 of 30 done
+cycle 10 of 30 done
+cycle 11 of 30 done
+cycle 12 of 30 done
+cycle 13 of 30 done
+cycle 14 of 30 done
+cycle 15 of 30 done
+cycle 16 of 30 done
+cycle 17 of 30 done
+cycle 18 of 30 done
+cycle 19 of 30 done
+cycle 20 of 30 done
+cycle 21 of 30 done
+cycle 22 of 30 done
+cycle 23 of 30 done
+cycle 24 of 30 done
+cycle 25 of 30 done
+cycle 26 of 30 done
+cycle 27 of 30 done
+cycle 28 of 30 done
+cycle 29 of 30 done
+cycle 30 of 30 done
+wrote results/bench/cloud_genoa_t4_r17/aa/replicate_4.json. valid: true. checked 966 replies, worst logit difference 0.000091552734375
+done: 5 replicates in results/bench/cloud_genoa_t4_r17/aa
+== BENCH_DONE 08:29:28Z
