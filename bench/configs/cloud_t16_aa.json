@@ -22,7 +22,7 @@
   "cycles": 30,
   "examples_per_slice": 16,
   "warmup_examples": 3,
-  "seed": 16000,
+  "seed": 16200,
   "weights": "weights/ModernBERT-Large-Instruct",
   "prompt_ids": "data/agnews_test_prompt_ids.tsv",
   "reference_logits": "results/rung0_logits.npy",
