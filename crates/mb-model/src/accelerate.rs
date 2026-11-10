@@ -63,6 +63,10 @@ extern "C" {
 #[link(name = "mkl_rt")]
 extern "C" {
     /// Returns the setting it replaced; 0 means "none", which clears it.
+    ///
+    /// Trap: the lowercase symbol `mkl_set_num_threads_local` is MKL's Fortran
+    /// interface, which takes a pointer. This capitalised one is the C one.
+    #[link_name = "MKL_Set_Num_Threads_Local"]
     fn mkl_set_num_threads_local(threads: i32) -> i32;
 }
 
