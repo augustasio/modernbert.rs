@@ -933,3 +933,9 @@ Changes to the plan made after seeing data, with the reason.
   p99 at or under 200 ms up to 35 to 40/s against 25 to 30/s for rung 22, about 112,000
   examples per dollar (`results/bench/cloud_turin_serve23/SUMMARY.md`). Every linear
   layer but head.dense is now s8.
+- **Rung 24 passes its bound and serves the same as rung 23** (2026-11-10, Zen 5). Tier 3
+  logits equal rung 23's bit for bit on all 7,600 examples (same pod). Behind the
+  server, three interleaved rounds: p99 at or under 200 ms up to 35, 35, 40/s for both,
+  worker p50 1 to 2 ms lower. So u8 input is exact but not a measurable gain at batch 1
+  (`results/bench/cloud_turin_serve24/SUMMARY.md`). The matmuls are no longer the main
+  lever; the next step is a profile of the rest of the forward pass.

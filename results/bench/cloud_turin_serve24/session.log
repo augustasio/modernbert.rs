@@ -1,0 +1,26 @@
+wrote weights/ModernBERT-Large-Instruct/smooth_scales.safetensors (221406b4b84a), widest max/min scale ratio 71.5
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 46 filtered out; finished in 0.00s
+== tier3 23 22:19:07Z
+ 7600 / 7600  0.0272 s per example
+== tier3 24 22:22:34Z
+ 7600 / 7600  0.0255 s per example
+== bit-identical: 1 0.0
+== speed rung23 round 1 load 52.72: 8.408 s per example, about 0 min left
+== speed rung24 round 1 load 43.27: 8.406 s per example, about 0 min left
+== speed rung23 round 2 load 71.50: 8.406 s per example, about 0 min left
+== speed rung24 round 2 load 65.98: 8.403 s per example, about 0 min left
+== speed rung23 round 3 load 21.55: 8.392 s per example, about 0 min left
+== speed rung24 round 3 load 7.63: 8.395 s per example, about 0 min left
+== serve rung24 4x4 round 1 23:19:41Z load 36.78
+{"best_rate_within_budget":35.0,"budget_ms":200.0,"changed_allowed":82.502927,"changed_predictions":51,"changed_share":0.005693870715641398,"checked":8957,"summary":true,"valid":true}
+== serve rung23 4x4 round 1 23:24:18Z load 52.59
+{"best_rate_within_budget":35.0,"budget_ms":200.0,"changed_allowed":82.502927,"changed_predictions":51,"changed_share":0.005693870715641398,"checked":8957,"summary":true,"valid":true}
+== serve rung24 4x4 round 2 23:28:56Z load 62.74
+{"best_rate_within_budget":35.0,"budget_ms":200.0,"changed_allowed":80.218599,"changed_predictions":28,"changed_share":0.003215064875416236,"checked":8709,"summary":true,"valid":true}
+== serve rung23 4x4 round 2 23:33:33Z load 44.14
+{"best_rate_within_budget":35.0,"budget_ms":200.0,"changed_allowed":80.218599,"changed_predictions":28,"changed_share":0.003215064875416236,"checked":8709,"summary":true,"valid":true}
+== serve rung24 4x4 round 3 23:38:11Z load 40.49
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":100.37226700000001,"changed_predictions":50,"changed_share":0.004588418830870882,"checked":10897,"summary":true,"valid":true}
+== serve rung23 4x4 round 3 23:43:34Z load 47.23
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":100.37226700000001,"changed_predictions":50,"changed_share":0.004588418830870882,"checked":10897,"summary":true,"valid":true}
+== R24_DONE 23:48:57Z
