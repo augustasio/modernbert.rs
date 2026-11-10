@@ -1,0 +1,18 @@
+== speed rung19 round 1 load 38.90: 0.155 s per example, about 0 min left
+== speed rung22 round 1 load 42.52: 0.134 s per example, about 0 min left
+== serve rung22 4x4 round 1 20:31:02Z load 43.28
+{"best_rate_within_budget":35.0,"budget_ms":200.0,"changed_allowed":44.48050799999999,"changed_predictions":25,"changed_share":0.0025145845906256285,"checked":9942,"summary":true,"valid":true}
+== serve rung19 4x4 round 1 20:37:11Z load 40.53
+{"best_rate_within_budget":20.0,"budget_ms":200.0,"changed_allowed":3.9976,"changed_predictions":0,"changed_share":0.0,"checked":4603,"summary":true,"valid":true}
+== speed rung19 round 2 load 32.18: 0.158 s per example, about 0 min left
+== speed rung22 round 2 load 33.76: 0.132 s per example, about 0 min left
+== serve rung22 4x4 round 2 20:41:25Z load 34.64
+{"best_rate_within_budget":30.0,"budget_ms":200.0,"changed_allowed":34.69587,"changed_predictions":15,"changed_share":0.0019342359767891683,"checked":7755,"summary":true,"valid":true}
+== serve rung19 4x4 round 2 20:46:49Z load 54.18
+{"best_rate_within_budget":25.0,"budget_ms":200.0,"changed_allowed":3.9976,"changed_predictions":3,"changed_share":0.0005012531328320802,"checked":5985,"summary":true,"valid":true}
+== speed rung19 round 3 load 28.25: 0.148 s per example, about 0 min left
+== speed rung22 round 3 load 23.11: 0.127 s per example, about 0 min left
+== serve rung22 4x4 round 3 20:51:47Z load 21.74
+{"best_rate_within_budget":20.0,"budget_ms":200.0,"changed_allowed":34.002399999999994,"changed_predictions":13,"changed_share":0.0028921023359288096,"checked":4495,"summary":true,"valid":true}
+== serve rung19 4x4 round 3 20:55:40Z load 16.25
+{"best_rate_within_budget":20.0,"budget_ms":200.0,"changed_allowed":3.9976,"changed_predictions":2,"changed_share":0.0004449388209121246,"checked":4495,"summary":true,"valid":true}

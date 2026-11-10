@@ -902,3 +902,9 @@ Changes to the plan made after seeing data, with the reason.
   (`results/bench/cloud_turin_serve22/`). It also showed that a load test which stops
   early checks too few replies to hold a share set over 7,600; `mb-load` now allows as
   many changed predictions as the gate does over one full pass.
+- **Rung 22 serves about 1.45x rung 19 within the budget**
+  (`results/bench/cloud_turin_serve22b/SUMMARY.md`, three interleaved rounds on a host
+  at load 16 to 54). 4 bound workers of 4 threads: p99 crosses 200 ms near 24 to 36/s
+  for rung 22 and 22 to 26/s for rung 19, about 96,000 against 64,000 examples per
+  dollar. Worker p99 near 110 ms against 130. Hosts vary a lot (load 12 to 144 seen on
+  the same flavor), so the orchestrator now replaces a pod whose host load is over 60.
