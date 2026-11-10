@@ -155,7 +155,9 @@ pub fn backend() -> &'static str {
             }
         };
     }
-    if cfg!(feature = "serial-blas") {
+    if cfg!(feature = "omp-pool") {
+        with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool")
+    } else if cfg!(feature = "serial-blas") {
         with_blas!(
             "-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas"
         )

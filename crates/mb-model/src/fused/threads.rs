@@ -42,6 +42,7 @@ use crate::tensor::Matrix;
 
 /// Run `work` on each block, one thread per block. The last block runs on
 /// the calling thread, so one block spawns nothing.
+#[cfg(not(all(feature = "omp-pool", target_os = "linux")))]
 fn in_parallel<T: Send>(blocks: impl Iterator<Item = T>, work: impl Fn(T) + Sync) {
     let mut blocks = blocks.peekable();
     let Some(first) = blocks.next() else { return };
@@ -58,6 +59,22 @@ fn in_parallel<T: Send>(blocks: impl Iterator<Item = T>, work: impl Fn(T) + Sync
             } else {
                 s.spawn(move || work(block));
             }
+        }
+    });
+}
+
+/// Rung 19: run `work` on each block, on the OpenMP pool that oneDNN and MKL
+/// also use. The workers are already alive, and no second set of threads
+/// competes with the pool's spin-waiting ones.
+#[cfg(all(feature = "omp-pool", target_os = "linux"))]
+fn in_parallel<T: Send>(blocks: impl Iterator<Item = T>, work: impl Fn(T) + Sync) {
+    use std::sync::Mutex;
+    // A block moves out of its slot on whichever thread claims that index.
+    let slots: Vec<Mutex<Option<T>>> = blocks.map(|b| Mutex::new(Some(b))).collect();
+    crate::omp::parallel_for(slots.len(), &|i| {
+        let block = slots[i].lock().expect("no block panics while held").take();
+        if let Some(block) = block {
+            work(block);
         }
     });
 }

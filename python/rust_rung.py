@@ -52,6 +52,7 @@ EXPECTED_BACKEND = {
     16: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows",
     17: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16",
     18: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas",
+    19: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool",
 }
 DESCRIPTION = {
     4: "candle-transformers encoder with a mask-only head, candle CPU (gemm) matmul",
@@ -69,6 +70,7 @@ DESCRIPTION = {
     16: "rung 15 built on Linux x86, with MKL's cblas_sgemm in place of Accelerate's",
     17: "rung 16 with the linear layers as bf16 matmuls through oneDNN, f32 sums",
     18: "rung 17 with MKL serial inside the attention threads",
+    19: "rung 18 with our threads taken from the OpenMP pool",
 }
 
 

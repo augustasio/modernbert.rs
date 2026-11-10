@@ -60,3 +60,8 @@ bf16 = ["mask-rows"]
 # has no such trap, because its attention runs inside one OpenMP pool and MKL
 # goes serial inside a parallel region. No effect on macOS. Built on rung 17.
 serial-blas = ["bf16"]
+# Rung 19: the threads of ours come from the same OpenMP pool that oneDNN and
+# MKL use, as PyTorch does, instead of being spawned for each piece of work.
+# Links `libgomp`, Linux only; on macOS the spawned threads stay. Built on
+# rung 18.
+omp-pool = ["serial-blas"]

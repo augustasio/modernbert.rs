@@ -28,6 +28,8 @@ pub mod fused;
 pub mod head;
 pub mod mlp;
 pub mod model;
+#[cfg(all(feature = "omp-pool", target_os = "linux"))]
+pub mod omp;
 #[cfg(feature = "bf16")]
 pub mod onednn;
 pub mod ops;
