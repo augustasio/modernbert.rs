@@ -69,3 +69,9 @@ omp-pool = ["serial-blas"]
 # oneDNN: weights with a scale per output column, activations with a scale per
 # row, computed on each call. Built on rung 19.
 int8 = ["omp-pool"]
+# Rung 22: s8 only for the MLP's Wi and the attention's Wo, the two kinds whose
+# rounding moved the logits least when measured one at a time against rung 0
+# (760 examples, no labels). Wi is also the largest matmul. Wqkv, the MLP's
+# Wo and head.dense stay bf16. Built on rung 20, with its quantize and
+# dequantize loops on the pool.
+int8-partial = ["int8"]

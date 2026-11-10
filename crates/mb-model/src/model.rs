@@ -260,9 +260,15 @@ fn keep_precision(weight: &mut crate::tensor::Matrix, kind: &str) {
     {
         // Analysis only, never set in a benchmark: `MB_INT8_ONLY=wi,head`
         // keeps just those kinds in s8 and the rest in bf16, to find which
-        // layer's rounding moves the logits most. Unset, every kind is s8.
-        let only = std::env::var("MB_INT8_ONLY").ok();
-        if only.is_none_or(|list| list.split(',').any(|k| k == kind)) {
+        // layer's rounding moves the logits most. Unset, rung 20 keeps every
+        // kind in s8 and rung 22 only the two that moved them least.
+        let default = if cfg!(feature = "int8-partial") {
+            "wi,attn_wo"
+        } else {
+            "wqkv,attn_wo,wi,mlp_wo,head"
+        };
+        let only = std::env::var("MB_INT8_ONLY").unwrap_or_else(|_| default.to_string());
+        if only.split(',').any(|k| k == kind) {
             weight.keep_int8();
         } else {
             weight.keep_bf16();
