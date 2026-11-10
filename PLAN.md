@@ -867,3 +867,11 @@ Changes to the plan made after seeing data, with the reason.
   throughput; a few of their calls still stall for about 1.5 s after the team cap, cause
   not yet found. 4 threads give 8.6 examples/s on a quarter of the cores, so rung 21
   should test several workers per host before batching.
+- **Four workers of 4 threads beat one of 16** (`results/bench/cloud_turin_multi/SUMMARY.md`,
+  2026-11-10, a closed-loop rough check, not the paired harness). Rung 19 at batch 1 on 16
+  Zen 5 cores: 36.7 examples/s at p99 160 ms, against 25.5/s for one 16-thread worker:
+  about 118,000 examples per dollar. Rung 0 meets 200 ms in no layout (best 5.8/s at
+  p99 216 ms). Threads must be bound through OpenMP (`OMP_PLACES`, `OMP_PROC_BIND=close`):
+  that removed every 1.5 s stall seen, while `taskset` caused them. So rung 21 serves with
+  four bound 4-thread workers, and its open-loop test adds the queue wait this check
+  leaves out.

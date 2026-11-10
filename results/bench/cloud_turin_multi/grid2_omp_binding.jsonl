@@ -1,0 +1,38 @@
+== load 16.28 20.58 20.11
+== round 1 08:22:38Z
+{"workers": 1, "threads": 16, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 24.37, "p50": 40, "p90": 45, "p99": 81, "max": 104, "over_1s": 0, "calls": 400, "load": "21.50"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 2, "env": {}, "examples_per_s": 18.65, "p50": 107, "p90": 117, "p99": 138, "max": 165, "over_1s": 0, "calls": 200, "load": "24.94"}
+{"workers": 1, "threads": 16, "batch": 4, "pin": 2, "env": {}, "examples_per_s": 25.96, "p50": 154, "p90": 172, "p99": 213, "max": 213, "over_1s": 0, "calls": 100, "load": "24.29"}
+{"workers": 1, "threads": 16, "batch": 8, "pin": 2, "env": {}, "examples_per_s": 30.38, "p50": 260, "p90": 305, "p99": 335, "max": 335, "over_1s": 0, "calls": 50, "load": "24.05"}
+{"workers": 2, "threads": 8, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 29.49, "p50": 67, "p90": 73, "p99": 87, "max": 132, "over_1s": 0, "calls": 400, "load": "23.83"}
+{"workers": 2, "threads": 8, "batch": 2, "pin": 2, "env": {}, "examples_per_s": 32.82, "p50": 115, "p90": 139, "p99": 176, "max": 202, "over_1s": 0, "calls": 200, "load": "22.20"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 38.38, "p50": 98, "p90": 112, "p99": 171, "max": 185, "over_1s": 0, "calls": 400, "load": "24.59"}
+{"workers": 4, "threads": 4, "batch": 2, "pin": 2, "env": {}, "examples_per_s": 41.71, "p50": 181, "p90": 212, "p99": 270, "max": 273, "over_1s": 0, "calls": 200, "load": "25.87"}
+{"workers": 4, "threads": 4, "batch": 4, "pin": 2, "env": {}, "examples_per_s": 38.54, "p50": 372, "p90": 438, "p99": 613, "max": 613, "over_1s": 0, "calls": 100, "load": "27.10"}
+{"workers": 8, "threads": 2, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 47.02, "p50": 149, "p90": 174, "p99": 234, "max": 287, "over_1s": 0, "calls": 400, "load": "22.70"}
+{"workers": 1, "threads": 16, "batch": 1, "pin": 0, "env": {"OMP_PROC_BIND": "close", "OMP_PLACES": "cores"}, "examples_per_s": 27.29, "p50": 36, "p90": 40, "p99": 74, "max": 89, "over_1s": 0, "calls": 400, "load": "21.86"}
+== round 2 08:25:40Z
+{"workers": 1, "threads": 16, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 27.07, "p50": 36, "p90": 40, "p99": 73, "max": 95, "over_1s": 0, "calls": 400, "load": "21.89"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 2, "env": {}, "examples_per_s": 19.79, "p50": 100, "p90": 111, "p99": 139, "max": 157, "over_1s": 0, "calls": 200, "load": "22.19"}
+{"workers": 1, "threads": 16, "batch": 4, "pin": 2, "env": {}, "examples_per_s": 25.95, "p50": 154, "p90": 171, "p99": 192, "max": 192, "over_1s": 0, "calls": 100, "load": "23.99"}
+{"workers": 1, "threads": 16, "batch": 8, "pin": 2, "env": {}, "examples_per_s": 28.91, "p50": 270, "p90": 307, "p99": 359, "max": 359, "over_1s": 0, "calls": 50, "load": "28.78"}
+{"workers": 2, "threads": 8, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 26.7, "p50": 72, "p90": 81, "p99": 115, "max": 156, "over_1s": 0, "calls": 400, "load": "42.00"}
+{"workers": 2, "threads": 8, "batch": 2, "pin": 2, "env": {}, "examples_per_s": 30.0, "p50": 129, "p90": 151, "p99": 181, "max": 216, "over_1s": 0, "calls": 200, "load": "54.41"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 36.2, "p50": 104, "p90": 119, "p99": 153, "max": 193, "over_1s": 0, "calls": 400, "load": "65.92"}
+{"workers": 4, "threads": 4, "batch": 2, "pin": 2, "env": {}, "examples_per_s": 38.18, "p50": 195, "p90": 229, "p99": 289, "max": 296, "over_1s": 0, "calls": 200, "load": "72.15"}
+{"workers": 4, "threads": 4, "batch": 4, "pin": 2, "env": {}, "examples_per_s": 36.15, "p50": 399, "p90": 472, "p99": 675, "max": 675, "over_1s": 0, "calls": 100, "load": "77.32"}
+{"workers": 8, "threads": 2, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 42.42, "p50": 169, "p90": 197, "p99": 270, "max": 329, "over_1s": 0, "calls": 400, "load": "78.30"}
+{"workers": 1, "threads": 16, "batch": 1, "pin": 0, "env": {"OMP_PROC_BIND": "close", "OMP_PLACES": "cores"}, "examples_per_s": 24.74, "p50": 39, "p90": 44, "p99": 82, "max": 102, "over_1s": 0, "calls": 400, "load": "79.80"}
+== round 3 08:28:47Z
+{"workers": 1, "threads": 16, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 24.97, "p50": 39, "p90": 45, "p99": 80, "max": 102, "over_1s": 0, "calls": 400, "load": "81.69"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 2, "env": {}, "examples_per_s": 18.18, "p50": 109, "p90": 121, "p99": 155, "max": 206, "over_1s": 0, "calls": 200, "load": "81.66"}
+{"workers": 1, "threads": 16, "batch": 4, "pin": 2, "env": {}, "examples_per_s": 23.94, "p50": 166, "p90": 186, "p99": 230, "max": 230, "over_1s": 0, "calls": 100, "load": "81.92"}
+{"workers": 1, "threads": 16, "batch": 8, "pin": 2, "env": {}, "examples_per_s": 28.35, "p50": 278, "p90": 306, "p99": 357, "max": 357, "over_1s": 0, "calls": 50, "load": "81.98"}
+{"workers": 2, "threads": 8, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 26.56, "p50": 72, "p90": 81, "p99": 96, "max": 140, "over_1s": 0, "calls": 400, "load": "82.42"}
+{"workers": 2, "threads": 8, "batch": 2, "pin": 2, "env": {}, "examples_per_s": 29.71, "p50": 131, "p90": 155, "p99": 187, "max": 222, "over_1s": 0, "calls": 200, "load": "83.29"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 35.56, "p50": 103, "p90": 118, "p99": 156, "max": 204, "over_1s": 0, "calls": 400, "load": "82.12"}
+{"workers": 4, "threads": 4, "batch": 2, "pin": 2, "env": {}, "examples_per_s": 38.87, "p50": 194, "p90": 227, "p99": 292, "max": 298, "over_1s": 0, "calls": 200, "load": "79.53"}
+{"workers": 4, "threads": 4, "batch": 4, "pin": 2, "env": {}, "examples_per_s": 36.34, "p50": 397, "p90": 467, "p99": 675, "max": 675, "over_1s": 0, "calls": 100, "load": "80.88"}
+{"workers": 8, "threads": 2, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 42.8, "p50": 167, "p90": 195, "p99": 266, "max": 324, "over_1s": 0, "calls": 400, "load": "81.19"}
+{"workers": 1, "threads": 16, "batch": 1, "pin": 0, "env": {"OMP_PROC_BIND": "close", "OMP_PLACES": "cores"}, "examples_per_s": 25.19, "p50": 39, "p90": 44, "p99": 83, "max": 100, "over_1s": 0, "calls": 400, "load": "83.22"}
+== MULTI2_DONE 08:31:59Z

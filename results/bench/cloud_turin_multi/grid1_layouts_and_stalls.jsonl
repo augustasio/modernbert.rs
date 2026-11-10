@@ -1,0 +1,44 @@
+== cpus 32, load 19.12 18.46 17.40
+== round 1 08:04:09Z
+{"workers": 1, "threads": 16, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 12.5, "p50": 41, "p90": 61, "p99": 1494, "max": 1495, "over_1s": 8, "calls": 400, "load": "22.30"}
+{"workers": 2, "threads": 8, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 27.93, "p50": 69, "p90": 76, "p99": 95, "max": 129, "over_1s": 0, "calls": 400, "load": "20.87"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 37.59, "p50": 100, "p90": 114, "p99": 148, "max": 194, "over_1s": 0, "calls": 400, "load": "20.37"}
+{"workers": 8, "threads": 2, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 47.5, "p50": 152, "p90": 176, "p99": 230, "max": 290, "over_1s": 0, "calls": 400, "load": "22.31"}
+{"workers": 16, "threads": 1, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 50.94, "p50": 288, "p90": 333, "p99": 432, "max": 602, "over_1s": 0, "calls": 400, "load": "19.70"}
+{"workers": 1, "threads": 16, "batch": 1, "pin": 0, "env": {}, "examples_per_s": 20.22, "p50": 48, "p90": 53, "p99": 105, "max": 127, "over_1s": 0, "calls": 400, "load": "22.22"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 0, "env": {}, "examples_per_s": 27.48, "p50": 141, "p90": 158, "p99": 207, "max": 281, "over_1s": 0, "calls": 400, "load": "24.44"}
+{"workers": 8, "threads": 4, "batch": 1, "pin": 0, "env": {}, "examples_per_s": 40.42, "p50": 174, "p90": 233, "p99": 382, "max": 421, "over_1s": 0, "calls": 400, "load": "25.94"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 0, "env": {}, "examples_per_s": 18.42, "p50": 106, "p90": 120, "p99": 180, "max": 245, "over_1s": 0, "calls": 300, "load": "26.78"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 1, "env": {}, "examples_per_s": 16.51, "p50": 99, "p90": 118, "p99": 1184, "max": 1501, "over_1s": 3, "calls": 300, "load": "28.94"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 0, "env": {"GOMP_SPINCOUNT": "0"}, "examples_per_s": 15.04, "p50": 129, "p90": 156, "p99": 190, "max": 225, "over_1s": 0, "calls": 300, "load": "27.81"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 0, "env": {"OMP_WAIT_POLICY": "passive"}, "examples_per_s": 14.62, "p50": 133, "p90": 158, "p99": 208, "max": 249, "over_1s": 0, "calls": 300, "load": "21.13"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 0, "env": {"OMP_PROC_BIND": "close", "OMP_PLACES": "cores"}, "examples_per_s": 23.76, "p50": 83, "p90": 92, "p99": 114, "max": 143, "over_1s": 0, "calls": 300, "load": "21.32"}
+== round 2 08:10:07Z
+{"workers": 1, "threads": 16, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 20.94, "p50": 40, "p90": 55, "p99": 85, "max": 1217, "over_1s": 1, "calls": 400, "load": "24.05"}
+{"workers": 2, "threads": 8, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 27.98, "p50": 69, "p90": 76, "p99": 92, "max": 131, "over_1s": 0, "calls": 400, "load": "24.25"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 36.99, "p50": 99, "p90": 112, "p99": 145, "max": 431, "over_1s": 0, "calls": 400, "load": "21.98"}
+{"workers": 8, "threads": 2, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 46.4, "p50": 154, "p90": 180, "p99": 238, "max": 297, "over_1s": 0, "calls": 400, "load": "19.30"}
+{"workers": 16, "threads": 1, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 53.68, "p50": 276, "p90": 318, "p99": 416, "max": 586, "over_1s": 0, "calls": 400, "load": "18.70"}
+{"workers": 1, "threads": 16, "batch": 1, "pin": 0, "env": {}, "examples_per_s": 20.4, "p50": 47, "p90": 53, "p99": 102, "max": 129, "over_1s": 0, "calls": 400, "load": "19.21"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 0, "env": {}, "examples_per_s": 27.05, "p50": 136, "p90": 160, "p99": 205, "max": 260, "over_1s": 0, "calls": 400, "load": "18.93"}
+{"workers": 8, "threads": 4, "batch": 1, "pin": 0, "env": {}, "examples_per_s": 35.79, "p50": 169, "p90": 245, "p99": 547, "max": 1494, "over_1s": 1, "calls": 400, "load": "19.76"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 0, "env": {}, "examples_per_s": 18.65, "p50": 105, "p90": 118, "p99": 150, "max": 196, "over_1s": 0, "calls": 300, "load": "20.10"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 1, "env": {}, "examples_per_s": 14.03, "p50": 95, "p90": 111, "p99": 1518, "max": 1600, "over_1s": 10, "calls": 300, "load": "20.15"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 0, "env": {"GOMP_SPINCOUNT": "0"}, "examples_per_s": 14.55, "p50": 136, "p90": 158, "p99": 195, "max": 227, "over_1s": 0, "calls": 300, "load": "15.19"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 0, "env": {"OMP_WAIT_POLICY": "passive"}, "examples_per_s": 14.86, "p50": 132, "p90": 156, "p99": 196, "max": 236, "over_1s": 0, "calls": 300, "load": "14.43"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 0, "env": {"OMP_PROC_BIND": "close", "OMP_PLACES": "cores"}, "examples_per_s": 23.2, "p50": 84, "p90": 94, "p99": 115, "max": 147, "over_1s": 0, "calls": 300, "load": "16.01"}
+== round 3 08:15:57Z
+{"workers": 1, "threads": 16, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 17.81, "p50": 41, "p90": 63, "p99": 515, "max": 1156, "over_1s": 2, "calls": 400, "load": "20.06"}
+{"workers": 2, "threads": 8, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 28.43, "p50": 69, "p90": 75, "p99": 94, "max": 136, "over_1s": 0, "calls": 400, "load": "20.04"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 37.82, "p50": 98, "p90": 111, "p99": 140, "max": 186, "over_1s": 0, "calls": 400, "load": "19.22"}
+{"workers": 8, "threads": 2, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 47.4, "p50": 150, "p90": 175, "p99": 234, "max": 291, "over_1s": 0, "calls": 400, "load": "17.37"}
+{"workers": 16, "threads": 1, "batch": 1, "pin": 1, "env": {}, "examples_per_s": 53.81, "p50": 274, "p90": 314, "p99": 419, "max": 576, "over_1s": 0, "calls": 400, "load": "16.49"}
+{"workers": 1, "threads": 16, "batch": 1, "pin": 0, "env": {}, "examples_per_s": 20.72, "p50": 47, "p90": 53, "p99": 100, "max": 125, "over_1s": 0, "calls": 400, "load": "19.69"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 0, "env": {}, "examples_per_s": 25.89, "p50": 148, "p90": 165, "p99": 215, "max": 288, "over_1s": 0, "calls": 400, "load": "23.11"}
+{"workers": 8, "threads": 4, "batch": 1, "pin": 0, "env": {}, "examples_per_s": 44.11, "p50": 170, "p90": 196, "p99": 286, "max": 328, "over_1s": 0, "calls": 400, "load": "27.53"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 0, "env": {}, "examples_per_s": 17.8, "p50": 110, "p90": 125, "p99": 154, "max": 201, "over_1s": 0, "calls": 300, "load": "31.52"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 1, "env": {}, "examples_per_s": 12.6, "p50": 93, "p90": 119, "p99": 1479, "max": 1524, "over_1s": 13, "calls": 300, "load": "26.13"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 0, "env": {"GOMP_SPINCOUNT": "0"}, "examples_per_s": 14.85, "p50": 132, "p90": 156, "p99": 202, "max": 234, "over_1s": 0, "calls": 300, "load": "20.67"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 0, "env": {"OMP_WAIT_POLICY": "passive"}, "examples_per_s": 14.96, "p50": 130, "p90": 155, "p99": 195, "max": 242, "over_1s": 0, "calls": 300, "load": "23.44"}
+{"workers": 1, "threads": 16, "batch": 2, "pin": 0, "env": {"OMP_PROC_BIND": "close", "OMP_PLACES": "cores"}, "examples_per_s": 23.31, "p50": 84, "p90": 93, "p99": 140, "max": 151, "over_1s": 0, "calls": 300, "load": "22.65"}
+== MULTI_DONE 08:21:52Z

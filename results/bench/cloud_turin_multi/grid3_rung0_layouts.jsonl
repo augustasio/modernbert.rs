@@ -1,0 +1,15 @@
+== round 1 08:32:47Z load 73.33
+{"workers": 1, "threads": 16, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 5.89, "p50": 166, "p90": 182, "p99": 216, "max": 216, "over_1s": 0, "calls": 100, "load": "74.66"}
+{"workers": 2, "threads": 8, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 8.21, "p50": 240, "p90": 258, "p99": 317, "max": 317, "over_1s": 0, "calls": 100, "load": "84.95"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 9.08, "p50": 407, "p90": 452, "p99": 606, "max": 606, "over_1s": 0, "calls": 100, "load": "94.82"}
+{"workers": 8, "threads": 2, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 8.61, "p50": 793, "p90": 953, "p99": 1164, "max": 1164, "over_1s": 5, "calls": 96, "load": "84.63"}
+{"workers": 16, "threads": 1, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 10.74, "p50": 1317, "p90": 1588, "p99": 2091, "max": 2091, "over_1s": 96, "calls": 96, "load": "75.37"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 36.86, "p50": 101, "p90": 116, "p99": 150, "max": 192, "over_1s": 0, "calls": 400, "load": "74.73"}
+== round 2 08:35:53Z load 74.73
+{"workers": 1, "threads": 16, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 5.78, "p50": 169, "p90": 197, "p99": 216, "max": 216, "over_1s": 0, "calls": 100, "load": "77.56"}
+{"workers": 2, "threads": 8, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 8.17, "p50": 241, "p90": 258, "p99": 311, "max": 311, "over_1s": 0, "calls": 100, "load": "76.88"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 8.98, "p50": 412, "p90": 455, "p99": 607, "max": 607, "over_1s": 0, "calls": 100, "load": "77.45"}
+{"workers": 8, "threads": 2, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 8.47, "p50": 810, "p90": 978, "p99": 1159, "max": 1159, "over_1s": 7, "calls": 96, "load": "71.85"}
+{"workers": 16, "threads": 1, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 10.88, "p50": 1310, "p90": 1533, "p99": 2125, "max": 2125, "over_1s": 96, "calls": 96, "load": "85.72"}
+{"workers": 4, "threads": 4, "batch": 1, "pin": 2, "env": {}, "examples_per_s": 35.04, "p50": 104, "p90": 121, "p99": 160, "max": 194, "over_1s": 0, "calls": 400, "load": "82.75"}
+== MULTI3_DONE 08:39:01Z
