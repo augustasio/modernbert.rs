@@ -45,6 +45,7 @@ fn main() {
         "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8" => "rung20",
         "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial" => "rung22",
         "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth" => "rung23",
+        "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8" => "rung24",
         // Built on the Mac only to test it; rung 17 is measured on Linux.
         "accelerate-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16" => {
             "rung17-macos"

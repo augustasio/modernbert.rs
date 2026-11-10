@@ -34,6 +34,10 @@ pub struct Matrix {
     /// input is multiplied by before it is rounded to s8. Empty when the
     /// weight is not smoothed. See [`Matrix::keep_int8_smoothed`].
     pub int8_smooth: Vec<f32>,
+    /// Rung 24: for each row, 128 times the sum of its s8 values. The input
+    /// goes into the matmul as u8 (s8 + 128), so each product sum carries
+    /// 128 * sum(w) too, and this is what is subtracted to undo it.
+    pub int8_shift: Vec<i32>,
 }
 
 impl Matrix {
@@ -46,6 +50,7 @@ impl Matrix {
             int8: Vec::new(),
             int8_unscale: Vec::new(),
             int8_smooth: Vec::new(),
+            int8_shift: Vec::new(),
         }
     }
 
@@ -65,6 +70,7 @@ impl Matrix {
             int8: Vec::new(),
             int8_unscale: Vec::new(),
             int8_smooth: Vec::new(),
+            int8_shift: Vec::new(),
         }
     }
 
@@ -102,6 +108,7 @@ impl Matrix {
             self.int8
                 .extend(row.iter().map(|&w| (w * scale).round_ties_even() as i8));
         }
+        self.int8_shift = int8_row_shifts(&self.int8, self.cols);
     }
 
     /// Rung 23: keep an s8 copy of this weight with each input channel j
@@ -134,6 +141,7 @@ impl Matrix {
             );
         }
         self.int8_smooth = smooth.iter().map(|&s| 1.0 / s).collect();
+        self.int8_shift = int8_row_shifts(&self.int8, self.cols);
     }
 
     /// Change the number of rows, keeping the buffer.
@@ -202,6 +210,14 @@ impl Matrix {
         }
         (dot / (left.sqrt() * right.sqrt())) as f32
     }
+}
+
+/// Rung 24: 128 times the sum of each row of s8 values.
+#[cfg(feature = "int8")]
+fn int8_row_shifts(int8: &[i8], cols: usize) -> Vec<i32> {
+    int8.chunks_exact(cols)
+        .map(|row| 128 * row.iter().map(|&w| i32::from(w)).sum::<i32>())
+        .collect()
 }
 
 impl std::fmt::Debug for Matrix {

@@ -81,3 +81,8 @@ int8-partial = ["int8"]
 # 512 train-split prompts (`python/smooth_calibrate.py`). head.dense stays
 # bf16. Built on rung 22.
 int8-smooth = ["int8-partial"]
+# Rung 24: the s8 matmuls take their input as u8 (s8 + 128), the type x86's
+# VNNI instruction multiplies by s8, and take 128 * sum(w) off each sum. The
+# s32 sums are exact either way, so the logits are rung 23's, bit for bit.
+# Built on rung 23.
+int8-u8 = ["int8-smooth"]

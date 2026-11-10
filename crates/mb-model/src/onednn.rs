@@ -38,6 +38,8 @@ const DNNL_F32: i32 = 3;
 const DNNL_S32: i32 = 4;
 #[cfg(feature = "int8")]
 const DNNL_S8: i32 = 5;
+#[cfg(feature = "int8-u8")]
+const DNNL_U8: i32 = 6;
 const DNNL_CPU: i32 = 1;
 const DNNL_STREAM_IN_ORDER: u32 = 0x1;
 const DNNL_ARG_SRC: i32 = 1;
@@ -317,6 +319,28 @@ pub fn int8_scale(values: &[f32]) -> f32 {
 #[cfg(feature = "int8")]
 type QuantBlock<'a> = (usize, &'a mut [i8], &'a mut [f32]);
 
+/// The data type of the matmul's input. Rung 24: u8, because the VNNI
+/// instruction on x86 (`vpdpbusd`) multiplies u8 by s8; an s8 input makes
+/// oneDNN add 128 and compensate inside every call.
+#[cfg(feature = "int8-u8")]
+const INPUT_TYPE: i32 = DNNL_U8;
+#[cfg(all(feature = "int8", not(feature = "int8-u8")))]
+const INPUT_TYPE: i32 = DNNL_S8;
+
+/// One input value, already scaled, rounded to s8; for rung 24 stored as u8
+/// (s8 + 128, which is the s8 bit pattern with its top bit flipped).
+#[cfg(feature = "int8")]
+#[inline]
+fn to_matmul_input(scaled: f32) -> i8 {
+    // `as` saturates, and the scale keeps every value in range.
+    let q = scaled.round_ties_even() as i8;
+    if cfg!(feature = "int8-u8") {
+        ((q as u8) ^ 0x80) as i8
+    } else {
+        q
+    }
+}
+
 /// Rows per block when a loop over `rows` is split across the pool: about
 /// 16 blocks, enough to keep every thread busy as threads claim blocks.
 #[cfg(feature = "int8")]
@@ -402,7 +426,7 @@ pub fn linear_int8_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
                     *scale = int8_scale(row);
                     for (q, &x) in q_row.iter_mut().zip(row) {
                         // `as` saturates, and the scale keeps every value in range.
-                        *q = (x * *scale).round_ties_even() as i8;
+                        *q = to_matmul_input(x * *scale);
                     }
                 } else {
                     // Rung 23: the row divided by s first, channel by channel.
@@ -413,18 +437,19 @@ pub fn linear_int8_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
                         .fold(0.0f32, |most, (&x, &f)| most.max((x * f).abs()));
                     *scale = if largest > 0.0 { 127.0 / largest } else { 1.0 };
                     for ((q, &x), &f) in q_row.iter_mut().zip(row).zip(smooth) {
-                        *q = (x * f * *scale).round_ties_even() as i8;
+                        *q = to_matmul_input(x * f * *scale);
                     }
                 }
             }
         });
         drop(blocks);
-        // SAFETY: `src` holds M * K s8, `weight.int8` N * K (checked above)
-        // and `dst` M * N s32. The sums fit: 3072 terms of at most 127 * 127.
+        // SAFETY: `src` holds M * K bytes (s8, or u8 for rung 24),
+        // `weight.int8` N * K s8 (checked above) and `dst` M * N s32. The sums
+        // fit: at most 5248 terms of at most 255 * 127.
         unsafe {
             run_matmul(
                 (m, k, n),
-                (src.as_mut_ptr().cast(), DNNL_S8),
+                (src.as_mut_ptr().cast(), INPUT_TYPE),
                 (weight.int8.as_ptr() as *mut c_void, DNNL_S8),
                 (dst.as_mut_ptr().cast(), DNNL_S32),
             );
@@ -441,10 +466,22 @@ pub fn linear_int8_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
                 let r = *first + i;
                 let unscale_input = 1.0 / scales[r];
                 let sums = &dst[r * n..(r + 1) * n];
+                #[cfg(not(feature = "int8-u8"))]
                 for ((y, &sum), &unscale_weight) in
                     o_row.iter_mut().zip(sums).zip(&weight.int8_unscale)
                 {
                     *y = sum as f32 * unscale_input * unscale_weight;
+                }
+                // Rung 24: the u8 input was s8 + 128, so take 128 * sum(w) off
+                // each sum first. Exact in s32, so the logits match rung 23's.
+                #[cfg(feature = "int8-u8")]
+                for (((y, &sum), &unscale_weight), &shift) in o_row
+                    .iter_mut()
+                    .zip(sums)
+                    .zip(&weight.int8_unscale)
+                    .zip(&weight.int8_shift)
+                {
+                    *y = (sum - shift) as f32 * unscale_input * unscale_weight;
                 }
             }
         });

@@ -77,6 +77,7 @@ CLOUD = {
     "rung20": ("rung20", ["target/bench/rung20/release/worker"]),
     "rung22": ("rung22", ["target/bench/rung22/release/worker"]),
     "rung23": ("rung23", ["target/bench/rung23/release/worker"]),
+    "rung24": ("rung24", ["target/bench/rung24/release/worker"]),
 }
 # The in-run gate of a reduced-precision rung, from its Tier 3 run (PLAN.md, rung 17's
 # bound): 4x the worst logit difference and twice the share of changed predictions.
@@ -93,6 +94,8 @@ GATES = {
     "rung19": GATE_17,
     "rung22": GATE_22,
     "rung23": GATE_23,
+    # Rung 24 computes rung 23's sums exactly, so it keeps rung 23's gate.
+    "rung24": GATE_23,
 }
 # One changed prediction in about 480 checked examples is past rung 17's gate, so a
 # schedule must not hold the two examples its Tier 3 run already found changed (401 and
