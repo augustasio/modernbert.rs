@@ -39,5 +39,5 @@ moved from 15/s to none. Read single numbers here as rough.
 
 - Shorter requests help the queue the most, so the remaining precision and kernel
   work still pays twice.
-- Two workers' worth of p99 head room: a smaller budget per worker (for example 8 x 2,
-  p50 162 ms closed loop) fails; 4 x 4 is the right shape on 16 cores.
+- 4 x 4 is the right shape on 16 cores: fewer, wider workers queue sooner, and narrower
+  ones (8 x 2, p50 162 ms closed loop) leave no room for any wait.
