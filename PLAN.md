@@ -841,3 +841,22 @@ Changes to the plan made after seeing data, with the reason.
   rung 20 and the server rung 21. Rungs 18 and 19 must meet rung 17's bound, set before
   they are measured: at least 99.0% agreement with rung 0 and calibrated accuracy within
   1.0 point of 84.78%.
+- **Rungs 18 and 19 pass rung 17's bound** (Zen 5, `cpu5c`, batches of 16 at 16
+  threads). Both: 7598/7600 agreement, calibrated accuracy 84.72%, worst logit difference
+  0.179, the same two changed predictions as rung 17 (examples 401 and 6503). They change
+  threads, not arithmetic, and the logits are bit-identical to each other. Tier 3 wall
+  clock, not a benchmark: 0.083 s an example for rung 18 and 0.0545 s for rung 19.
+- **Rung 20 fails its bound** (2026-11-10, Zen 5, oneDNN `brg_matmul:avx512_core_vnni`).
+  Agreement 7566/7600 (99.55%) passes the 97.0% floor, but calibrated accuracy is 83.12%
+  [82.28, 83.97], 1.66 points below 84.78%, outside the 1.5 points allowed. Worst logit
+  difference 1.17. It is also slower than rung 19: 0.088 s an example at batch 16 (Tier
+  3 wall clock) and 0.096 s against 0.076 s at batch 1. So it is not benchmarked and gets
+  no in-run gate. The bound stays as set. A later int8 attempt (for example, keeping
+  head.dense in bf16, or static scales) is a new rung with its own bound, set first.
+- **A bug in rung 19's pool, fixed** (`omp.rs`, 2026-11-10). `parallel_for` asked
+  libgomp for one thread per block. Attention has one block per sequence and head, so
+  batches of 2 to 8 asked for 32 to 128 threads on 16 cores, and 4 or 8 threads asked
+  for 16. The extra threads in libgomp's pool spun against the matmuls: at batch 2,
+  about 7% of calls took 1.5 s against a 150 ms median. The team is now capped at
+  `omp_get_max_threads()`. Batch 1 at 16 threads asked for exactly 16 and is unchanged;
+  the other rung 19 sweep jobs were rerun.
