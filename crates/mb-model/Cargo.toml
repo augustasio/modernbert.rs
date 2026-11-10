@@ -54,3 +54,9 @@ mask-rows = ["batch"]
 # activations entering them are rounded; the weights are the checkpoint's own
 # bf16. Links `libdnnl`. Built on rung 15 (16 on Linux).
 bf16 = ["mask-rows"]
+# Rung 18: MKL runs serial inside the attention threads. Each head's Q K^T and
+# P V already runs on a thread of ours; a threaded MKL there starts one more
+# OpenMP team per thread of ours, so t threads become about t squared. PyTorch
+# has no such trap, because its attention runs inside one OpenMP pool and MKL
+# goes serial inside a parallel region. No effect on macOS. Built on rung 17.
+serial-blas = ["bf16"]

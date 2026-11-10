@@ -548,9 +548,9 @@ What follows from it:
   threads, until the matmuls are too small to split. So each host gets a thread sweep at
   batch 1 (4, 8, 16, 32 threads) to find the fewest cores that meet the budget. The
   serving question is then how many such workers fit on one box, and what that box costs.
-- **Precision matters more.** bf16 and int8 (rungs 17 and 18) shorten each request, and
+- **Precision matters more.** bf16 and int8 (rungs 17 and 20) shorten each request, and
   that is what makes the budget reachable on few cores.
-- **Rung 19 is the judge.** Its load test raises the Poisson arrival rate until p99 passes
+- **The server rung is the judge.** Its load test raises the Poisson arrival rate until p99 passes
   200 ms, and reports the throughput at the last rate that met it, and that per dollar.
 
 **Rules for this phase.**
@@ -606,10 +606,12 @@ results are labelled rough checks, never mixed into the Mac tables.
 | 15 | Last layer at the mask row only | work the head never reads: the last layer is global, so all keys are still needed, but only the mask query |
 | 16 | The same code on Linux x86, with MKL in place of Accelerate, fp32 | the platform; the first rung that builds on Linux |
 | 17 | bf16 weights and bf16 matmul, f32 accumulation | the precision of the matmuls |
-| 18 | int8 weights and activations, dynamic per-row scales | the precision again, one step further |
-| 19 | HTTP server with dynamic batching (max batch at most 8, max wait chosen to fit the 200 ms budget) | serving overhead; load-tested open-loop, with Poisson arrivals, judged by throughput at p99 of 200 ms |
+| 18 | MKL serial inside the attention threads | a bug: each thread of ours opened its own OpenMP team through MKL, so t threads became about t squared |
+| 19 | Our threads taken from the OpenMP pool that oneDNN and MKL use | two thread pools competing on the same cores |
+| 20 | int8 weights and activations, dynamic per-row scales | the precision again, one step further |
+| 21 | HTTP server with dynamic batching (max batch at most 8, max wait chosen to fit the 200 ms budget) | serving overhead; load-tested open-loop, with Poisson arrivals, judged by throughput at p99 of 200 ms |
 
-Rungs 17 and 18 change the numbers, so Tier 3 for them is the
+Rungs 17 and 20 change the numbers, so Tier 3 for them is the
 agreement rate with rung 0 and the accuracy, not a logit bound; the bound they must meet
 is set before they are measured.
 
@@ -634,7 +636,7 @@ libraries:
 
 Both are C libraries reached through FFI, as Accelerate is now. So rung 16 is the same
 code built for Linux with MKL, compared with rung 0 on the same host, which also uses MKL.
-Rungs 16 to 18 are measured only on cloud hosts, as rough checks: MKL does not run on
+Rungs 16 to 20 are measured only on cloud hosts, as rough checks: MKL does not run on
 Apple silicon, and oneDNN is weak there. One known bias: MKL has taken slower code paths
 on AMD CPUs. Rung 0 shares it, so the ratios stay fair, but absolute Genoa numbers may
 understate the CPU.
@@ -646,7 +648,7 @@ understate the CPU.
 - **Batching.** Answered by rung 14: unpadding. Rung 0 padded loses throughput above
   batch 4, and rung 14 unpadded gains up to batch 64. Under the 200 ms budget of phase 2,
   only batches up to 8 count.
-- **Precision.** fp32 up to rung 16. bf16 and int8 are rungs 17 and 18, because on cloud
+- **Precision.** fp32 up to rung 16. bf16 and int8 are rungs 17 and 20, because on cloud
   CPUs fp32 cannot use the matrix instructions.
 - **GitHub.** Local git now; push to `augustasio/modernbert.rs` once the tokenizer matches
   HF exactly, so the first public commit is not a skeleton.
@@ -819,3 +821,13 @@ Changes to the plan made after seeing data, with the reason.
   prediction changed in the in-run check. Batch-1 p99 is 339 ms, so 4 cores miss the
   200 ms budget even in bf16. The A/A floor on that pod was 0.993 [0.988, 0.998]: read
   ratios within about 1% of 1 as no difference.
+- **Two new rungs before int8: 18 and 19** (2026-11-09). The thread sweep on Zen 5 found
+  rung 17 getting slower with more threads: 723 ms at 8 and 1,110 ms at 16 at batch 1,
+  against rung 0's 300. On the pod, `MKL_NUM_THREADS=1` alone gave 163 ms at 8 threads, and
+  turning off OpenMP's spin-wait helped further at 32. So two problems: each attention
+  thread of ours opened its own OpenMP team through MKL (rung 18 fixes it with MKL's
+  per-thread setting), and our spawned threads compete with the OpenMP pool (rung 19 runs
+  them on it). All rung 16 and 17 figures so far carry the first problem. int8 becomes
+  rung 20 and the server rung 21. Rungs 18 and 19 must meet rung 17's bound, set before
+  they are measured: at least 99.0% agreement with rung 0 and calibrated accuracy within
+  1.0 point of 84.78%.

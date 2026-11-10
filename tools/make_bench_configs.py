@@ -72,11 +72,15 @@ CLOUD = {
     "aa": VARIANTS["aa"],
     "rung16": ("rung16", ["target/bench/rung16/release/worker"]),
     "rung17": ("rung17", ["target/bench/rung17/release/worker"]),
+    "rung18": ("rung18", ["target/bench/rung18/release/worker"]),
+    "rung19": ("rung19", ["target/bench/rung19/release/worker"]),
 }
 # The in-run gate of a reduced-precision rung, from its Tier 3 run (PLAN.md, rung 17's
 # bound): 4x the worst logit difference and twice the share of changed predictions.
 # Rung 17's Tier 3 run: worst |logit diff| 0.179, 2 of 7,600 predictions changed.
-GATES = {"rung17": {"max_logit_abs": 0.72, "max_disagreement_rate": 2 * 2 / 7600}}
+GATE_17 = {"max_logit_abs": 0.72, "max_disagreement_rate": 2 * 2 / 7600}
+# Rungs 18 and 19 change threads, not arithmetic, so they keep rung 17's gate.
+GATES = {"rung17": GATE_17, "rung18": GATE_17, "rung19": GATE_17}
 # One changed prediction in about 480 checked examples is past rung 17's gate, so a
 # schedule must not hold the two examples its Tier 3 run already found changed (401 and
 # 6503). Seeds 16000 and 16001 do; 16200 to 16204 are the first clean block in steps of

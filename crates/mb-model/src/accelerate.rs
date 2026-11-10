@@ -57,6 +57,54 @@ extern "C" {
     );
 }
 
+// Rung 18. MKL's per-thread setting, so that a thread of ours can go serial
+// without touching the thread count the main thread's big matmuls use.
+#[cfg(all(feature = "serial-blas", target_os = "linux"))]
+#[link(name = "mkl_rt")]
+extern "C" {
+    /// Returns the setting it replaced; 0 means "none", which clears it.
+    fn mkl_set_num_threads_local(threads: i32) -> i32;
+}
+
+/// Rung 18: while this value lives, BLAS calls on this thread run serial.
+///
+/// Trap: every thread of ours that enters a threaded MKL gets an OpenMP team
+/// of its own, because libgomp's teams belong to the thread that opens them.
+/// With `MKL_NUM_THREADS` = t and t attention threads, that is about t squared
+/// threads, all spin-waiting. On a 16-core pod it made a batch-1 request 7x
+/// slower at 8 threads. The value restores the previous setting when dropped,
+/// because one of the attention blocks runs on the main thread, and that
+/// thread still wants a threaded MKL for the big matmuls.
+#[cfg(feature = "serial-blas")]
+pub struct SerialBlas {
+    #[cfg(target_os = "linux")]
+    previous: i32,
+}
+
+#[cfg(feature = "serial-blas")]
+impl SerialBlas {
+    #[cfg(target_os = "linux")]
+    pub fn here() -> Self {
+        // SAFETY: MKL's documented setter; it only writes a per-thread integer.
+        let previous = unsafe { mkl_set_num_threads_local(1) };
+        SerialBlas { previous }
+    }
+
+    /// Accelerate manages its own threads, so there is nothing to change.
+    #[cfg(not(target_os = "linux"))]
+    pub fn here() -> Self {
+        SerialBlas {}
+    }
+}
+
+#[cfg(all(feature = "serial-blas", target_os = "linux"))]
+impl Drop for SerialBlas {
+    fn drop(&mut self) {
+        // SAFETY: as in `here`.
+        unsafe { mkl_set_num_threads_local(self.previous) };
+    }
+}
+
 /// `input @ weight.T`, the same contract as `ops::linear_naive`.
 ///
 /// `input` is `[M, K]` and `weight` is `[N, K]` (safetensors' `[out, in]`), so

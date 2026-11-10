@@ -326,6 +326,9 @@ fn attend_by_head(ws: &mut Workspace, rope: &RopeTable, window: Option<usize>, s
     });
     let blocks = runs.zip(ws.scores.chunks_mut((longest * longest).max(1)));
     in_parallel(blocks, |((run, q, k, v, out), scores)| {
+        // Rung 18: this block's sgemms must not open their own OpenMP teams.
+        #[cfg(feature = "serial-blas")]
+        let _serial = crate::accelerate::SerialBlas::here();
         let mut at = 0;
         for unit in run {
             let rows = segments[unit / heads].clone();

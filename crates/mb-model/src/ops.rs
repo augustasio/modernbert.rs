@@ -155,7 +155,11 @@ pub fn backend() -> &'static str {
             }
         };
     }
-    if cfg!(feature = "bf16") {
+    if cfg!(feature = "serial-blas") {
+        with_blas!(
+            "-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas"
+        )
+    } else if cfg!(feature = "bf16") {
         with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16")
     } else if cfg!(feature = "mask-rows") {
         with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows")
