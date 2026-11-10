@@ -75,3 +75,9 @@ int8 = ["omp-pool"]
 # Wo and head.dense stay bf16. Built on rung 20, with its quantize and
 # dequantize loops on the pool.
 int8-partial = ["int8"]
+# Rung 23: Wqkv and the MLP's Wo join rung 22's s8 layers, smoothed first
+# (SmoothQuant, alpha 0.5): each input channel is divided by a scale s_j and
+# the weight's column multiplied by it, with s_j from rung 0's activations on
+# 512 train-split prompts (`python/smooth_calibrate.py`). head.dense stays
+# bf16. Built on rung 22.
+int8-smooth = ["int8-partial"]

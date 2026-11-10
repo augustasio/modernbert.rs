@@ -99,6 +99,25 @@ impl ModernBert {
         // bf16 matmul runs them. Rung 20 takes the same five for int8. The
         // verbalizer rows of the decoder stay f32: four rows, no measurable
         // time.
+        // Rung 23: SmoothQuant scales for Wqkv and the MLP's Wo, written next to
+        // the weights by `python/smooth_calibrate.py` from the train split.
+        #[cfg(feature = "int8-smooth")]
+        {
+            let path = dir.join("smooth_scales.safetensors");
+            let mut scales = Checkpoint::from_file(&path).map_err(|e| {
+                TensorError::new(format!(
+                    "{}: {e}. Run python/smooth_calibrate.py first.",
+                    path.display()
+                ))
+            })?;
+            let (hidden, inter) = (model.config.hidden_size, model.config.intermediate_size);
+            for (i, layer) in model.layers.iter_mut().enumerate() {
+                let wqkv = scales.take(&format!("layers.{i}.wqkv"), &[hidden])?;
+                layer.attn.wqkv.keep_int8_smoothed(&wqkv);
+                let mlp_wo = scales.take(&format!("layers.{i}.mlp_wo"), &[inter])?;
+                layer.mlp.wo.keep_int8_smoothed(&mlp_wo);
+            }
+        }
         #[cfg(feature = "bf16")]
         {
             for layer in &mut model.layers {
@@ -258,11 +277,19 @@ impl ModernBert {
 fn keep_precision(weight: &mut crate::tensor::Matrix, kind: &str) {
     #[cfg(feature = "int8")]
     {
+        // Rung 23's smoothed weights already have their s8 copy.
+        if !weight.int8_smooth.is_empty() {
+            return;
+        }
         // Analysis only, never set in a benchmark: `MB_INT8_ONLY=wi,head`
         // keeps just those kinds in s8 and the rest in bf16, to find which
         // layer's rounding moves the logits most. Unset, rung 20 keeps every
-        // kind in s8 and rung 22 only the two that moved them least.
-        let default = if cfg!(feature = "int8-partial") {
+        // kind in s8, rung 22 only the two that moved them least, and rung 23
+        // those two plus the smoothed ones.
+        let default = if cfg!(feature = "int8-smooth") {
+            // Wqkv and the MLP's Wo were made s8 above, smoothed.
+            "wi,attn_wo"
+        } else if cfg!(feature = "int8-partial") {
             "wi,attn_wo"
         } else {
             "wqkv,attn_wo,wi,mlp_wo,head"

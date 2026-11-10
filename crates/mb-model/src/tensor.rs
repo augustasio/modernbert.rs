@@ -30,6 +30,10 @@ pub struct Matrix {
     pub int8: Vec<i8>,
     /// Rung 20: for each row, one over the scale its s8 values were made with.
     pub int8_unscale: Vec<f32>,
+    /// Rung 23: one factor per input channel (column), 1 / s_j, that the
+    /// input is multiplied by before it is rounded to s8. Empty when the
+    /// weight is not smoothed. See [`Matrix::keep_int8_smoothed`].
+    pub int8_smooth: Vec<f32>,
 }
 
 impl Matrix {
@@ -41,6 +45,7 @@ impl Matrix {
             bf16: Vec::new(),
             int8: Vec::new(),
             int8_unscale: Vec::new(),
+            int8_smooth: Vec::new(),
         }
     }
 
@@ -59,6 +64,7 @@ impl Matrix {
             bf16: Vec::new(),
             int8: Vec::new(),
             int8_unscale: Vec::new(),
+            int8_smooth: Vec::new(),
         }
     }
 
@@ -96,6 +102,38 @@ impl Matrix {
             self.int8
                 .extend(row.iter().map(|&w| (w * scale).round_ties_even() as i8));
         }
+    }
+
+    /// Rung 23: keep an s8 copy of this weight with each input channel j
+    /// multiplied by `smooth[j]` (SmoothQuant's s_j) before rounding, and
+    /// remember 1 / s_j for the input. The product is unchanged in exact
+    /// arithmetic, `x W^T = (x / s)(W s)^T`, but `x / s` has flatter rows, so
+    /// one scale per row loses less to its few large channels.
+    #[cfg(feature = "int8")]
+    pub fn keep_int8_smoothed(&mut self, smooth: &[f32]) {
+        assert_eq!(
+            smooth.len(),
+            self.cols,
+            "{} smoothing scales for a weight with {} input channels",
+            smooth.len(),
+            self.cols
+        );
+        self.int8.clear();
+        self.int8_unscale.clear();
+        let mut row_scaled = vec![0.0f32; self.cols];
+        for row in self.data.chunks_exact(self.cols) {
+            for ((y, &w), &s) in row_scaled.iter_mut().zip(row).zip(smooth) {
+                *y = w * s;
+            }
+            let scale = crate::onednn::int8_scale(&row_scaled);
+            self.int8_unscale.push(1.0 / scale);
+            self.int8.extend(
+                row_scaled
+                    .iter()
+                    .map(|&w| (w * scale).round_ties_even() as i8),
+            );
+        }
+        self.int8_smooth = smooth.iter().map(|&s| 1.0 / s).collect();
     }
 
     /// Change the number of rows, keeping the buffer.

@@ -161,7 +161,9 @@ pub fn backend() -> &'static str {
             }
         };
     }
-    if cfg!(feature = "int8-partial") {
+    if cfg!(feature = "int8-smooth") {
+        with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth")
+    } else if cfg!(feature = "int8-partial") {
         with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial")
     } else if cfg!(feature = "int8") {
         with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8")

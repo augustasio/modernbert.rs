@@ -398,10 +398,23 @@ pub fn linear_int8_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
             let (first, q, s) = &mut *block;
             for (i, (q_row, scale)) in q.chunks_mut(k).zip(s.iter_mut()).enumerate() {
                 let row = &input.data[(*first + i) * k..(*first + i + 1) * k];
-                *scale = int8_scale(row);
-                for (q, &x) in q_row.iter_mut().zip(row) {
-                    // `as` saturates, and the scale keeps every value in range.
-                    *q = (x * *scale).round_ties_even() as i8;
+                if weight.int8_smooth.is_empty() {
+                    *scale = int8_scale(row);
+                    for (q, &x) in q_row.iter_mut().zip(row) {
+                        // `as` saturates, and the scale keeps every value in range.
+                        *q = (x * *scale).round_ties_even() as i8;
+                    }
+                } else {
+                    // Rung 23: the row divided by s first, channel by channel.
+                    let smooth = &weight.int8_smooth;
+                    let largest = row
+                        .iter()
+                        .zip(smooth)
+                        .fold(0.0f32, |most, (&x, &f)| most.max((x * f).abs()));
+                    *scale = if largest > 0.0 { 127.0 / largest } else { 1.0 };
+                    for ((q, &x), &f) in q_row.iter_mut().zip(row).zip(smooth) {
+                        *q = (x * f * *scale).round_ties_even() as i8;
+                    }
                 }
             }
         });
@@ -519,5 +532,44 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// Rung 23: with one input channel 100x the rest, smoothing that channel
+    /// keeps the product close to f32, where one scale per row does not.
+    #[cfg(feature = "int8")]
+    #[test]
+    fn smoothing_shrinks_the_error_of_an_outlier_channel() {
+        let (m, k, n) = (4, 256, 16);
+        let value = |i: usize| ((i * 2654435761) % 1000) as f32 / 250.0 - 2.0;
+        let mut x: Vec<f32> = (0..m * k).map(value).collect();
+        for r in 0..m {
+            x[r * k + 7] *= 100.0;
+        }
+        let input = Matrix::from_vec(m, k, x);
+        let w: Vec<f32> = (0..n * k).map(|i| value(i + 17) / 10.0).collect();
+        let exact =
+            |r: usize, c: usize| -> f32 { (0..k).map(|i| input.at(r, i) * w[c * k + i]).sum() };
+        let worst = |weight: &Matrix| -> f32 {
+            let mut out = Matrix::zeros(m, n);
+            linear_int8_into(&input, weight, &mut out);
+            let mut worst = 0.0f32;
+            for r in 0..m {
+                for c in 0..n {
+                    worst = worst.max((out.at(r, c) - exact(r, c)).abs());
+                }
+            }
+            worst
+        };
+        let mut plain = Matrix::from_vec(n, k, w.clone());
+        plain.keep_int8();
+        let mut smooth_scales = vec![1.0f32; k];
+        smooth_scales[7] = 10.0; // sqrt of the 100x range, as alpha 0.5 gives
+        let mut smoothed = Matrix::from_vec(n, k, w.clone());
+        smoothed.keep_int8_smoothed(&smooth_scales);
+        let (e_plain, e_smoothed) = (worst(&plain), worst(&smoothed));
+        assert!(
+            e_smoothed < e_plain / 2.0,
+            "smoothed error {e_smoothed} against plain {e_plain}"
+        );
     }
 }
