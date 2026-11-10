@@ -1,0 +1,285 @@
+== tier3 19, 00:07:46Z
+ 7600 / 7600  0.0545 s per example
+wrote results/rung19_logits.npy and its .json, batches of 16
+
+rung 19 against rung 0
+  agreement      7598/7600  wilson [0.9990409207061931, 0.9999278296467488]
+  |logit diff|   median 1.20e-02  p99 4.88e-02  max 1.79e-01
+  raw acc        0.7158  [0.7059210526315789, 0.7257894736842105]
+  calibrated acc 0.8472  [0.8392105263157895, 0.8552631578947368]
+  p_cf vs rung 0 max abs 2.67e-03, max rel 1.25e-02
+== tier3 18, 00:14:57Z
+ 7600 / 7600  0.0830 s per example
+wrote results/rung18_logits.npy and its .json, batches of 16
+
+rung 18 against rung 0
+  agreement      7598/7600  wilson [0.9990409207061931, 0.9999278296467488]
+  |logit diff|   median 1.20e-02  p99 4.88e-02  max 1.79e-01
+  raw acc        0.7158  [0.7059210526315789, 0.7257894736842105]
+  calibrated acc 0.8472  [0.8392105263157895, 0.8552631578947368]
+  p_cf vs rung 0 max abs 2.67e-03, max rel 1.25e-02
+== t4 rung19, 00:25:39Z
+replicate 1 of 5, seed 4000
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t4_rung19/replicate_0.json. valid: true. checked 966 replies, worst logit difference 0.13370037078857422
+replicate 2 of 5, seed 4001
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t4_rung19/replicate_1.json. valid: true. checked 966 replies, worst logit difference 0.10391998291015625
+replicate 3 of 5, seed 4002
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t4_rung19/replicate_2.json. valid: true. checked 966 replies, worst logit difference 0.14011573791503906
+replicate 4 of 5, seed 4003
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t4_rung19/replicate_3.json. valid: true. checked 966 replies, worst logit difference 0.0772848129272461
+replicate 5 of 5, seed 4004
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t4_rung19/replicate_4.json. valid: true. checked 966 replies, worst logit difference 0.11500930786132812
+done: 5 replicates in results/bench/cloud_turin_sweep/t4_rung19
+== t8 rung19, 00:53:05Z
+replicate 1 of 5, seed 8000
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t8_rung19/replicate_0.json. valid: true. checked 966 replies, worst logit difference 0.1416301727294922
+replicate 2 of 5, seed 8001
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t8_rung19/replicate_1.json. valid: true. checked 966 replies, worst logit difference 0.08769798278808594
+replicate 3 of 5, seed 8002
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t8_rung19/replicate_2.json. valid: true. checked 966 replies, worst logit difference 0.07280540466308594
+replicate 4 of 5, seed 8003
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t8_rung19/replicate_3.json. valid: true. checked 966 replies, worst logit difference 0.09982681274414062
+replicate 5 of 5, seed 8004
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t8_rung19/replicate_4.json. valid: true. checked 966 replies, worst logit difference 0.12472343444824219
+done: 5 replicates in results/bench/cloud_turin_sweep/t8_rung19
+== t16 rung19, 01:11:42Z
+replicate 1 of 5, seed 16200
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_rung19/replicate_0.json. valid: true. checked 966 replies, worst logit difference 0.08215141296386719
+replicate 2 of 5, seed 16201
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_rung19/replicate_1.json. valid: true. checked 966 replies, worst logit difference 0.09185791015625
+replicate 3 of 5, seed 16202
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_rung19/replicate_2.json. valid: true. checked 966 replies, worst logit difference 0.08769798278808594
+replicate 4 of 5, seed 16203
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_rung19/replicate_3.json. valid: true. checked 966 replies, worst logit difference 0.17931079864501953
+replicate 5 of 5, seed 16204
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_rung19/replicate_4.json. valid: true. checked 966 replies, worst logit difference 0.10655593872070312
+done: 5 replicates in results/bench/cloud_turin_sweep/t16_rung19
+== t16 b2_rung19, 01:26:11Z
+replicate 1 of 5, seed 16200
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b2_rung19/replicate_0.json. valid: true. checked 964 replies, worst logit difference 0.08215141296386719
+replicate 2 of 5, seed 16201
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b2_rung19/replicate_1.json. valid: true. checked 964 replies, worst logit difference 0.09185791015625
+replicate 3 of 5, seed 16202
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b2_rung19/replicate_2.json. valid: true. checked 964 replies, worst logit difference 0.08770179748535156
+replicate 4 of 5, seed 16203
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b2_rung19/replicate_3.json. valid: true. checked 964 replies, worst logit difference 0.17930984497070312
+replicate 5 of 5, seed 16204
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b2_rung19/replicate_4.json. valid: true. checked 964 replies, worst logit difference 0.10655593872070312
+done: 5 replicates in results/bench/cloud_turin_sweep/t16_b2_rung19
+== t16 b4_rung19, 01:40:06Z
+replicate 1 of 5, seed 16200
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b4_rung19/replicate_0.json. valid: true. checked 968 replies, worst logit difference 0.08215141296386719
+replicate 2 of 5, seed 16201
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b4_rung19/replicate_1.json. valid: true. checked 968 replies, worst logit difference 0.09185791015625
+replicate 3 of 5, seed 16202
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b4_rung19/replicate_2.json. valid: true. checked 968 replies, worst logit difference 0.08770179748535156
+replicate 4 of 5, seed 16203
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b4_rung19/replicate_3.json. valid: true. checked 968 replies, worst logit difference 0.17930984497070312
+replicate 5 of 5, seed 16204
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b4_rung19/replicate_4.json. valid: true. checked 968 replies, worst logit difference 0.10655593872070312
+done: 5 replicates in results/bench/cloud_turin_sweep/t16_b4_rung19
+== t16 b8_rung19, 01:51:46Z
+replicate 1 of 5, seed 16200
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b8_rung19/replicate_0.json. valid: true. checked 976 replies, worst logit difference 0.08215141296386719
+replicate 2 of 5, seed 16201
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b8_rung19/replicate_1.json. valid: true. checked 976 replies, worst logit difference 0.09185791015625
+replicate 3 of 5, seed 16202
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b8_rung19/replicate_2.json. valid: true. checked 976 replies, worst logit difference 0.08770179748535156
+replicate 4 of 5, seed 16203
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b8_rung19/replicate_3.json. valid: true. checked 976 replies, worst logit difference 0.17930984497070312
+replicate 5 of 5, seed 16204
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b8_rung19/replicate_4.json. valid: true. checked 976 replies, worst logit difference 0.10655593872070312
+done: 5 replicates in results/bench/cloud_turin_sweep/t16_b8_rung19
+== t4 rung18, 02:02:50Z
+replicate 1 of 5, seed 4000
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t4_rung18/replicate_0.json. valid: true. checked 966 replies, worst logit difference 0.13370037078857422
+replicate 2 of 5, seed 4001
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t4_rung18/replicate_1.json. valid: true. checked 966 replies, worst logit difference 0.10391998291015625
+replicate 3 of 5, seed 4002
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t4_rung18/replicate_2.json. valid: true. checked 966 replies, worst logit difference 0.14011573791503906
+replicate 4 of 5, seed 4003
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t4_rung18/replicate_3.json. valid: true. checked 966 replies, worst logit difference 0.0772848129272461
+replicate 5 of 5, seed 4004
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t4_rung18/replicate_4.json. valid: true. checked 966 replies, worst logit difference 0.11500930786132812
+done: 5 replicates in results/bench/cloud_turin_sweep/t4_rung18
+== t8 rung18, 02:26:57Z
+replicate 1 of 5, seed 8000
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t8_rung18/replicate_0.json. valid: true. checked 966 replies, worst logit difference 0.1416301727294922
+replicate 2 of 5, seed 8001
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t8_rung18/replicate_1.json. valid: true. checked 966 replies, worst logit difference 0.08769798278808594
+replicate 3 of 5, seed 8002
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t8_rung18/replicate_2.json. valid: true. checked 966 replies, worst logit difference 0.07280540466308594
+replicate 4 of 5, seed 8003
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t8_rung18/replicate_3.json. valid: true. checked 966 replies, worst logit difference 0.09982681274414062
+replicate 5 of 5, seed 8004
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t8_rung18/replicate_4.json. valid: true. checked 966 replies, worst logit difference 0.12472343444824219
+done: 5 replicates in results/bench/cloud_turin_sweep/t8_rung18
+== t16 rung18, 02:47:08Z
+replicate 1 of 5, seed 16200
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t16_rung18/replicate_0.json. valid: true. checked 966 replies, worst logit difference 0.08215141296386719
+replicate 2 of 5, seed 16201
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t16_rung18/replicate_1.json. valid: true. checked 966 replies, worst logit difference 0.09185791015625
+replicate 3 of 5, seed 16202
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t16_rung18/replicate_2.json. valid: true. checked 966 replies, worst logit difference 0.08769798278808594
+replicate 4 of 5, seed 16203
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t16_rung18/replicate_3.json. valid: true. checked 966 replies, worst logit difference 0.17931079864501953
+replicate 5 of 5, seed 16204
+starting rung0 and rung18
+wrote results/bench/cloud_turin_sweep/t16_rung18/replicate_4.json. valid: true. checked 966 replies, worst logit difference 0.10655593872070312
+done: 5 replicates in results/bench/cloud_turin_sweep/t16_rung18
+== RUN_DONE 03:05:17Z
+8e94822 Rung 19: cap the OpenMP team at the pool width
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 44 filtered out; finished in 0.02s
+== t16 b2_rung19, 03:20:36Z
+replicate 1 of 5, seed 16200
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b2_rung19/replicate_0.json. valid: true. checked 964 replies, worst logit difference 0.08215141296386719
+replicate 2 of 5, seed 16201
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b2_rung19/replicate_1.json. valid: true. checked 964 replies, worst logit difference 0.09185791015625
+replicate 3 of 5, seed 16202
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b2_rung19/replicate_2.json. valid: true. checked 964 replies, worst logit difference 0.08770179748535156
+replicate 4 of 5, seed 16203
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b2_rung19/replicate_3.json. valid: true. checked 964 replies, worst logit difference 0.17930984497070312
+replicate 5 of 5, seed 16204
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b2_rung19/replicate_4.json. valid: true. checked 964 replies, worst logit difference 0.10655593872070312
+done: 5 replicates in results/bench/cloud_turin_sweep/t16_b2_rung19
+== t16 b4_rung19, 03:35:09Z
+replicate 1 of 5, seed 16200
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b4_rung19/replicate_0.json. valid: true. checked 968 replies, worst logit difference 0.08215141296386719
+replicate 2 of 5, seed 16201
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b4_rung19/replicate_1.json. valid: true. checked 968 replies, worst logit difference 0.09185791015625
+replicate 3 of 5, seed 16202
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b4_rung19/replicate_2.json. valid: true. checked 968 replies, worst logit difference 0.08770179748535156
+replicate 4 of 5, seed 16203
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b4_rung19/replicate_3.json. valid: true. checked 968 replies, worst logit difference 0.17930984497070312
+replicate 5 of 5, seed 16204
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b4_rung19/replicate_4.json. valid: true. checked 968 replies, worst logit difference 0.10655593872070312
+done: 5 replicates in results/bench/cloud_turin_sweep/t16_b4_rung19
+== t16 b8_rung19, 03:47:16Z
+replicate 1 of 5, seed 16200
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b8_rung19/replicate_0.json. valid: true. checked 976 replies, worst logit difference 0.08215141296386719
+replicate 2 of 5, seed 16201
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b8_rung19/replicate_1.json. valid: true. checked 976 replies, worst logit difference 0.09185791015625
+replicate 3 of 5, seed 16202
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b8_rung19/replicate_2.json. valid: true. checked 976 replies, worst logit difference 0.08770179748535156
+replicate 4 of 5, seed 16203
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b8_rung19/replicate_3.json. valid: true. checked 976 replies, worst logit difference 0.17930984497070312
+replicate 5 of 5, seed 16204
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t16_b8_rung19/replicate_4.json. valid: true. checked 976 replies, worst logit difference 0.10655593872070312
+done: 5 replicates in results/bench/cloud_turin_sweep/t16_b8_rung19
+== t8 rung19, 03:58:43Z
+replicate 1 of 5, seed 8000
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t8_rung19/replicate_0.json. valid: true. checked 966 replies, worst logit difference 0.1416301727294922
+replicate 2 of 5, seed 8001
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t8_rung19/replicate_1.json. valid: true. checked 966 replies, worst logit difference 0.08769798278808594
+replicate 3 of 5, seed 8002
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t8_rung19/replicate_2.json. valid: true. checked 966 replies, worst logit difference 0.07280540466308594
+replicate 4 of 5, seed 8003
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t8_rung19/replicate_3.json. valid: true. checked 966 replies, worst logit difference 0.09982681274414062
+replicate 5 of 5, seed 8004
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t8_rung19/replicate_4.json. valid: true. checked 966 replies, worst logit difference 0.12472343444824219
+done: 5 replicates in results/bench/cloud_turin_sweep/t8_rung19
+== t4 rung19, 04:17:12Z
+replicate 1 of 5, seed 4000
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t4_rung19/replicate_0.json. valid: true. checked 966 replies, worst logit difference 0.13370037078857422
+replicate 2 of 5, seed 4001
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t4_rung19/replicate_1.json. valid: true. checked 966 replies, worst logit difference 0.10391998291015625
+replicate 3 of 5, seed 4002
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t4_rung19/replicate_2.json. valid: true. checked 966 replies, worst logit difference 0.14011573791503906
+replicate 4 of 5, seed 4003
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t4_rung19/replicate_3.json. valid: true. checked 966 replies, worst logit difference 0.0772848129272461
+replicate 5 of 5, seed 4004
+starting rung0 and rung19
+wrote results/bench/cloud_turin_sweep/t4_rung19/replicate_4.json. valid: true. checked 966 replies, worst logit difference 0.11500930786132812
+done: 5 replicates in results/bench/cloud_turin_sweep/t4_rung19
+== RERUN_DONE 04:42:35Z
+== build 03:07:00Z
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 46 filtered out; finished in 0.00s
+== isa
+onednn_verbose,v1,info,cpu,runtime:OpenMP,nthr:16
+onednn_verbose,v1,info,cpu,isa:Intel AVX-512 with Intel DL Boost and bfloat16 support
+onednn_verbose,v1,primitive,exec,cpu,matmul,brg_matmul:avx512_core_vnni,undef,src:s8::blocked:ab::f0 wei:s8::blocked:ba::f0 dst:s32::blocked:ab::f0,,,138x1024:1024x3072,0.506104
+rung20 b1 t=8: 0.114 s per example, about 0 min left
+rung20 b1 t=16: 0.096 s per example, about 0 min left
+== tier3 20, 03:07:30Z
+ 7600 / 7600  0.0879 s per example
+wrote results/rung20_logits.npy and its .json, batches of 16
+wrote /root/mb/data/content_free_logits.npy and its .json
+wrote /root/mb/results/rung20.json
+
+rung 20 against rung 0
+  agreement      7566/7600  wilson [0.9937552317380162, 0.9967967202970495]
+  |logit diff|   median 1.63e-01  p99 6.88e-01  max 1.17e+00
+  raw acc        0.7161  [0.7061842105263157, 0.7259210526315789]
+  calibrated acc 0.8312  [0.8227631578947369, 0.8397368421052631]
+  p_cf vs rung 0 max abs 5.96e-02, max rel 3.59e-01
+== R20_DONE 03:18:49Z
+
+[exited with code 0]

@@ -860,3 +860,10 @@ Changes to the plan made after seeing data, with the reason.
   about 7% of calls took 1.5 s against a 150 ms median. The team is now capped at
   `omp_get_max_threads()`. Batch 1 at 16 threads asked for exactly 16 and is unchanged;
   the other rung 19 sweep jobs were rerun.
+- **The Zen 5 sweep answers the budget question for batch 1**
+  (`results/bench/cloud_turin_sweep/SUMMARY.md`). Rung 19 at 16 threads: p99 115 ms,
+  15.4 examples/s, 4.4x rung 0, about 49,500 examples per dollar on a $1.12/h pod. Rung 0
+  misses 200 ms at every thread count. Batches of 2 to 8 miss it too and add at most 13%
+  throughput; a few of their calls still stall for about 1.5 s after the team cap, cause
+  not yet found. 4 threads give 8.6 examples/s on a quarter of the cores, so rung 21
+  should test several workers per host before batching.

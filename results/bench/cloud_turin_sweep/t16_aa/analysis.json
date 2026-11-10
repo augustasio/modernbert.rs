@@ -1,0 +1,191 @@
+{
+  "ruler": "rung0",
+  "variant": "rung0-copy",
+  "threads": 16,
+  "replicates": 5,
+  "seeds": [
+    16200,
+    16201,
+    16202,
+    16203,
+    16204
+  ],
+  "bootstrap": {
+    "seed": 20261101,
+    "resamples": 10000,
+    "design": "two-stage"
+  },
+  "speedup_definition": "ruler time / variant time, geometric mean over paired examples",
+  "energy_ratio_definition": "ruler energy / variant energy, geometric mean over cycles",
+  "power_measured": false,
+  "all_slices": {
+    "energy": "not reported: a slice was shorter than 2.0 s, or power was not measured",
+    "replicates_used": 5,
+    "cycles_used": 150,
+    "cycles_dropped": 0,
+    "figures": {
+      "speedup": {
+        "point": 1.013080321288291,
+        "ci95": [
+          0.9965481054182166,
+          1.0302771816510488
+        ],
+        "per_replicate": [
+          1.0277202262913954,
+          1.0041942278216045,
+          1.0025862997195996,
+          1.0372868588801385,
+          0.994274109988196
+        ],
+        "cv_across_replicates": 0.018084252524634144
+      },
+      "ruler_p50_ms": {
+        "point": 238.0795719800517,
+        "ci95": [
+          230.0823253171984,
+          244.96150954801124
+        ],
+        "per_replicate": [
+          240.86222890764475,
+          248.80863446742296,
+          223.64821401424703,
+          239.64205500669777,
+          237.50124487560242
+        ],
+        "cv_across_replicates": 0.03837331474965989
+      },
+      "ruler_p90_ms": {
+        "point": 269.9776129797101,
+        "ci95": [
+          257.11696135113016,
+          278.1398280058056
+        ],
+        "per_replicate": [
+          274.00940426159656,
+          282.54098270554096,
+          246.69456733390692,
+          265.6762740574777,
+          260.52920839283615
+        ],
+        "cv_across_replicates": 0.05116928841219391
+      },
+      "ruler_p99_ms": {
+        "point": 321.1205892241558,
+        "ci95": [
+          293.16386892693095,
+          341.0196260083467
+        ],
+        "per_replicate": [
+          321.26617724774405,
+          341.67178247822443,
+          282.04881449230015,
+          294.9292898573911,
+          305.75199940707506
+        ],
+        "cv_across_replicates": 0.07504420218613188
+      },
+      "ruler_examples_per_s": {
+        "point": 4.1591195600732656,
+        "ci95": [
+          4.030021141852042,
+          4.314919700897306
+        ],
+        "per_replicate": [
+          4.104029657001186,
+          3.9539019807559743,
+          4.443309841244614,
+          4.1675844716723995,
+          4.156358250758066
+        ],
+        "cv_across_replicates": 0.04258156732757367
+      },
+      "variant_p50_ms": {
+        "point": 234.28182408679277,
+        "ci95": [
+          227.1007736941101,
+          241.9510095496662
+        ],
+        "per_replicate": [
+          234.7593125887215,
+          246.56783998943865,
+          221.02757543325424,
+          230.73650302831084,
+          238.64892905112356
+        ],
+        "cv_across_replicates": 0.04039559961691944
+      },
+      "variant_p90_ms": {
+        "point": 263.7550419429317,
+        "ci95": [
+          252.002067786525,
+          275.9024079423398
+        ],
+        "per_replicate": [
+          259.17547254357487,
+          283.9028670219705,
+          243.5555275529623,
+          252.69566043280068,
+          265.7257945975289
+        ],
+        "cv_across_replicates": 0.05821347441883403
+      },
+      "variant_p99_ms": {
+        "point": 322.31456359149865,
+        "ci95": [
+          291.1462099291384,
+          350.2165200188756
+        ],
+        "per_replicate": [
+          305.7553156651555,
+          351.2433345476164,
+          292.80611895257596,
+          287.83218585653225,
+          318.29086722107604
+        ],
+        "cv_across_replicates": 0.08141972900344963
+      },
+      "variant_examples_per_s": {
+        "point": 4.211327083929104,
+        "ci95": [
+          4.071552555184903,
+          4.349231317429791
+        ],
+        "per_replicate": [
+          4.2189178541290735,
+          3.9720228046095447,
+          4.419149502142303,
+          4.324762367372712,
+          4.149872814207514
+        ],
+        "cv_across_replicates": 0.04055704324789759
+      }
+    },
+    "too_noisy": [
+      "ruler_p90_ms",
+      "ruler_p99_ms",
+      "variant_p90_ms",
+      "variant_p99_ms"
+    ]
+  },
+  "nominal_slices_only": {
+    "cycles_used": 0,
+    "note": "no cycle was nominal throughout"
+  },
+  "warnings": [
+    "too noisy across replicates: ['ruler_p90_ms', 'ruler_p99_ms', 'variant_p90_ms', 'variant_p99_ms']"
+  ],
+  "cloud_cpu": {
+    "ruler": {
+      "slices": 75,
+      "steal_share_median": 0.0,
+      "steal_share_max": 0.0,
+      "mhz_median": 3374.5
+    },
+    "variant": {
+      "slices": 70,
+      "steal_share_median": 0.0,
+      "steal_share_max": 0.0,
+      "mhz_median": 3394.0
+    }
+  }
+}

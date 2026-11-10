@@ -1,0 +1,32 @@
+{
+  "label": "cloud, 8 threads: rung 0 ruler against rung19 (replicate 3)",
+  "ruler": {
+    "name": "rung0",
+    "command": [
+      "python/.venv/bin/python",
+      "python/worker.py",
+      "--rung",
+      "0"
+    ]
+  },
+  "variant": {
+    "name": "rung19",
+    "command": [
+      "target/bench/rung19/release/worker"
+    ]
+  },
+  "threads": 8,
+  "cycles": 30,
+  "examples_per_slice": 16,
+  "warmup_examples": 3,
+  "seed": 8003,
+  "weights": "weights/ModernBERT-Large-Instruct",
+  "prompt_ids": "data/agnews_test_prompt_ids.tsv",
+  "reference_logits": "results/rung0_logits.npy",
+  "thermal_helper": "target/tools/thermal_state",
+  "powermetrics": null,
+  "integrity": {
+    "max_logit_abs": 0.72,
+    "max_disagreement_rate": 0.0005263157894736842
+  }
+}

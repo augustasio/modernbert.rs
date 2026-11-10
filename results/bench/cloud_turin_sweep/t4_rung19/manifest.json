@@ -1,0 +1,45 @@
+{
+  "config": "bench/configs/cloud_t4_rung19.json",
+  "replicates": [
+    {
+      "replicate": 0,
+      "seed": 4000,
+      "started_utc": "2026-11-10T04:17:12Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_0.json"
+    },
+    {
+      "replicate": 1,
+      "seed": 4001,
+      "started_utc": "2026-11-10T04:22:14Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_1.json"
+    },
+    {
+      "replicate": 2,
+      "seed": 4002,
+      "started_utc": "2026-11-10T04:27:34Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_2.json"
+    },
+    {
+      "replicate": 3,
+      "seed": 4003,
+      "started_utc": "2026-11-10T04:32:34Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_3.json"
+    },
+    {
+      "replicate": 4,
+      "seed": 4004,
+      "started_utc": "2026-11-10T04:37:32Z",
+      "cooldown_seconds": 0.0,
+      "exit_status": 0,
+      "result": "replicate_4.json"
+    }
+  ]
+}
