@@ -625,6 +625,16 @@ accumulate in f32. The attention products, the norms, the softmax and GELU stay 
 in-run gate (hard rule 5) for this rung is set from its Tier 3 run, as the fp32 gate
 was: 4x the worst logit difference seen, and at most twice the disagreement rate seen.
 
+**Rung 20's bound, set on 2026-11-10 before any int8 logit was seen.** Over all 7,600
+examples: agreement with rung 0 of at least 97.0% (at most 228 changed predictions), and
+calibrated accuracy within 1.5 points of rung 0's 84.78%. The logit differences are
+reported, with no bound. The design: the same five linear layers as rung 17 (Wqkv, Wo,
+Wi, the MLP's Wo, head.dense). Their weights are s8 with one scale per output column.
+Their activations are s8 with one scale per row, computed from that row's largest value
+on each call, so nothing is calibrated in advance. The products accumulate in s32 and are
+scaled back to f32 by the two scales. The attention products, the norms, the softmax
+and GELU stay f32. The in-run gate is set from its Tier 3 run, by the same rule as rung 17.
+
 **Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
 uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
 libraries:
