@@ -35,4 +35,6 @@ pub mod onednn;
 pub mod ops;
 pub mod rope;
 pub mod safetensors;
+#[cfg(feature = "stage-times")]
+pub mod stage_times;
 pub mod tensor;

@@ -84,6 +84,8 @@ fn main() {
             std::process::exit(2);
         }
         let logits = score_in_batches(&model, &mut workspace, &examples, batch);
+        #[cfg(feature = "stage-times")]
+        eprint!("{}", mb_model::stage_times::report(examples.len()));
         write_npy(out_path, &logits, examples.len(), VERBALIZER_IDS.len());
         write_sidecar(out_path, ids_path, &digest, examples.len(), 0.0);
         eprintln!(
@@ -128,6 +130,8 @@ fn main() {
             );
         }
     }
+    #[cfg(feature = "stage-times")]
+    eprint!("{}", mb_model::stage_times::report(examples.len()));
 
     write_npy(out_path, &logits, examples.len(), VERBALIZER_IDS.len());
     write_sidecar(

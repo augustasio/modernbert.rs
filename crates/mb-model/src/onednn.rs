@@ -544,6 +544,7 @@ mod tests {
     /// The product equals the same sum done by hand on the same rounded values.
     #[cfg(feature = "int8")]
     #[test]
+    #[allow(clippy::needless_range_loop)] // the reference sum reads clearest by index
     fn int8_matches_the_sum_of_rounded_values() {
         let (m, k, n) = (5, 200, 21);
         let value = |i: usize| ((i * 2654435761) % 1000) as f32 / 250.0 - 2.0;

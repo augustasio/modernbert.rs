@@ -79,6 +79,19 @@ fn in_parallel<T: Send>(blocks: impl Iterator<Item = T>, work: impl Fn(T) + Sync
     });
 }
 
+/// Run `work` as stage `index` of `stage_times::STAGES`: timed in a
+/// `stage-times` build, plainly otherwise.
+#[inline(always)]
+fn stage<T>(index: usize, work: impl FnOnce() -> T) -> T {
+    #[cfg(feature = "stage-times")]
+    return crate::stage_times::timed(index, work);
+    #[cfg(not(feature = "stage-times"))]
+    {
+        let _ = index;
+        work()
+    }
+}
+
 /// How many rows each thread takes, so that `threads` blocks cover `rows`.
 fn rows_per_block(rows: usize, threads: usize) -> usize {
     rows.div_ceil(threads.max(1)).max(1)
@@ -120,8 +133,9 @@ impl ModernBert {
         } else {
             Some(c.local_window_each_side())
         };
-        attend_by_head(ws, rope, window, 1.0 / (layer.attn.head_dim as f32).sqrt());
-        gather_heads(ws);
+        let scale = 1.0 / (layer.attn.head_dim as f32).sqrt();
+        stage(2, || attend_by_head(ws, rope, window, scale));
+        stage(3, || gather_heads(ws));
         self.after_attention(index, ws);
     }
 
@@ -133,12 +147,18 @@ impl ModernBert {
         // norm with unit weight), so its projection reads `h` itself.
         let attn_in = match &layer.attn_norm {
             Some(w) => {
-                layer_norm_rows(&ws.h, w, self.config.norm_eps, &mut ws.normed, ws.threads);
+                let eps = self.config.norm_eps;
+                stage(0, || {
+                    layer_norm_rows(&ws.h, w, eps, &mut ws.normed, ws.threads)
+                });
                 &ws.normed
             }
             None => &ws.h,
         };
-        crate::ops::linear_into(attn_in, &layer.attn.wqkv, &mut ws.qkv);
+        let qkv = &mut ws.qkv;
+        stage(1, || {
+            crate::ops::linear_into(attn_in, &layer.attn.wqkv, qkv)
+        });
     }
 
     /// Rung 15: the last layer, at the mask rows only.
@@ -242,58 +262,70 @@ impl ModernBert {
 
         // The projection gets its own buffer. See the `fused` module comment
         // for why it is not added onto h inside the matmul.
-        crate::ops::linear_into(&ws.context, &attn.wo, &mut ws.projection);
+        stage(4, || {
+            crate::ops::linear_into(&ws.context, &attn.wo, &mut ws.projection)
+        });
 
         // h += projection, then mlp_norm(h), row by row. Pre-norm: the add
         // is onto the un-normed h.
         let width = ws.h.cols;
         let block = rows_per_block(ws.h.rows, threads) * width;
-        let blocks =
-            ws.h.data
-                .chunks_mut(block)
-                .zip(ws.projection.data.chunks(block))
-                .zip(ws.normed.data.chunks_mut(block));
-        in_parallel(blocks, |((h, p), normed)| {
-            for ((h, p), normed) in h
-                .chunks_mut(width)
-                .zip(p.chunks(width))
-                .zip(normed.chunks_mut(width))
-            {
+        stage(5, || {
+            let blocks =
+                ws.h.data
+                    .chunks_mut(block)
+                    .zip(ws.projection.data.chunks(block))
+                    .zip(ws.normed.data.chunks_mut(block));
+            in_parallel(blocks, |((h, p), normed)| {
+                for ((h, p), normed) in h
+                    .chunks_mut(width)
+                    .zip(p.chunks(width))
+                    .zip(normed.chunks_mut(width))
+                {
+                    for (x, p) in h.iter_mut().zip(p) {
+                        *x += p;
+                    }
+                    layer_norm_row(h, &layer.mlp_norm, c.norm_eps, normed);
+                }
+            });
+        });
+
+        stage(6, || {
+            crate::ops::linear_into(&ws.normed, &layer.mlp.wi, &mut ws.projected)
+        });
+
+        // gelu(input) * gate, by blocks of rows.
+        stage(7, || {
+            ws.gated.resize_rows(ws.projected.rows);
+            let (wide, narrow) = (ws.projected.cols, ws.gated.cols);
+            let rows = rows_per_block(ws.projected.rows, threads);
+            let blocks = ws
+                .projected
+                .data
+                .chunks(rows * wide)
+                .zip(ws.gated.data.chunks_mut(rows * narrow));
+            in_parallel(blocks, |(projected, gated)| {
+                for (p, g) in projected.chunks(wide).zip(gated.chunks_mut(narrow)) {
+                    gelu_gate_row(p, g);
+                }
+            });
+        });
+
+        stage(8, || {
+            crate::ops::linear_into(&ws.gated, &layer.mlp.wo, &mut ws.projection)
+        });
+
+        // h += projection.
+        stage(9, || {
+            let blocks =
+                ws.h.data
+                    .chunks_mut(block)
+                    .zip(ws.projection.data.chunks(block));
+            in_parallel(blocks, |(h, p)| {
                 for (x, p) in h.iter_mut().zip(p) {
                     *x += p;
                 }
-                layer_norm_row(h, &layer.mlp_norm, c.norm_eps, normed);
-            }
-        });
-
-        crate::ops::linear_into(&ws.normed, &layer.mlp.wi, &mut ws.projected);
-
-        // gelu(input) * gate, by blocks of rows.
-        ws.gated.resize_rows(ws.projected.rows);
-        let (wide, narrow) = (ws.projected.cols, ws.gated.cols);
-        let rows = rows_per_block(ws.projected.rows, threads);
-        let blocks = ws
-            .projected
-            .data
-            .chunks(rows * wide)
-            .zip(ws.gated.data.chunks_mut(rows * narrow));
-        in_parallel(blocks, |(projected, gated)| {
-            for (p, g) in projected.chunks(wide).zip(gated.chunks_mut(narrow)) {
-                gelu_gate_row(p, g);
-            }
-        });
-
-        crate::ops::linear_into(&ws.gated, &layer.mlp.wo, &mut ws.projection);
-
-        // h += projection.
-        let blocks =
-            ws.h.data
-                .chunks_mut(block)
-                .zip(ws.projection.data.chunks(block));
-        in_parallel(blocks, |(h, p)| {
-            for (x, p) in h.iter_mut().zip(p) {
-                *x += p;
-            }
+            });
         });
     }
 }

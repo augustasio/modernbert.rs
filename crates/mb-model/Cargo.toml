@@ -86,3 +86,6 @@ int8-smooth = ["int8-partial"]
 # s32 sums are exact either way, so the logits are rung 23's, bit for bit.
 # Built on rung 23.
 int8-u8 = ["int8-smooth"]
+# Analysis only, never a rung: wall time per stage of the threaded layer,
+# printed at the end of `eval_agnews` (`stage_times.rs`).
+stage-times = []
