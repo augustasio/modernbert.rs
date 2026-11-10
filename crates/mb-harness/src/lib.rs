@@ -13,10 +13,13 @@
 //! See `PLAN.md` for the full protocol and its changelog.
 
 pub mod bench;
+pub mod http;
 pub mod integrity;
+pub mod load;
 pub mod npy;
 pub mod power;
 pub mod rng;
 pub mod schedule;
+pub mod serve;
 pub mod thermal;
 pub mod worker;

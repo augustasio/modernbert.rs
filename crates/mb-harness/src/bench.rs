@@ -19,7 +19,7 @@ use crate::thermal;
 use crate::worker::Worker;
 
 /// `[MASK]`, where the verbalizer logits are read.
-const MASK_ID: u32 = 50284;
+pub const MASK_ID: u32 = 50284;
 
 #[derive(Debug, Clone)]
 pub struct WorkerSpec {
@@ -143,12 +143,12 @@ impl Config {
 }
 
 /// One test example: its token ids and where the mask sits.
-struct Example {
-    ids: Vec<u32>,
-    mask: usize,
+pub struct Example {
+    pub ids: Vec<u32>,
+    pub mask: usize,
 }
 
-fn read_examples(path: &Path) -> Result<Vec<Example>, String> {
+pub fn read_examples(path: &Path) -> Result<Vec<Example>, String> {
     let text = std::fs::read_to_string(path)
         .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     let mut out = Vec::new();
