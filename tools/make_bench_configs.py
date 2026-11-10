@@ -138,6 +138,15 @@ def main() -> None:
             body["seed"] = SWEEP_SEEDS.get(threads, body["seed"])
             path.write_text(json.dumps(body, indent=2) + "\n")
             print(path.relative_to(REPO))
+        # The batch sizes that can fit the 200 ms budget, on the best thread count.
+        if threads == 16:
+            for size in (2, 4, 8):
+                path = REPO / "bench" / "configs" / f"cloud_t{threads}_b{size}_rung19.json"
+                body = config(threads, "rung19", size, cloud=True) | CLOUD_SLICE
+                body["label"] = f"cloud, {threads} threads, batches of {size}: rung 0 ruler against rung19"
+                body["seed"] = SWEEP_SEEDS.get(threads, body["seed"])
+                path.write_text(json.dumps(body, indent=2) + "\n")
+                print(path.relative_to(REPO))
         return
     for name in VARIANTS:
         path = REPO / "bench" / "configs" / f"t{threads}_{name}.json"
