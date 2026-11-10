@@ -26,6 +26,8 @@
 use crate::tensor::Matrix;
 use std::cell::RefCell;
 use std::ffi::c_void;
+#[cfg(feature = "int8")]
+use std::sync::Mutex;
 use std::sync::OnceLock;
 
 // From oneDNN's `dnnl_common_types.h` and `dnnl_types.h`.
@@ -311,6 +313,29 @@ pub fn int8_scale(values: &[f32]) -> f32 {
     }
 }
 
+/// One block of rows to quantize: its first row, its s8 rows, its scales.
+#[cfg(feature = "int8")]
+type QuantBlock<'a> = (usize, &'a mut [i8], &'a mut [f32]);
+
+/// Rows per block when a loop over `rows` is split across the pool: about
+/// 16 blocks, enough to keep every thread busy as threads claim blocks.
+#[cfg(feature = "int8")]
+fn rows_per_block(rows: usize) -> usize {
+    rows.div_ceil(16).max(1)
+}
+
+/// Run `work(0)` to `work(count - 1)`, on the OpenMP pool where rung 19 has
+/// one (Linux), else in order on this thread.
+#[cfg(feature = "int8")]
+fn on_pool(count: usize, work: &(dyn Fn(usize) + Sync)) {
+    #[cfg(all(feature = "omp-pool", target_os = "linux"))]
+    crate::omp::parallel_for(count, work);
+    #[cfg(not(all(feature = "omp-pool", target_os = "linux")))]
+    for i in 0..count {
+        work(i);
+    }
+}
+
 #[cfg(feature = "int8")]
 thread_local! {
     /// The s8 input, its per-row scales and the s32 product, reused across
@@ -357,15 +382,30 @@ pub fn linear_int8_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
         src.resize(m * k, 0);
         scales.resize(m, 1.0);
         dst.resize(m * n, 0);
-        for r in 0..m {
-            let row = &input.data[r * k..(r + 1) * k];
-            let scale = int8_scale(row);
-            scales[r] = scale;
-            for (q, &x) in src[r * k..(r + 1) * k].iter_mut().zip(row) {
-                // `as` saturates, and the scale keeps every value in range.
-                *q = (x * scale).round_ties_even() as i8;
+        // Trap: these two loops touch every input and every output value of
+        // the matmul. Serial, they took longer than the s8 matmul itself
+        // (rung 20 on Zen 5: 30 ms of s8 matmul in 79 ms an example), so they
+        // run in blocks of rows across the pool.
+        let per = rows_per_block(m);
+        let blocks: Vec<Mutex<QuantBlock>> = src
+            .chunks_mut(per * k)
+            .zip(scales.chunks_mut(per))
+            .enumerate()
+            .map(|(b, (q, s))| Mutex::new((b * per, q, s)))
+            .collect();
+        on_pool(blocks.len(), &|b| {
+            let mut block = blocks[b].lock().expect("no block panics while held");
+            let (first, q, s) = &mut *block;
+            for (i, (q_row, scale)) in q.chunks_mut(k).zip(s.iter_mut()).enumerate() {
+                let row = &input.data[(*first + i) * k..(*first + i + 1) * k];
+                *scale = int8_scale(row);
+                for (q, &x) in q_row.iter_mut().zip(row) {
+                    // `as` saturates, and the scale keeps every value in range.
+                    *q = (x * *scale).round_ties_even() as i8;
+                }
             }
-        }
+        });
+        drop(blocks);
         // SAFETY: `src` holds M * K s8, `weight.int8` N * K (checked above)
         // and `dst` M * N s32. The sums fit: 3072 terms of at most 127 * 127.
         unsafe {
@@ -376,13 +416,25 @@ pub fn linear_int8_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
                 (dst.as_mut_ptr().cast(), DNNL_S32),
             );
         }
-        for r in 0..m {
-            let unscale_input = 1.0 / scales[r];
-            for c in 0..n {
-                out.data[r * n + c] =
-                    dst[r * n + c] as f32 * unscale_input * weight.int8_unscale[c];
+        let blocks: Vec<Mutex<(usize, &mut [f32])>> = out.data[..m * n]
+            .chunks_mut(per * n)
+            .enumerate()
+            .map(|(b, o)| Mutex::new((b * per, o)))
+            .collect();
+        on_pool(blocks.len(), &|b| {
+            let mut block = blocks[b].lock().expect("no block panics while held");
+            let (first, o) = &mut *block;
+            for (i, o_row) in o.chunks_mut(n).enumerate() {
+                let r = *first + i;
+                let unscale_input = 1.0 / scales[r];
+                let sums = &dst[r * n..(r + 1) * n];
+                for ((y, &sum), &unscale_weight) in
+                    o_row.iter_mut().zip(sums).zip(&weight.int8_unscale)
+                {
+                    *y = sum as f32 * unscale_input * unscale_weight;
+                }
             }
-        }
+        });
     });
 }
 
