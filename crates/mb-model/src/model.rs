@@ -102,12 +102,12 @@ impl ModernBert {
         #[cfg(feature = "bf16")]
         {
             for layer in &mut model.layers {
-                keep_precision(&mut layer.attn.wqkv);
-                keep_precision(&mut layer.attn.wo);
-                keep_precision(&mut layer.mlp.wi);
-                keep_precision(&mut layer.mlp.wo);
+                keep_precision(&mut layer.attn.wqkv, "wqkv");
+                keep_precision(&mut layer.attn.wo, "attn_wo");
+                keep_precision(&mut layer.mlp.wi, "wi");
+                keep_precision(&mut layer.mlp.wo, "mlp_wo");
             }
-            keep_precision(&mut model.head.dense);
+            keep_precision(&mut model.head.dense, "head");
         }
         // Rung 13 moves every tensor out, so anything left was never read:
         // a checkpoint with a tensor this model does not know about.
@@ -255,9 +255,22 @@ impl ModernBert {
 
 /// Rung 17's bf16 copy of a weight, or rung 20's s8 one.
 #[cfg(feature = "bf16")]
-fn keep_precision(weight: &mut crate::tensor::Matrix) {
+fn keep_precision(weight: &mut crate::tensor::Matrix, kind: &str) {
     #[cfg(feature = "int8")]
-    weight.keep_int8();
+    {
+        // Analysis only, never set in a benchmark: `MB_INT8_ONLY=wi,head`
+        // keeps just those kinds in s8 and the rest in bf16, to find which
+        // layer's rounding moves the logits most. Unset, every kind is s8.
+        let only = std::env::var("MB_INT8_ONLY").ok();
+        if only.is_none_or(|list| list.split(',').any(|k| k == kind)) {
+            weight.keep_int8();
+        } else {
+            weight.keep_bf16();
+        }
+    }
     #[cfg(not(feature = "int8"))]
-    weight.keep_bf16();
+    {
+        let _ = kind;
+        weight.keep_bf16();
+    }
 }
