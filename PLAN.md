@@ -655,6 +655,12 @@ prompts drawn with a fixed seed from the AG News *train* split
 (`python/smooth_calibrate.py`); alpha is the paper's default, 0.5, not tuned. head.dense
 stays bf16. The in-run gate is set from its Tier 3 run, by rung 17's rule.
 
+**Rung 24's bound, set on 2026-11-10 before it was run.** Its logits must equal rung 23's
+bit for bit on all 7,600 examples, both run on the same pod: the s32 sums are exact with
+s8 or u8 input, so any difference is a bug. The design: the s8 matmuls take their input
+as u8 (s8 + 128, the type x86's `vpdpbusd` multiplies by s8), and 128 * sum(w) per output
+column, computed once at load, comes off each sum before it is scaled back.
+
 **Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
 uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
 libraries:
