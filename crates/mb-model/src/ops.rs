@@ -112,6 +112,12 @@ pub fn linear(input: &Matrix, weight: &Matrix) -> Matrix {
 /// version of [`linear`]: the same product, no allocation.
 pub fn linear_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
     out.resize_rows(input.rows);
+    // Rung 20: a weight with an s8 copy goes through oneDNN's s8 matmul.
+    #[cfg(feature = "int8")]
+    if !weight.int8.is_empty() {
+        crate::onednn::linear_int8_into(input, weight, out);
+        return;
+    }
     // Rung 17: a weight with a bf16 copy goes through oneDNN's bf16 matmul.
     #[cfg(feature = "bf16")]
     if !weight.bf16.is_empty() {
@@ -155,7 +161,9 @@ pub fn backend() -> &'static str {
             }
         };
     }
-    if cfg!(feature = "omp-pool") {
+    if cfg!(feature = "int8") {
+        with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8")
+    } else if cfg!(feature = "omp-pool") {
         with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool")
     } else if cfg!(feature = "serial-blas") {
         with_blas!(

@@ -65,3 +65,7 @@ serial-blas = ["bf16"]
 # Links `libgomp`, Linux only; on macOS the spawned threads stay. Built on
 # rung 18.
 omp-pool = ["serial-blas"]
+# Rung 20: the same five linear layers as rung 17, in s8 with s32 sums through
+# oneDNN: weights with a scale per output column, activations with a scale per
+# row, computed on each call. Built on rung 19.
+int8 = ["omp-pool"]

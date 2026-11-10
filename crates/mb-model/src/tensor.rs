@@ -25,6 +25,11 @@ pub struct Matrix {
     /// bf16 matmul (`onednn.rs`). Empty for every other matrix, which then
     /// takes the f32 path.
     pub bf16: Vec<u16>,
+    /// Rung 20: this weight in s8, for the int8 matmul. Empty for every other
+    /// matrix. Each row (an output column of the product) has its own scale.
+    pub int8: Vec<i8>,
+    /// Rung 20: for each row, one over the scale its s8 values were made with.
+    pub int8_unscale: Vec<f32>,
 }
 
 impl Matrix {
@@ -34,6 +39,8 @@ impl Matrix {
             cols,
             data: vec![0.0; rows * cols],
             bf16: Vec::new(),
+            int8: Vec::new(),
+            int8_unscale: Vec::new(),
         }
     }
 
@@ -50,6 +57,8 @@ impl Matrix {
             cols,
             data,
             bf16: Vec::new(),
+            int8: Vec::new(),
+            int8_unscale: Vec::new(),
         }
     }
 
@@ -73,6 +82,20 @@ impl Matrix {
                 (bits >> 16) as u16
             })
             .collect();
+    }
+
+    /// Rung 20: keep an s8 copy of this weight, one scale per row. The row is
+    /// `[K]` long, one output column of the product. The f32 copy stays.
+    #[cfg(feature = "int8")]
+    pub fn keep_int8(&mut self) {
+        self.int8.clear();
+        self.int8_unscale.clear();
+        for row in self.data.chunks_exact(self.cols) {
+            let scale = crate::onednn::int8_scale(row);
+            self.int8_unscale.push(1.0 / scale);
+            self.int8
+                .extend(row.iter().map(|&w| (w * scale).round_ties_even() as i8));
+        }
     }
 
     /// Change the number of rows, keeping the buffer.

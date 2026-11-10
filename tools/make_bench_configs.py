@@ -74,6 +74,7 @@ CLOUD = {
     "rung17": ("rung17", ["target/bench/rung17/release/worker"]),
     "rung18": ("rung18", ["target/bench/rung18/release/worker"]),
     "rung19": ("rung19", ["target/bench/rung19/release/worker"]),
+    "rung20": ("rung20", ["target/bench/rung20/release/worker"]),
 }
 # The in-run gate of a reduced-precision rung, from its Tier 3 run (PLAN.md, rung 17's
 # bound): 4x the worst logit difference and twice the share of changed predictions.

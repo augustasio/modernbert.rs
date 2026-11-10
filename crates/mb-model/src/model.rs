@@ -96,17 +96,18 @@ impl ModernBert {
         #[allow(unused_mut)]
         let mut model = Self::from_checkpoint(config, &mut checkpoint)?;
         // Rung 17: every linear layer's weight gets its bf16 copy, so the
-        // bf16 matmul runs them. The verbalizer rows of the decoder stay f32:
-        // four rows, no measurable time.
+        // bf16 matmul runs them. Rung 20 takes the same five for int8. The
+        // verbalizer rows of the decoder stay f32: four rows, no measurable
+        // time.
         #[cfg(feature = "bf16")]
         {
             for layer in &mut model.layers {
-                layer.attn.wqkv.keep_bf16();
-                layer.attn.wo.keep_bf16();
-                layer.mlp.wi.keep_bf16();
-                layer.mlp.wo.keep_bf16();
+                keep_precision(&mut layer.attn.wqkv);
+                keep_precision(&mut layer.attn.wo);
+                keep_precision(&mut layer.mlp.wi);
+                keep_precision(&mut layer.mlp.wo);
             }
-            model.head.dense.keep_bf16();
+            keep_precision(&mut model.head.dense);
         }
         // Rung 13 moves every tensor out, so anything left was never read:
         // a checkpoint with a tensor this model does not know about.
@@ -250,4 +251,13 @@ impl ModernBert {
     pub fn head(&self) -> (&MlmHead, &Matrix) {
         (&self.head, self.embeddings.weight())
     }
+}
+
+/// Rung 17's bf16 copy of a weight, or rung 20's s8 one.
+#[cfg(feature = "bf16")]
+fn keep_precision(weight: &mut crate::tensor::Matrix) {
+    #[cfg(feature = "int8")]
+    weight.keep_int8();
+    #[cfg(not(feature = "int8"))]
+    weight.keep_bf16();
 }

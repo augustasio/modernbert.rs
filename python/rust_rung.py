@@ -53,6 +53,7 @@ EXPECTED_BACKEND = {
     17: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16",
     18: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas",
     19: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool",
+    20: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8",
 }
 DESCRIPTION = {
     4: "candle-transformers encoder with a mask-only head, candle CPU (gemm) matmul",
@@ -71,6 +72,7 @@ DESCRIPTION = {
     17: "rung 16 with the linear layers as bf16 matmuls through oneDNN, f32 sums",
     18: "rung 17 with MKL serial inside the attention threads",
     19: "rung 18 with our threads taken from the OpenMP pool",
+    20: "rung 19 with the linear layers in s8, s32 sums, per-row dynamic scales",
 }
 
 

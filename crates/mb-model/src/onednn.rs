@@ -32,6 +32,10 @@ use std::sync::OnceLock;
 const DNNL_SUCCESS: i32 = 0;
 const DNNL_BF16: i32 = 2;
 const DNNL_F32: i32 = 3;
+#[cfg(feature = "int8")]
+const DNNL_S32: i32 = 4;
+#[cfg(feature = "int8")]
+const DNNL_S8: i32 = 5;
 const DNNL_CPU: i32 = 1;
 const DNNL_STREAM_IN_ORDER: u32 = 0x1;
 const DNNL_ARG_SRC: i32 = 1;
@@ -196,8 +200,6 @@ pub fn linear_bf16_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
     if m == 0 || n == 0 {
         return;
     }
-    let ctx = context();
-
     INPUT_BF16.with(|cell| {
         let mut src = cell.borrow_mut();
         src.resize(m * k, 0);
@@ -205,86 +207,181 @@ pub fn linear_bf16_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
             *b = to_bf16(x);
         }
 
-        let src_md = desc(m, k, k, 1, DNNL_BF16);
-        let weights_md = desc(k, n, 1, k, DNNL_BF16);
-        let dst_md = desc(m, n, n, 1, DNNL_F32);
-        let mut pd: Handle = std::ptr::null_mut();
-        let mut primitive: Handle = std::ptr::null_mut();
-        let mut mems: [Handle; 3] = [std::ptr::null_mut(); 3];
-        // SAFETY: every handle is created here and destroyed before return.
-        // The three memories wrap buffers that are live for the whole call
-        // and sized as their descriptors say: `src` holds M * K bf16 values,
-        // `weight.bf16` N * K (checked above), `out.data` M * N f32 (checked
-        // above). oneDNN reads src and weights and writes only dst, and the
-        // stream wait means it is done with them before they can move. The
-        // weights are passed as `*mut` because the C API takes one, but a
-        // matmul never writes its weights.
+        // SAFETY: `src` holds M * K bf16 values, `weight.bf16` N * K (checked
+        // above) and `out.data` M * N f32 (checked above).
         unsafe {
-            ok(
-                dnnl_matmul_primitive_desc_create(
-                    &mut pd,
-                    ctx.engine,
-                    src_md,
-                    weights_md,
-                    std::ptr::null_mut(),
-                    dst_md,
-                    std::ptr::null_mut(),
-                ),
-                "matmul_primitive_desc_create",
+            run_matmul(
+                (m, k, n),
+                (src.as_mut_ptr().cast(), DNNL_BF16),
+                (weight.bf16.as_ptr() as *mut c_void, DNNL_BF16),
+                (out.data.as_mut_ptr().cast(), DNNL_F32),
             );
-            ok(
-                dnnl_primitive_create(&mut primitive, pd),
-                "primitive_create",
-            );
-            ok(
-                dnnl_memory_create(&mut mems[0], src_md, ctx.engine, src.as_mut_ptr().cast()),
-                "memory_create src",
-            );
-            ok(
-                dnnl_memory_create(
-                    &mut mems[1],
-                    weights_md,
-                    ctx.engine,
-                    weight.bf16.as_ptr() as *mut c_void,
-                ),
-                "memory_create weights",
-            );
-            ok(
-                dnnl_memory_create(
-                    &mut mems[2],
-                    dst_md,
-                    ctx.engine,
-                    out.data.as_mut_ptr().cast(),
-                ),
-                "memory_create dst",
-            );
-            let args = [
-                ExecArg {
-                    arg: DNNL_ARG_SRC,
-                    memory: mems[0],
-                },
-                ExecArg {
-                    arg: DNNL_ARG_WEIGHTS,
-                    memory: mems[1],
-                },
-                ExecArg {
-                    arg: DNNL_ARG_DST,
-                    memory: mems[2],
-                },
-            ];
-            ok(
-                dnnl_primitive_execute(primitive, ctx.stream, 3, args.as_ptr()),
-                "primitive_execute",
-            );
-            ok(dnnl_stream_wait(ctx.stream), "stream_wait");
-            for mem in mems {
-                dnnl_memory_destroy(mem);
+        }
+    });
+}
+
+/// One matmul, with its descriptors, primitive and memories made and destroyed
+/// here. Each pair is a buffer and its oneDNN data type.
+///
+/// # Safety
+/// `src` must hold M * K values, `weights` N * K and `dst` M * N of the stated
+/// types, live for the whole call. oneDNN reads src and weights and writes only
+/// dst. The stream wait means it is done with them before this returns.
+unsafe fn run_matmul(
+    (m, k, n): (usize, usize, usize),
+    src: (*mut c_void, i32),
+    weights: (*mut c_void, i32),
+    dst: (*mut c_void, i32),
+) {
+    let ctx = context();
+    let src_md = desc(m, k, k, 1, src.1);
+    // The weight goes in as a `[K, N]` view with strides `(1, K)`, so nothing
+    // is transposed or copied.
+    let weights_md = desc(k, n, 1, k, weights.1);
+    let dst_md = desc(m, n, n, 1, dst.1);
+    let mut pd: Handle = std::ptr::null_mut();
+    let mut primitive: Handle = std::ptr::null_mut();
+    let mut mems: [Handle; 3] = [std::ptr::null_mut(); 3];
+    ok(
+        dnnl_matmul_primitive_desc_create(
+            &mut pd,
+            ctx.engine,
+            src_md,
+            weights_md,
+            std::ptr::null_mut(),
+            dst_md,
+            std::ptr::null_mut(),
+        ),
+        "matmul_primitive_desc_create",
+    );
+    ok(
+        dnnl_primitive_create(&mut primitive, pd),
+        "primitive_create",
+    );
+    ok(
+        dnnl_memory_create(&mut mems[0], src_md, ctx.engine, src.0),
+        "memory_create src",
+    );
+    ok(
+        dnnl_memory_create(&mut mems[1], weights_md, ctx.engine, weights.0),
+        "memory_create weights",
+    );
+    ok(
+        dnnl_memory_create(&mut mems[2], dst_md, ctx.engine, dst.0),
+        "memory_create dst",
+    );
+    let args = [
+        ExecArg {
+            arg: DNNL_ARG_SRC,
+            memory: mems[0],
+        },
+        ExecArg {
+            arg: DNNL_ARG_WEIGHTS,
+            memory: mems[1],
+        },
+        ExecArg {
+            arg: DNNL_ARG_DST,
+            memory: mems[2],
+        },
+    ];
+    ok(
+        dnnl_primitive_execute(primitive, ctx.stream, 3, args.as_ptr()),
+        "primitive_execute",
+    );
+    ok(dnnl_stream_wait(ctx.stream), "stream_wait");
+    for mem in mems {
+        dnnl_memory_destroy(mem);
+    }
+    dnnl_primitive_destroy(primitive);
+    dnnl_primitive_desc_destroy(pd);
+    dnnl_memory_desc_destroy(src_md);
+    dnnl_memory_desc_destroy(weights_md);
+    dnnl_memory_desc_destroy(dst_md);
+}
+
+/// The scale that maps a slice's largest magnitude to 127. An all-zero slice
+/// gets 1, so nothing divides by zero.
+#[cfg(feature = "int8")]
+pub fn int8_scale(values: &[f32]) -> f32 {
+    let largest = values.iter().fold(0.0f32, |most, x| most.max(x.abs()));
+    if largest > 0.0 {
+        127.0 / largest
+    } else {
+        1.0
+    }
+}
+
+#[cfg(feature = "int8")]
+thread_local! {
+    /// The s8 input, its per-row scales and the s32 product, reused across
+    /// calls so a forward pass does not allocate once they have grown.
+    static INT8_BUFFERS: RefCell<(Vec<i8>, Vec<f32>, Vec<i32>)> =
+        const { RefCell::new((Vec::new(), Vec::new(), Vec::new())) };
+}
+
+/// Rung 20: `out = input @ weight.T`, with both sides in s8 and the sums in
+/// s32. `weight` must hold its s8 copy ([`Matrix::keep_int8`]).
+///
+/// Each input row gets its own scale, from its largest value on this call, as
+/// dynamic quantization does, so nothing is calibrated in advance. Each output
+/// column gets the scale of its weight row. So `s32[r][c]` is
+/// `sum(round(x * sx[r]) * round(w * sw[c]))`, and dividing by the two scales
+/// gives the product back in f32.
+///
+/// The two scales are divided out here and not given to oneDNN: its matmul
+/// takes per-row scales on neither src nor dst.
+#[cfg(feature = "int8")]
+pub fn linear_int8_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
+    let (m, k, n) = (input.rows, input.cols, weight.rows);
+    assert_eq!(
+        k, weight.cols,
+        "cannot multiply a {m}x{k} input by a {n}x{} weight",
+        weight.cols
+    );
+    assert_eq!(
+        out.shape(),
+        (m, n),
+        "a {m}x{n} product cannot go into a {:?} buffer",
+        out.shape()
+    );
+    assert_eq!(
+        weight.int8.len(),
+        n * k,
+        "the {n}x{k} weight has no s8 copy"
+    );
+    if m == 0 || n == 0 {
+        return;
+    }
+    INT8_BUFFERS.with(|cell| {
+        let (src, scales, dst) = &mut *cell.borrow_mut();
+        src.resize(m * k, 0);
+        scales.resize(m, 1.0);
+        dst.resize(m * n, 0);
+        for r in 0..m {
+            let row = &input.data[r * k..(r + 1) * k];
+            let scale = int8_scale(row);
+            scales[r] = scale;
+            for (q, &x) in src[r * k..(r + 1) * k].iter_mut().zip(row) {
+                // `as` saturates, and the scale keeps every value in range.
+                *q = (x * scale).round_ties_even() as i8;
             }
-            dnnl_primitive_destroy(primitive);
-            dnnl_primitive_desc_destroy(pd);
-            dnnl_memory_desc_destroy(src_md);
-            dnnl_memory_desc_destroy(weights_md);
-            dnnl_memory_desc_destroy(dst_md);
+        }
+        // SAFETY: `src` holds M * K s8, `weight.int8` N * K (checked above)
+        // and `dst` M * N s32. The sums fit: 3072 terms of at most 127 * 127.
+        unsafe {
+            run_matmul(
+                (m, k, n),
+                (src.as_mut_ptr().cast(), DNNL_S8),
+                (weight.int8.as_ptr() as *mut c_void, DNNL_S8),
+                (dst.as_mut_ptr().cast(), DNNL_S32),
+            );
+        }
+        for r in 0..m {
+            let unscale_input = 1.0 / scales[r];
+            for c in 0..n {
+                out.data[r * n + c] =
+                    dst[r * n + c] as f32 * unscale_input * weight.int8_unscale[c];
+            }
         }
     });
 }
@@ -337,6 +434,36 @@ mod tests {
                 assert!(
                     (got - sum).abs() <= 1e-4 * sum.abs().max(1.0),
                     "({r},{c}): {got} vs {sum}"
+                );
+            }
+        }
+    }
+
+    /// The product equals the same sum done by hand on the same rounded values.
+    #[cfg(feature = "int8")]
+    #[test]
+    fn int8_matches_the_sum_of_rounded_values() {
+        let (m, k, n) = (5, 200, 21);
+        let value = |i: usize| ((i * 2654435761) % 1000) as f32 / 250.0 - 2.0;
+        let input = Matrix::from_vec(m, k, (0..m * k).map(value).collect());
+        let mut weight = Matrix::from_vec(n, k, (0..n * k).map(|i| value(i + 17)).collect());
+        weight.keep_int8();
+        let mut out = Matrix::zeros(m, n);
+        linear_int8_into(&input, &weight, &mut out);
+        for r in 0..m {
+            let row = &input.data[r * k..(r + 1) * k];
+            let scale = int8_scale(row);
+            for c in 0..n {
+                let mut sum = 0i64;
+                for i in 0..k {
+                    let x = (row[i] * scale).round_ties_even() as i64;
+                    sum += x * weight.int8[c * k + i] as i64;
+                }
+                let want = sum as f32 / scale * weight.int8_unscale[c];
+                let got = out.at(r, c);
+                assert!(
+                    (got - want).abs() <= 1e-5 * want.abs().max(1.0),
+                    "({r},{c}): {got} vs {want}"
                 );
             }
         }
