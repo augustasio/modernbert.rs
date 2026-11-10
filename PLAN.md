@@ -635,6 +635,16 @@ on each call, so nothing is calibrated in advance. The products accumulate in s3
 scaled back to f32 by the two scales. The attention products, the norms, the softmax
 and GELU stay f32. The in-run gate is set from its Tier 3 run, by the same rule as rung 17.
 
+**Rung 22's bound, set on 2026-11-10 before any rung 22 logit was seen.** Over all 7,600
+examples: agreement with rung 0 of at least 99.0% (at most 76 changed predictions), and
+calibrated accuracy within 1.0 point of rung 0's 84.78%: rung 17's bound, since rung 22
+must be as safe to serve as bf16. The design: rung 20's s8 matmul only for the MLP's Wi
+and the attention's Wo; Wqkv, the MLP's Wo and head.dense stay bf16. The two kinds were
+chosen by putting each kind alone in s8 on the first 760 examples and comparing logits
+with rung 0, with no labels read: Wi alone changed 0 of 760 predictions (p99 logit
+difference 0.22) and the attention's Wo 1 (0.10), against 3 for Wqkv (0.41) and 4 for
+the MLP's Wo (0.31). The in-run gate is set from its Tier 3 run, by rung 17's rule.
+
 **Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
 uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
 libraries:
@@ -875,3 +885,10 @@ Changes to the plan made after seeing data, with the reason.
   that removed every 1.5 s stall seen, while `taskset` caused them. So rung 21 serves with
   four bound 4-thread workers, and its open-loop test adds the queue wait this check
   leaves out.
+- **Why rung 20 failed, and rung 22** (2026-11-10). A profile of rung 19 at batch 1 and 4
+  threads on Zen 5: 123 ms an example, 103 ms of it the bf16 matmuls (the MLP's Wi alone
+  45.5 ms). So the matmuls are the lever. Rung 20's s8 matmuls took only 30 ms, but its
+  quantize and dequantize loops ran on one thread and ate the gain; they now run on the
+  pool. Its accuracy loss came mostly from Wqkv and the MLP's Wo (measured one kind at a
+  time against rung 0, no labels). Rung 22 keeps s8 only for Wi and the attention's Wo,
+  with rung 17's bound, set above before measuring.
