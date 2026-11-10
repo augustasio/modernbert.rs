@@ -17,17 +17,27 @@ use std::path::Path;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let flag = |name: &str| args.iter().position(|f| f == name).and_then(|i| args.get(i + 1));
+    let flag = |name: &str| {
+        args.iter()
+            .position(|f| f == name)
+            .and_then(|i| args.get(i + 1))
+    };
     let number = |name: &str, default: f64| -> f64 {
         flag(name).map_or(default, |v| {
-            v.parse().unwrap_or_else(|_| fail(&format!("{name} {v} is not a number")))
+            v.parse()
+                .unwrap_or_else(|_| fail(&format!("{name} {v} is not a number")))
         })
     };
-    let addr = flag("--addr").cloned().unwrap_or_else(|| "127.0.0.1:8080".to_string());
+    let addr = flag("--addr")
+        .cloned()
+        .unwrap_or_else(|| "127.0.0.1:8080".to_string());
     let rates: Vec<f64> = flag("--rates")
         .unwrap_or_else(|| fail("--rates is required, for example 10,20,30"))
         .split(',')
-        .map(|r| r.parse().unwrap_or_else(|_| fail(&format!("rate {r} is not a number"))))
+        .map(|r| {
+            r.parse()
+                .unwrap_or_else(|_| fail(&format!("rate {r} is not a number")))
+        })
         .collect();
     let budget_ms = number("--budget-ms", 200.0);
     let seed = number("--seed", 21000.0) as u64;
@@ -59,13 +69,22 @@ fn main() {
             gate,
         };
         let shift = (k * 7919) % order.len();
-        let rotated: Vec<usize> = order[shift..].iter().chain(&order[..shift]).copied().collect();
-        let record = run_rate(&config, &examples, &reference, &rotated).unwrap_or_else(|e| fail(&e));
+        let rotated: Vec<usize> = order[shift..]
+            .iter()
+            .chain(&order[..shift])
+            .copied()
+            .collect();
+        let record =
+            run_rate(&config, &examples, &reference, &rotated).unwrap_or_else(|e| fail(&e));
         println!("{record}");
         valid &= record["integrity"]["within_logit_bound"].as_bool() == Some(true);
         checked += record["integrity"]["checked"].as_u64().unwrap_or(0);
-        changed += record["integrity"]["changed_predictions"].as_u64().unwrap_or(0);
-        let p99 = record["latency_ms"]["p99"].as_f64().unwrap_or(f64::INFINITY);
+        changed += record["integrity"]["changed_predictions"]
+            .as_u64()
+            .unwrap_or(0);
+        let p99 = record["latency_ms"]["p99"]
+            .as_f64()
+            .unwrap_or(f64::INFINITY);
         if p99 <= budget_ms {
             best = Some(best.map_or(rate, |b: f64| b.max(rate)));
             over = 0;
@@ -79,10 +98,13 @@ fn main() {
     // The share of changed predictions, over every reply of the whole test.
     let share = changed as f64 / checked.max(1) as f64;
     valid &= share <= gate.max_disagreement_rate;
-    println!("{}", json!({ "summary": true, "budget_ms": budget_ms,
+    println!(
+        "{}",
+        json!({ "summary": true, "budget_ms": budget_ms,
                            "best_rate_within_budget": best, "checked": checked,
                            "changed_predictions": changed, "changed_share": share,
-                           "valid": valid }));
+                           "valid": valid })
+    );
     if !valid {
         std::process::exit(1);
     }

@@ -6,12 +6,22 @@ use std::time::Duration;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let split = args.iter().position(|a| a == "--").unwrap_or_else(|| usage(&args[0]));
+    let split = args
+        .iter()
+        .position(|a| a == "--")
+        .unwrap_or_else(|| usage(&args[0]));
     let (flags, command) = (&args[1..split], args[split + 1..].to_vec());
-    let flag = |name: &str| flags.iter().position(|f| f == name).and_then(|i| flags.get(i + 1));
+    let flag = |name: &str| {
+        flags
+            .iter()
+            .position(|f| f == name)
+            .and_then(|i| flags.get(i + 1))
+    };
     let number = |name: &str, default: Option<f64>| -> f64 {
         match flag(name) {
-            Some(v) => v.parse().unwrap_or_else(|_| fail(&format!("{name} {v} is not a number"))),
+            Some(v) => v
+                .parse()
+                .unwrap_or_else(|_| fail(&format!("{name} {v} is not a number"))),
             None => default.unwrap_or_else(|| fail(&format!("{name} is required"))),
         }
     };
@@ -21,7 +31,9 @@ fn main() {
         threads: number("--threads", None) as usize,
         max_batch: number("--max-batch", Some(1.0)) as usize,
         max_wait: Duration::from_secs_f64(number("--max-wait-ms", Some(0.0)) / 1e3),
-        weights: flag("--weights").cloned().unwrap_or_else(|| fail("--weights is required")),
+        weights: flag("--weights")
+            .cloned()
+            .unwrap_or_else(|| fail("--weights is required")),
         command,
     };
     if config.command.is_empty() {

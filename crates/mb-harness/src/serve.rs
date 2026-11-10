@@ -110,7 +110,9 @@ pub fn serve(config: &ServeConfig) -> Result<(), String> {
 
 /// One kept-alive client connection: read a request, queue it, wait, answer.
 fn connection(stream: TcpStream, queue: &Queue) -> Result<(), String> {
-    stream.set_nodelay(true).map_err(|e| format!("nodelay: {e}"))?;
+    stream
+        .set_nodelay(true)
+        .map_err(|e| format!("nodelay: {e}"))?;
     let mut writer = stream.try_clone().map_err(|e| format!("clone: {e}"))?;
     let mut reader = BufReader::new(stream);
     while let Some(request) = read_message(&mut reader)? {
@@ -121,7 +123,11 @@ fn connection(stream: TcpStream, queue: &Queue) -> Result<(), String> {
             ["GET", "/health"] => ("200 OK", json!({ "ok": true })),
             _ => ("404 Not Found", json!({ "error": "unknown path" })),
         };
-        write_message(&mut writer, &format!("HTTP/1.1 {status}"), body.to_string().as_bytes())?;
+        write_message(
+            &mut writer,
+            &format!("HTTP/1.1 {status}"),
+            body.to_string().as_bytes(),
+        )?;
     }
     Ok(())
 }
@@ -135,14 +141,25 @@ fn classify(body: &[u8], arrived: Instant, queue: &Queue) -> (&'static str, Valu
             .collect()
     });
     let Some(ids) = ids else {
-        return ("400 Bad Request", json!({ "error": "expected {\"ids\": [integers]}" }));
+        return (
+            "400 Bad Request",
+            json!({ "error": "expected {\"ids\": [integers]}" }),
+        );
     };
     // The last [MASK], as every other rung reads it.
     let Some(mask) = ids.iter().rposition(|&id| id == MASK_ID) else {
-        return ("400 Bad Request", json!({ "error": "the prompt has no [MASK]" }));
+        return (
+            "400 Bad Request",
+            json!({ "error": "the prompt has no [MASK]" }),
+        );
     };
     let (answer, wait) = mpsc::channel();
-    queue.jobs.lock().expect("queue lock").push_back(Job { ids, mask, arrived, answer });
+    queue.jobs.lock().expect("queue lock").push_back(Job {
+        ids,
+        mask,
+        arrived,
+        answer,
+    });
     queue.changed.notify_all();
     match wait.recv() {
         Ok(Ok(done)) => (
@@ -151,7 +168,10 @@ fn classify(body: &[u8], arrived: Instant, queue: &Queue) -> (&'static str, Valu
                     "worker_seconds": done.worker_seconds, "batch": done.batch }),
         ),
         Ok(Err(e)) => ("500 Internal Server Error", json!({ "error": e })),
-        Err(_) => ("500 Internal Server Error", json!({ "error": "no worker answered" })),
+        Err(_) => (
+            "500 Internal Server Error",
+            json!({ "error": "no worker answered" }),
+        ),
     }
 }
 
@@ -169,7 +189,9 @@ fn dispatch(
         let first = next_example.fetch_add(jobs.len(), Ordering::Relaxed);
         let examples: Vec<usize> = (first..first + jobs.len()).collect();
         let replies = if jobs.len() == 1 {
-            worker.run(first, jobs[0].mask, &jobs[0].ids).map(|r| vec![r])
+            worker
+                .run(first, jobs[0].mask, &jobs[0].ids)
+                .map(|r| vec![r])
         } else {
             let masks: Vec<usize> = jobs.iter().map(|j| j.mask).collect();
             let ids: Vec<&[u32]> = jobs.iter().map(|j| j.ids.as_slice()).collect();
@@ -212,7 +234,11 @@ fn take(queue: &Queue, max_batch: usize, max_wait: Duration) -> Vec<Job> {
             if now >= deadline {
                 break;
             }
-            jobs = queue.changed.wait_timeout(jobs, deadline - now).expect("queue lock").0;
+            jobs = queue
+                .changed
+                .wait_timeout(jobs, deadline - now)
+                .expect("queue lock")
+                .0;
         }
         // Another worker may have taken them while this one waited.
         if !jobs.is_empty() {
@@ -274,7 +300,15 @@ mod tests {
 
     fn job(arrived: Instant) -> (Job, mpsc::Receiver<Result<Done, String>>) {
         let (answer, wait) = mpsc::channel();
-        (Job { ids: vec![MASK_ID], mask: 0, arrived, answer }, wait)
+        (
+            Job {
+                ids: vec![MASK_ID],
+                mask: 0,
+                arrived,
+                answer,
+            },
+            wait,
+        )
     }
 
     #[test]

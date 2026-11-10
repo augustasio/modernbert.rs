@@ -72,7 +72,11 @@ pub fn run_rate(
     order: &[usize],
 ) -> Result<Value, String> {
     let mut rng = Rng::new(config.seed);
-    let arrivals = poisson_arrivals(config.rate, config.warmup_seconds + config.seconds, &mut rng);
+    let arrivals = poisson_arrivals(
+        config.rate,
+        config.warmup_seconds + config.seconds,
+        &mut rng,
+    );
 
     let (send, receive) = mpsc::channel::<(usize, f64)>();
     let receive = Arc::new(Mutex::new(receive));
@@ -89,14 +93,22 @@ pub fn run_rate(
     for _ in 0..config.senders {
         let stream = TcpStream::connect(&config.addr)
             .map_err(|e| format!("cannot connect to {}: {e}", config.addr))?;
-        stream.set_nodelay(true).map_err(|e| format!("nodelay: {e}"))?;
-        let (receive, samples, bodies) = (Arc::clone(&receive), Arc::clone(&samples), Arc::clone(&bodies));
+        stream
+            .set_nodelay(true)
+            .map_err(|e| format!("nodelay: {e}"))?;
+        let (receive, samples, bodies) = (
+            Arc::clone(&receive),
+            Arc::clone(&samples),
+            Arc::clone(&bodies),
+        );
         senders.push(std::thread::spawn(move || -> Result<(), String> {
             let mut writer = stream.try_clone().map_err(|e| format!("clone: {e}"))?;
             let mut reader = BufReader::new(stream);
             loop {
                 let next = receive.lock().expect("receiver lock").recv();
-                let Ok((example, scheduled)) = next else { return Ok(()) };
+                let Ok((example, scheduled)) = next else {
+                    return Ok(());
+                };
                 let sent = start.elapsed().as_secs_f64();
                 write_message(&mut writer, "POST /classify HTTP/1.1", &bodies[example])?;
                 let reply = read_message(&mut reader)?.ok_or("the server closed the connection")?;
