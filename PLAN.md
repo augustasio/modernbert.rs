@@ -645,6 +645,16 @@ with rung 0, with no labels read: Wi alone changed 0 of 760 predictions (p99 log
 difference 0.22) and the attention's Wo 1 (0.10), against 3 for Wqkv (0.41) and 4 for
 the MLP's Wo (0.31). The in-run gate is set from its Tier 3 run, by rung 17's rule.
 
+**Rung 23's bound, set on 2026-11-10 before any rung 23 logit was seen.** Rung 17's bound
+again: over all 7,600 examples, agreement with rung 0 of at least 99.0% (at most 76
+changed predictions) and calibrated accuracy within 1.0 point of 84.78%. The design: rung
+22, plus Wqkv and the MLP's Wo in s8, smoothed first (SmoothQuant, Xiao et al. 2023):
+each input channel j is multiplied by 1/s_j as it is rounded, and the weight's column j by
+s_j, with s_j = max|X_j|^0.5 / max|W_j|^0.5. The maxima of X come from rung 0 on 512
+prompts drawn with a fixed seed from the AG News *train* split
+(`python/smooth_calibrate.py`); alpha is the paper's default, 0.5, not tuned. head.dense
+stays bf16. The in-run gate is set from its Tier 3 run, by rung 17's rule.
+
 **Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
 uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
 libraries:
