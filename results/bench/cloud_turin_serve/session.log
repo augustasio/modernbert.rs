@@ -1,0 +1,31 @@
+== r19_4x4_b1 round 1 08:49:58Z load 100.42
+{"bound_to_cores":true,"max_batch":1,"max_wait_ms":0.0,"port":8090,"ready":true,"threads":4,"workers":4}
+{"best_rate_within_budget":15.0,"budget_ms":200.0,"changed_predictions":0,"changed_share":0.0,"checked":3179,"summary":true,"valid":true}
+== r19_1x16_b1 round 1 08:53:07Z load 52.61
+{"bound_to_cores":true,"max_batch":1,"max_wait_ms":0.0,"port":8090,"ready":true,"threads":16,"workers":1}
+{"best_rate_within_budget":10.0,"budget_ms":200.0,"changed_predictions":0,"changed_share":0.0,"checked":2028,"summary":true,"valid":true}
+== r19_4x4_b2 round 1 08:55:26Z load 49.38
+{"bound_to_cores":true,"max_batch":2,"max_wait_ms":0.0,"port":8090,"ready":true,"threads":4,"workers":4}
+{"best_rate_within_budget":15.0,"budget_ms":200.0,"changed_predictions":0,"changed_share":0.0,"checked":3179,"summary":true,"valid":true}
+== r19_2x8_b2 round 1 08:58:34Z load 51.54
+{"bound_to_cores":true,"max_batch":2,"max_wait_ms":0.0,"port":8090,"ready":true,"threads":8,"workers":2}
+{"best_rate_within_budget":10.0,"budget_ms":200.0,"changed_predictions":0,"changed_share":0.0,"checked":2028,"summary":true,"valid":true}
+== r0_1x16_b1 round 1 09:00:55Z load 47.56
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 1792.86it/s]
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_predictions":0,"changed_share":0.0,"checked":129,"summary":true,"valid":true}
+== r19_4x4_b1 round 2 09:02:31Z load 43.32
+{"bound_to_cores":true,"max_batch":1,"max_wait_ms":0.0,"port":8090,"ready":true,"threads":4,"workers":4}
+{"best_rate_within_budget":20.0,"budget_ms":200.0,"changed_predictions":0,"changed_share":0.0,"checked":4508,"summary":true,"valid":true}
+== r19_1x16_b1 round 2 09:06:24Z load 59.36
+{"bound_to_cores":true,"max_batch":1,"max_wait_ms":0.0,"port":8090,"ready":true,"threads":16,"workers":1}
+{"best_rate_within_budget":10.0,"budget_ms":200.0,"changed_predictions":0,"changed_share":0.0,"checked":1999,"summary":true,"valid":true}
+== r19_4x4_b2 round 2 09:08:44Z load 120.33
+{"bound_to_cores":true,"max_batch":2,"max_wait_ms":0.0,"port":8090,"ready":true,"threads":4,"workers":4}
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_predictions":0,"changed_share":0.0,"checked":1087,"summary":true,"valid":true}
+== r19_2x8_b2 round 2 09:10:22Z load 107.58
+{"bound_to_cores":true,"max_batch":2,"max_wait_ms":0.0,"port":8090,"ready":true,"threads":8,"workers":2}
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_predictions":0,"changed_share":0.0,"checked":1087,"summary":true,"valid":true}
+== r0_1x16_b1 round 2 09:11:57Z load 62.91
+Loading weights:   0%|          | 0/173 [00:00<?, ?it/s]Loading weights: 100%|██████████| 173/173 [00:00<00:00, 1983.73it/s]
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_predictions":0,"changed_share":0.0,"checked":123,"summary":true,"valid":true}
+== SERVE_DONE 09:13:34Z
