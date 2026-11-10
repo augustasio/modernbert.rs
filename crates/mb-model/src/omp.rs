@@ -23,6 +23,7 @@ extern "C" {
         num_threads: u32,
         flags: u32,
     );
+    fn omp_get_max_threads() -> i32;
 }
 
 struct Job<'a> {
@@ -60,13 +61,21 @@ pub fn parallel_for(count: usize, work: &(dyn Fn(usize) + Sync)) {
         next: AtomicUsize::new(0),
         count,
     };
+    // Trap: the team must not be wider than the pool. Attention has one block
+    // per sequence and head, so a batch of 8 asks for 128. A team that wide
+    // grows libgomp's pool past the cores, and its idle threads then spin
+    // against the matmul threads: batches of 2 to 8 stalled for 1.5 s on about
+    // one call in twenty. Claiming indices lets a narrower team do every block.
+    // SAFETY: `omp_get_max_threads` only reads libgomp's settings.
+    let pool = unsafe { omp_get_max_threads() }.max(1) as usize;
+    let team = count.min(pool);
     // SAFETY: `run_claimed` only reads `job`, through atomics and a `Sync`
     // closure, and `GOMP_parallel` blocks until the team is done.
     unsafe {
         GOMP_parallel(
             run_claimed,
             &job as *const Job as *mut c_void,
-            count as u32,
+            team as u32,
             0,
         )
     };
