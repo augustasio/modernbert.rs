@@ -1,5 +1,5 @@
 //! `mb-serve --workers N --threads T [--port P] [--max-batch B] [--max-wait-ms W]
-//!  --weights DIR -- <worker command...>`: rung 21's HTTP server. See `serve.rs`.
+//!  [--smt] --weights DIR -- <worker command...>`: rung 21's HTTP server. See `serve.rs`.
 
 use mb_harness::serve::{serve, ServeConfig};
 use std::time::Duration;
@@ -35,6 +35,7 @@ fn main() {
             .cloned()
             .unwrap_or_else(|| fail("--weights is required")),
         command,
+        smt: flags.iter().any(|f| f == "--smt"),
     };
     if config.command.is_empty() {
         usage(&args[0]);
@@ -46,7 +47,7 @@ fn main() {
 
 fn usage(program: &str) -> ! {
     fail(&format!(
-        "usage: {program} --workers N --threads T [--port P] [--max-batch B] [--max-wait-ms W] \
+        "usage: {program} --workers N --threads T [--port P] [--max-batch B] [--max-wait-ms W] [--smt] \
          --weights DIR -- <worker command...>"
     ))
 }

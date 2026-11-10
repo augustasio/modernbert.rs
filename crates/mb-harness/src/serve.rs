@@ -35,6 +35,11 @@ pub struct ServeConfig {
     pub max_wait: Duration,
     pub weights: String,
     pub command: Vec<String>,
+    /// Bind to every hardware thread, not only the first of each core: the
+    /// first `cores` OpenMP places are each core's first thread, the next
+    /// ones its second, so with 2N workers on N workers' worth of cores,
+    /// workers k and k + N share the same cores (SMT siblings).
+    pub smt: bool,
 }
 
 /// One request, from its arrival to its answer.
@@ -60,7 +65,11 @@ struct Queue {
 
 /// Start the workers, then serve until the process is killed.
 pub fn serve(config: &ServeConfig) -> Result<(), String> {
-    let cores = physical_cores();
+    let cores = if config.smt {
+        hardware_threads()
+    } else {
+        physical_cores()
+    };
     let bind = cores.len() >= config.workers * config.threads;
     let queue = Arc::new(Queue::default());
     let next_example = Arc::new(AtomicUsize::new(0));
@@ -94,7 +103,8 @@ pub fn serve(config: &ServeConfig) -> Result<(), String> {
         "{}",
         json!({ "ready": true, "port": config.port, "workers": config.workers,
                 "threads": config.threads, "max_batch": config.max_batch,
-                "max_wait_ms": config.max_wait.as_secs_f64() * 1e3, "bound_to_cores": bind })
+                "max_wait_ms": config.max_wait.as_secs_f64() * 1e3, "bound_to_cores": bind,
+                "smt": config.smt })
     );
     for stream in listener.incoming() {
         let Ok(stream) = stream else { continue };
@@ -270,6 +280,38 @@ pub fn physical_cores() -> Vec<usize> {
         }
     }
     cores
+}
+
+/// Every CPU this process may use: each core's first hardware thread in
+/// order, then each core's second, and so on. Empty where Linux's `/proc` and
+/// `/sys` are not.
+pub fn hardware_threads() -> Vec<usize> {
+    let Ok(status) = std::fs::read_to_string("/proc/self/status") else {
+        return Vec::new();
+    };
+    let Some(list) = status
+        .lines()
+        .find_map(|l| l.strip_prefix("Cpus_allowed_list:"))
+    else {
+        return Vec::new();
+    };
+    // The allowed CPUs of each core, in order of the core's first CPU.
+    let mut cores: Vec<(String, Vec<usize>)> = Vec::new();
+    for cpu in parse_cpu_list(list.trim()) {
+        let path = format!("/sys/devices/system/cpu/cpu{cpu}/topology/thread_siblings_list");
+        let siblings = std::fs::read_to_string(path).unwrap_or_else(|_| cpu.to_string());
+        let key = siblings.trim().to_string();
+        match cores.iter_mut().find(|(k, _)| *k == key) {
+            Some((_, cpus)) => cpus.push(cpu),
+            None => cores.push((key, vec![cpu])),
+        }
+    }
+    let mut out = Vec::new();
+    let deepest = cores.iter().map(|(_, c)| c.len()).max().unwrap_or(0);
+    for level in 0..deepest {
+        out.extend(cores.iter().filter_map(|(_, cpus)| cpus.get(level)));
+    }
+    out
 }
 
 /// "4,7,18-19" -> [4, 7, 18, 19].
