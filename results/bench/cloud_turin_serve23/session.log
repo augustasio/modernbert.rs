@@ -1,0 +1,23 @@
+== calibrate 21:06:37Z
+== tier3 23 21:09:26Z
+== bound: agreement 7565/7600 (need 7524), calibrated 0.8474 (need 0.8378), pass=True; max diff 0.854
+== verdict 1 3.416 0.009211
+== speed rung22 round 1 load 22.41: 0.132 s per example, about 0 min left
+== speed rung23 round 1 load 21.04: 0.110 s per example, about 0 min left
+== speed rung22 round 2 load 20.47: 0.132 s per example, about 0 min left
+== speed rung23 round 2 load 19.43: 0.112 s per example, about 0 min left
+== speed rung22 round 3 load 18.37: 0.131 s per example, about 0 min left
+== speed rung23 round 3 load 17.16: 0.110 s per example, about 0 min left
+== serve rung23 4x4 round 1 21:13:37Z load 16.83
+{"best_rate_within_budget":35.0,"budget_ms":200.0,"changed_allowed":87.54134400000001,"changed_predictions":50,"changed_share":0.005260942760942761,"checked":9504,"summary":true,"valid":true}
+== serve rung22 4x4 round 1 21:18:59Z load 35.89
+{"best_rate_within_budget":25.0,"budget_ms":200.0,"changed_allowed":34.002399999999994,"changed_predictions":15,"changed_share":0.002642706131078224,"checked":5676,"summary":true,"valid":true}
+== serve rung23 4x4 round 2 21:22:53Z load 23.52
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":107.437104,"changed_predictions":60,"changed_share":0.0051440329218107,"checked":11664,"summary":true,"valid":true}
+== serve rung22 4x4 round 2 21:29:02Z load 23.55
+{"best_rate_within_budget":30.0,"budget_ms":200.0,"changed_allowed":34.002399999999994,"changed_predictions":12,"changed_share":0.0016522098306484924,"checked":7263,"summary":true,"valid":true}
+== serve rung23 4x4 round 3 21:33:41Z load 25.77
+{"best_rate_within_budget":35.0,"budget_ms":200.0,"changed_allowed":87.863729,"changed_predictions":62,"changed_share":0.006499633085229059,"checked":9539,"summary":true,"valid":true}
+== serve rung22 4x4 round 3 21:39:05Z load 23.23
+{"best_rate_within_budget":25.0,"budget_ms":200.0,"changed_allowed":34.002399999999994,"changed_predictions":7,"changed_share":0.0012384996461429583,"checked":5652,"summary":true,"valid":true}
+== R23_DONE 21:42:58Z

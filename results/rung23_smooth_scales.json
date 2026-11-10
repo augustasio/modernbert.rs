@@ -1,0 +1,20 @@
+{
+  "alpha": 0.5,
+  "examples": 512,
+  "seed": 23,
+  "split": "train",
+  "train_indices_first_10": [
+    102155,
+    37999,
+    116973,
+    108742,
+    10951,
+    2238,
+    77598,
+    40205,
+    55541,
+    49700
+  ],
+  "sha256": "221406b4b84abe1bd39aef1ddaddc1d0454cb408028dbe0e01f3343fa04796a1",
+  "widest_scale_spread": 71.5147933959961
+}

@@ -918,3 +918,12 @@ Changes to the plan made after seeing data, with the reason.
   for rung 22 and 22 to 26/s for rung 19, about 96,000 against 64,000 examples per
   dollar. Worker p99 near 110 ms against 130. Hosts vary a lot (load 12 to 144 seen on
   the same flavor), so the orchestrator now replaces a pod whose host load is over 60.
+- **Rung 23 passes its bound, and serves about 1.35x rung 22** (2026-11-10, Zen 5).
+  Tier 3 at batches of 16: agreement 7565/7600 (99.54%), calibrated accuracy 84.74%
+  [83.95, 85.54] against 84.78%, worst logit difference 0.854; in-run gate 3.416 and 2 x
+  35/7600. Scales from 512 train-split prompts (sha256 221406b4..., widest max/min ratio
+  71.5, `results/rung23_smooth_scales.json`). Batch 1 on 4 threads: 0.110 s against rung
+  22's 0.132. Behind the server, 4 x 4, three interleaved rounds at host load 16 to 36:
+  p99 at or under 200 ms up to 35 to 40/s against 25 to 30/s for rung 22, about 112,000
+  examples per dollar (`results/bench/cloud_turin_serve23/SUMMARY.md`). Every linear
+  layer but head.dense is now s8.
