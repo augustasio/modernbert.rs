@@ -82,7 +82,9 @@ CLOUD = {
 # Rung 17's Tier 3 run: worst |logit diff| 0.179, 2 of 7,600 predictions changed.
 GATE_17 = {"max_logit_abs": 0.72, "max_disagreement_rate": 2 * 2 / 7600}
 # Rungs 18 and 19 change threads, not arithmetic, so they keep rung 17's gate.
-GATES = {"rung17": GATE_17, "rung18": GATE_17, "rung19": GATE_17}
+# Rung 22's Tier 3 run: worst |logit diff| 0.427, 17 of 7,600 predictions changed.
+GATE_22 = {"max_logit_abs": 1.707, "max_disagreement_rate": 2 * 17 / 7600}
+GATES = {"rung17": GATE_17, "rung18": GATE_17, "rung19": GATE_17, "rung22": GATE_22}
 # One changed prediction in about 480 checked examples is past rung 17's gate, so a
 # schedule must not hold the two examples its Tier 3 run already found changed (401 and
 # 6503). Seeds 16000 and 16001 do; 16200 to 16204 are the first clean block in steps of

@@ -892,3 +892,13 @@ Changes to the plan made after seeing data, with the reason.
   pool. Its accuracy loss came mostly from Wqkv and the MLP's Wo (measured one kind at a
   time against rung 0, no labels). Rung 22 keeps s8 only for Wi and the attention's Wo,
   with rung 17's bound, set above before measuring.
+- **Rung 22 passes its bound** (Zen 5, batches of 16 at 16 threads). Agreement 7583/7600
+  (99.78%), calibrated accuracy 84.72% [83.92, 85.53] against 84.78%, worst logit
+  difference 0.427. In-run gate: 1.707 and a share of 2 x 17/7600. Tier 3 wall clock, not
+  a benchmark: 0.0417 s an example against rung 19's 0.0545. At batch 1 on 4 threads, in
+  three interleaved rounds on a busy host (load 113 to 144): rung 19 0.186 to 0.194 s,
+  rung 20 (with its loops on the pool) 0.145 to 0.148 s, rung 22 0.169 to 0.175 s. The
+  open-loop server test on that host was too noisy to read and is redone
+  (`results/bench/cloud_turin_serve22/`). It also showed that a load test which stops
+  early checks too few replies to hold a share set over 7,600; `mb-load` now allows as
+  many changed predictions as the gate does over one full pass.

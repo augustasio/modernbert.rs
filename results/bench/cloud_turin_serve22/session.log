@@ -1,0 +1,21 @@
+== tier3 22 20:08:09Z
+wrote results/rung22_logits.npy and its .json, batches of 16
+rung 22 against rung 0
+== bound: agreement 7583/7600 (need 7524), calibrated 0.8472 (need 0.8378), pass=True; gate 1.707 0.004474
+== verdict 1 1.707 0.004474
+== batch 1, 4 threads, 64 examples, 3 rounds interleaved
+rung19 round 1: 0.186 s per example, about 0 min left
+rung20 round 1: 0.146 s per example, about 0 min left
+rung22 round 1: 0.175 s per example, about 0 min left
+rung19 round 2: 0.192 s per example, about 0 min left
+rung20 round 2: 0.148 s per example, about 0 min left
+rung22 round 2: 0.169 s per example, about 0 min left
+rung19 round 3: 0.194 s per example, about 0 min left
+rung20 round 3: 0.145 s per example, about 0 min left
+rung22 round 3: 0.169 s per example, about 0 min left
+== serve rung22 4x4 round 1 20:15:29Z load 144.03
+== serve rung19 4x4 round 1 20:17:07Z load 133.46
+== serve rung22 4x4 round 2 20:18:44Z load 130.34
+== serve rung19 4x4 round 2 20:21:07Z load 113.08
+== FAILED or INVALID
+== R22_DONE 20:22:45Z
