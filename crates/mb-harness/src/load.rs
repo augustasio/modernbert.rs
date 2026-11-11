@@ -33,6 +33,8 @@ pub struct LoadConfig {
     pub seed: u64,
     pub senders: usize,
     pub gate: Gate,
+    /// Where to append one line per measured request, if anywhere.
+    pub latencies: Option<String>,
 }
 
 /// What one request saw.
@@ -180,6 +182,11 @@ fn summarize(config: &LoadConfig, samples: &[Sample], reference: &Array2) -> Res
         .iter()
         .filter(|s| s.scheduled >= config.warmup_seconds)
         .collect();
+    let latencies: Vec<f64> = measured.iter().map(|s| s.latency * 1e3).collect();
+    let p99_ci95 = bootstrap_interval(&latencies, 0.99, BOOTSTRAP_RESAMPLES, config.seed);
+    if let Some(path) = &config.latencies {
+        append_latencies(path, config.rate, &measured)?;
+    }
     let ms = |f: &dyn Fn(&Sample) -> f64| -> Value {
         let mut v: Vec<f64> = measured.iter().map(|s| f(s) * 1e3).collect();
         v.sort_by(f64::total_cmp);
@@ -196,6 +203,7 @@ fn summarize(config: &LoadConfig, samples: &[Sample], reference: &Array2) -> Res
         "requests": measured.len(),
         "served_per_s": measured.len() as f64 / config.seconds,
         "latency_ms": ms(&|s| s.latency),
+        "latency_p99_ci95_ms": p99_ci95,
         "queue_ms": ms(&|s| s.queue_seconds),
         "worker_ms": ms(&|s| s.worker_seconds),
         "late_send_ms": ms(&|s| s.late_send),
@@ -205,6 +213,61 @@ fn summarize(config: &LoadConfig, samples: &[Sample], reference: &Array2) -> Res
         "load_average": std::fs::read_to_string("/proc/loadavg").ok()
             .and_then(|l| l.split(' ').next().map(str::to_string)),
     }))
+}
+
+/// How many resamples the bootstrap interval of the p99 takes.
+const BOOTSTRAP_RESAMPLES: usize = 2000;
+
+/// A 95% percentile-bootstrap interval for the `q` percentile of `values`:
+/// resample the requests with replacement, take the percentile of each
+/// resample, and report the 2.5th and 97.5th percentiles of those. A p99 of
+/// about 2,000 requests rests on its slowest 20 or so, so it has a real
+/// sampling error, and this says how large. Requests are treated as
+/// independent, which a queue makes only roughly true: neighbours in time
+/// share a backlog, so the interval is a lower bound on the uncertainty.
+pub fn bootstrap_interval(values: &[f64], q: f64, resamples: usize, seed: u64) -> Option<[f64; 2]> {
+    if values.is_empty() {
+        return None;
+    }
+    let mut rng = Rng::new(seed ^ 0xB007_57A9);
+    let mut estimates = Vec::with_capacity(resamples);
+    let mut resample = vec![0.0; values.len()];
+    for _ in 0..resamples {
+        for x in resample.iter_mut() {
+            *x = values[rng.below(values.len())];
+        }
+        resample.sort_by(f64::total_cmp);
+        estimates.push(percentile(&resample, q)?);
+    }
+    estimates.sort_by(f64::total_cmp);
+    Some([
+        percentile(&estimates, 0.025)?,
+        percentile(&estimates, 0.975)?,
+    ])
+}
+
+/// One tab-separated line per measured request: the arrival rate, when it was
+/// scheduled, and its latency, queue wait and worker time in milliseconds.
+fn append_latencies(path: &str, rate: f64, measured: &[&Sample]) -> Result<(), String> {
+    use std::io::Write;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .map_err(|e| format!("cannot open {path}: {e}"))?;
+    let mut lines = String::new();
+    for s in measured {
+        lines.push_str(&format!(
+            "{rate}\t{:.6}\t{:.3}\t{:.3}\t{:.3}\t{}\n",
+            s.scheduled,
+            s.latency * 1e3,
+            s.queue_seconds * 1e3,
+            s.worker_seconds * 1e3,
+            s.batch
+        ));
+    }
+    file.write_all(lines.as_bytes())
+        .map_err(|e| format!("cannot write {path}: {e}"))
 }
 
 /// The nearest-rank percentile of sorted values: the smallest value with at
@@ -228,6 +291,17 @@ mod tests {
         let rate = times.len() as f64 / 200.0;
         assert!((rate - 50.0).abs() < 1.5, "rate {rate}");
         assert!(times.windows(2).all(|w| w[0] < w[1]));
+    }
+
+    #[test]
+    fn the_bootstrap_interval_holds_the_percentile() {
+        // 0..1000: the p99 is 990, and with 1,000 values its interval is a
+        // few ranks wide on either side.
+        let v: Vec<f64> = (0..1000).map(f64::from).collect();
+        let [lo, hi] = bootstrap_interval(&v, 0.99, 500, 7).expect("an interval");
+        assert!(lo <= 990.0 && 990.0 <= hi, "{lo}..{hi}");
+        assert!(hi - lo < 30.0, "{lo}..{hi}");
+        assert_eq!(bootstrap_interval(&[], 0.99, 10, 7), None);
     }
 
     #[test]

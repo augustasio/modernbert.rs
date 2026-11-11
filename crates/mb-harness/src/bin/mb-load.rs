@@ -1,12 +1,14 @@
 //! `mb-load --addr HOST:PORT --rates 10,20,... [--seconds S] [--warmup S]
 //!  [--seed N] [--senders N] [--budget-ms MS] [--gate-logit X --gate-share Y]
-//!  [--prompt-ids TSV] [--reference NPY]`
+//!  [--prompt-ids TSV] [--reference NPY] [--latencies TSV]`
 //!
 //! Rung 21's load test (`load.rs`). Prints one JSON line per arrival rate, in
 //! rising order, then a summary line with the highest rate whose p99 latency
 //! met the budget. It stops after two rates in a row over the budget, since
 //! higher rates only queue more. Exits 1 if any reply broke the logit bound, or the
 //! test changed more predictions than the gate allows over one full pass.
+//! Each rate's p99 comes with a 95% bootstrap interval; `--latencies` also
+//! writes every measured request's times, one line each.
 
 use mb_harness::bench::read_examples;
 use mb_harness::integrity::Gate;
@@ -53,6 +55,15 @@ fn main() {
     let examples = read_examples(Path::new(ids)).unwrap_or_else(|e| fail(&e));
     let reference = mb_harness::npy::read(Path::new(reference)).unwrap_or_else(|e| fail(&e));
 
+    let latencies = flag("--latencies").cloned();
+    if let Some(path) = &latencies {
+        std::fs::write(
+            path,
+            "rate_per_s\tscheduled_s\tlatency_ms\tqueue_ms\tworker_ms\tbatch\n",
+        )
+        .unwrap_or_else(|e| fail(&format!("cannot write {path}: {e}")));
+    }
+
     // One seeded shuffle of every example; each rate starts where the last stopped.
     let mut order: Vec<usize> = (0..examples.len()).collect();
     Rng::new(seed).shuffle(&mut order);
@@ -70,6 +81,7 @@ fn main() {
             seed: seed + 1 + k as u64,
             senders: number("--senders", 64.0) as usize,
             gate,
+            latencies: latencies.clone(),
         };
         let shift = (k * 7919) % order.len();
         let rotated: Vec<usize> = order[shift..]
