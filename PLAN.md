@@ -1022,3 +1022,10 @@ Changes to the plan made after seeing data, with the reason.
   interleaved rounds: worker p50 5 to 11 ms lower, and the budget held 5/s further in two
   rounds, a tie in the third; 60/s, about 193,000 examples per dollar
   (`results/bench/cloud_turin_serve27/`). Later rungs build on rung 27.
+- **Rung 28 meets its bound and saves about 2 ms per request** (2026-11-11, Zen 5). The
+  scatter writes Q, K and V in bf16 in the products' layouts. Logits equal rung 27's
+  bit for bit. At two threads the products drop from 12.4 to 8.1 thread-ms, the scatter
+  rises from 7.9 to 8.6, and the layers from 90 to 87.5 ms wall. Behind the server the
+  host's neighbours set the best rate more than the rung did (28: 65, 50, 60; 27: 65, 55,
+  40); at the same rate rung 28's worker p50 is 3 to 6 ms lower
+  (`results/bench/cloud_turin_serve28/`). Later rungs build on rung 28.
