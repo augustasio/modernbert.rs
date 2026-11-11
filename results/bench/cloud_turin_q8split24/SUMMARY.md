@@ -40,3 +40,17 @@ same fold. Rung 25 tests this (`../cloud_turin_serve25/`).
 Banding the local layers' attention (window 128) was considered and set aside. With
 prompts of about 160 tokens, query tiles of 32 rows skip only about a quarter of the two
 sgemms on two thirds of the layers, about 2.4 ms per request.
+
+## Follow-up: the x86 code (2026-11-11, 06:41Z, a 9575F pod)
+
+Rung 25 (16 running maxima) was exact but slower (`../cloud_turin_serve25/`), so the
+code was read instead of guessed. `objdump` of rung 24's `eval_agnews` built with
+`target-cpu=native`:
+
+- no calls to `roundf`, `expf`, `fmaxf` or any other libm function anywhere;
+- `ops::softmax_in_place`: 101 zmm (512-bit) instructions, so the exp, the maximum and
+  the lane sum are already AVX-512;
+- `fused::gelu_gate_row` and the int8 quantize closure: also zmm.
+
+So the softmax's cost is the exp polynomial and three passes over rows of about 160
+values, not a missed vectorisation. What is left there is a few percent of a request.

@@ -39,6 +39,11 @@ Only where they clearly earn their place. Current justified set:
 - `fancy-regex` and HF `tokenizers` as **dev-dependencies only**, as test oracles, and
   `flate2` to read the gzipped AG News golden file. These must never appear in a non-test
   build path.
+- Native libraries reached through FFI, the ones PyTorch itself uses on each platform
+  (agreed 2026-11-08, see `PLAN.md`): Apple Accelerate on macOS; on Linux x86, Intel
+  MKL's `cblas_sgemm` for fp32, oneDNN (`libdnnl`) for bf16 and int8 matmuls, and
+  `libgomp` for the OpenMP pool those two share (rung 19). They are matmul kernels and a
+  thread pool only; everything else in the forward pass stays ours.
 
 Anything else gets discussed before it lands. In particular: no tensor framework, no
 `ndarray`, no autodiff. The point is that the forward pass is ours.
