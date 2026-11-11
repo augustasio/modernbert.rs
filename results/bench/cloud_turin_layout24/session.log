@@ -1,0 +1,64 @@
+wrote weights/ModernBERT-Large-Instruct/smooth_scales.safetensors (221406b4b84a), widest max/min scale ratio 71.5
+CPU(s):                                  128
+Model name:                              AMD EPYC 9575F 64-Core Processor
+Thread(s) per core:                      2
+Core(s) per socket:                      64
+Socket(s):                               1
+NUMA node(s):                            1
+NUMA node0 CPU(s):                       0-127
+Cpus_allowed_list:	2,6,9,16-17,21-22,25-26,36-38,41,44,53,56,66,70,73,80-81,85-86,89-90,100-102,105,108,117,120
+== cpus 0-3 round 1 load 28.70: 8.412 s per example, about 0 min left
+== places=cores round 1 load 21.42: 0.083 s per example, about 0 min left
+== cpus 0-3 round 2 load 20.59: 8.409 s per example, about 0 min left
+== places=cores round 2 load 22.45: 0.083 s per example, about 0 min left
+== stage times round 1 load 22.45
+   64 / 64  0.075 s per example, about 0 min left
+stage attn_norm        0.57 ms/example    27 calls
+stage wqkv            13.49 ms/example    28 calls
+stage attention       13.50 ms/example    27 calls
+stage gather_heads     1.01 ms/example    27 calls
+stage attn_wo          5.06 ms/example    28 calls
+stage add_mlp_norm     0.71 ms/example    28 calls
+stage wi              27.15 ms/example    28 calls
+stage gelu_gate        2.54 ms/example    28 calls
+stage mlp_wo          10.31 ms/example    28 calls
+stage add              0.25 ms/example    28 calls
+stage layers_total    74.59 ms/example
+== stage times round 2 load 21.21
+   64 / 64  0.076 s per example, about 0 min left
+stage attn_norm        0.54 ms/example    27 calls
+stage wqkv            13.59 ms/example    28 calls
+stage attention       13.39 ms/example    27 calls
+stage gather_heads     1.15 ms/example    27 calls
+stage attn_wo          5.17 ms/example    28 calls
+stage add_mlp_norm     0.81 ms/example    28 calls
+stage wi              27.29 ms/example    28 calls
+stage gelu_gate        2.59 ms/example    28 calls
+stage mlp_wo          10.42 ms/example    28 calls
+stage add              0.30 ms/example    28 calls
+stage layers_total    75.26 ms/example
+== onednn exec 44.4 ms/example (verbose run); create (ms/example): {'create:cache_miss': 0.49, 'create:cache_hit': 0.07}
+   ('matmul', '1024x5248', 'src:u8::blocked:ab::f0')  calls/example 28  22.7 ms
+   ('matmul', '1024x3072', 'src:u8::blocked:ab::f0')  calls/example 28  10.4 ms
+   ('matmul', '2624x1024', 'src:u8::blocked:ab::f0')  calls/example 28  7.7 ms
+   ('matmul', '1024x1024', 'src:u8::blocked:ab::f0')  calls/example 28  3.6 ms
+   ('matmul', '1024x1024', 'src:bf16::blocked:ab::f0')  calls/example 1  0.0 ms
+== serve rung24 4x4 round 1 00:12:55Z load 22.39
+{"bound_to_cores":true,"max_batch":1,"max_wait_ms":0.0,"port":8090,"ready":true,"smt":false,"threads":4,"workers":4}
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":93.712714,"changed_predictions":32,"changed_share":0.003145272262630234,"checked":10174,"summary":true,"valid":true}
+== serve rung24 8x4_smt round 1 00:17:33Z load 34.25
+{"bound_to_cores":true,"max_batch":1,"max_wait_ms":0.0,"port":8090,"ready":true,"smt":true,"threads":4,"workers":8}
+{"best_rate_within_budget":45.0,"budget_ms":200.0,"changed_allowed":116.15992100000001,"changed_predictions":45,"changed_share":0.003568313377210372,"checked":12611,"summary":true,"valid":true}
+== serve rung24 8x2 round 1 00:22:59Z load 42.49
+{"bound_to_cores":true,"max_batch":1,"max_wait_ms":0.0,"port":8090,"ready":true,"smt":false,"threads":2,"workers":8}
+{"best_rate_within_budget":60.0,"budget_ms":200.0,"changed_allowed":203.038073,"changed_predictions":96,"changed_share":0.004355124075670281,"checked":22043,"summary":true,"valid":true}
+== serve rung24 4x4 round 2 00:30:42Z load 16.18
+{"bound_to_cores":true,"max_batch":1,"max_wait_ms":0.0,"port":8090,"ready":true,"smt":false,"threads":4,"workers":4}
+{"best_rate_within_budget":45.0,"budget_ms":200.0,"changed_allowed":116.049389,"changed_predictions":76,"changed_share":0.0060322247797444245,"checked":12599,"summary":true,"valid":true}
+== serve rung24 8x4_smt round 2 00:36:05Z load 15.97
+{"bound_to_cores":true,"max_batch":1,"max_wait_ms":0.0,"port":8090,"ready":true,"smt":true,"threads":4,"workers":8}
+{"best_rate_within_budget":50.0,"budget_ms":200.0,"changed_allowed":141.26910700000002,"changed_predictions":91,"changed_share":0.005933363760839799,"checked":15337,"summary":true,"valid":true}
+== serve rung24 8x2 round 2 00:42:16Z load 23.52
+{"bound_to_cores":true,"max_batch":1,"max_wait_ms":0.0,"port":8090,"ready":true,"smt":false,"threads":2,"workers":8}
+{"best_rate_within_budget":55.0,"budget_ms":200.0,"changed_allowed":171.06669200000002,"changed_predictions":104,"changed_share":0.0055998276976093045,"checked":18572,"summary":true,"valid":true}
+== P24_DONE 00:49:13Z
