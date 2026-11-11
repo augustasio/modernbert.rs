@@ -10,9 +10,12 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-/// The stages, in the order a layer runs them. The last three are inside the
-/// four matmul stages (int8 builds only), so the total leaves them out.
-pub const STAGES: [&str; 13] = [
+/// The stages, in the order a layer runs them. The `q8_` lines are inside the
+/// four matmul stages (int8 builds only) and the `att_` lines inside
+/// attention, so the total leaves them out. The `att_` lines run on every
+/// thread at once and sum over the threads: divide by the thread count for
+/// wall time.
+pub const STAGES: [&str; 17] = [
     "attn_norm",
     "wqkv",
     "attention",
@@ -26,6 +29,10 @@ pub const STAGES: [&str; 13] = [
     "q8_quantize",
     "q8_onednn",
     "q8_dequantize",
+    "att_scatter",
+    "att_scores",
+    "att_softmax",
+    "att_pv",
 ];
 
 /// How many of [`STAGES`] make up a layer; the rest are inside them.
@@ -59,7 +66,7 @@ pub fn report(examples: usize) -> String {
         ));
     }
     out.push_str(&format!(
-        "stage {:13} {total:7.2} ms/example (without the q8_ lines)\n",
+        "stage {:13} {total:7.2} ms/example (without the q8_ and att_ lines)\n",
         "layers_total"
     ));
     out

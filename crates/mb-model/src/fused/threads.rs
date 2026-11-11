@@ -390,7 +390,7 @@ fn attend_by_head(ws: &mut Workspace, rope: &RopeTable, window: Option<usize>, s
                 &mut v[part.clone()],
             );
             let seq = rows.len();
-            scatter_head(qkv, rows, rope, head, hd, q, k, v);
+            stage(13, || scatter_head(qkv, rows, rope, head, hd, q, k, v));
             attend_head(q, k, v, &mut out[part], scores, window, scale, seq, hd);
         }
     });
@@ -457,19 +457,25 @@ fn attend_head(
     hd: usize,
 ) {
     let scores = &mut scores[..seq * seq];
-    sgemm_strided(seq, seq, hd, scale, query, hd, key_t, seq, scores, seq);
-    for t in 0..seq {
-        let (first, end) = match window {
-            None => (0, seq),
-            Some(w) => (t.saturating_sub(w), (t + w + 1).min(seq)),
-        };
-        let row = &mut scores[t * seq..(t + 1) * seq];
-        // f64 accumulation, as in rung 7. See `ops::softmax_in_place`.
-        softmax_in_place(&mut row[first..end]);
-        row[..first].fill(0.0);
-        row[end..].fill(0.0);
-    }
-    sgemm_strided(seq, hd, seq, 1.0, scores, seq, values, hd, out, hd);
+    stage(14, || {
+        sgemm_strided(seq, seq, hd, scale, query, hd, key_t, seq, scores, seq)
+    });
+    stage(15, || {
+        for t in 0..seq {
+            let (first, end) = match window {
+                None => (0, seq),
+                Some(w) => (t.saturating_sub(w), (t + w + 1).min(seq)),
+            };
+            let row = &mut scores[t * seq..(t + 1) * seq];
+            // f64 accumulation, as in rung 7. See `ops::softmax_in_place`.
+            softmax_in_place(&mut row[first..end]);
+            row[..first].fill(0.0);
+            row[end..].fill(0.0);
+        }
+    });
+    stage(16, || {
+        sgemm_strided(seq, hd, seq, 1.0, scores, seq, values, hd, out, hd)
+    });
 }
 
 /// The largest head the stack buffers of [`attend_mask_head`] take.
