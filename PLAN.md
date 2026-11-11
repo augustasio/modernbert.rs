@@ -1039,3 +1039,8 @@ Changes to the plan made after seeing data, with the reason.
   host's neighbours set the best rate more than the rung did (28: 65, 50, 60; 27: 65, 55,
   40); at the same rate rung 28's worker p50 is 3 to 6 ms lower
   (`results/bench/cloud_turin_serve28/`). Later rungs build on rung 28.
+- **Rung 29 meets its bound and gains nothing** (2026-11-11, Zen 5, a slow host). The
+  softmax writes P in bf16; logits equal rung 28's bit for bit. At two threads `P V`
+  loses 0.45 thread-ms and the softmax gains about 0.9, so the work moved. Behind the
+  server the two tie at matched load (`results/bench/cloud_turin_serve29/`). Later rungs
+  build on rung 28.
