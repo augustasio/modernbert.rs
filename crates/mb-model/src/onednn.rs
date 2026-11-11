@@ -841,8 +841,28 @@ impl HeadMatmuls {
         );
     }
 
+    /// Rung 29: the buffer the softmax writes P into, `[seq, seq]` bf16.
+    /// It is the one Q used, which the scores are done with.
+    #[cfg(feature = "softmax-bf16")]
+    pub fn probs(&mut self, seq: usize) -> &mut [u16] {
+        self.a.resize(seq * seq, 0);
+        &mut self.a
+    }
+
+    /// Rung 29: `out = P V`, with P already in [`Self::probs`].
+    #[cfg(feature = "softmax-bf16")]
+    pub fn values_of_probs(&mut self, (seq, hd): (usize, usize), out: &mut [f32]) {
+        self.primitives.run(
+            (seq, seq, hd),
+            &self.a[..seq * seq],
+            &self.values_t[..seq * hd],
+            out,
+        );
+    }
+
     /// `out = P V`. P is rounded to bf16 into the buffer Q used, which the
     /// scores are done with.
+    #[cfg(not(feature = "softmax-bf16"))]
     pub fn values(&mut self, probs: &[f32], (seq, hd): (usize, usize), out: &mut [f32]) {
         self.a.resize(seq * seq, 0);
         for (b, &p) in self.a.iter_mut().zip(&probs[..seq * seq]) {
@@ -987,7 +1007,15 @@ mod attention_bf16_tests {
                 }
             }
             t.scores((seq, hd), &mut scores);
+            #[cfg(not(feature = "softmax-bf16"))]
             t.values(probs, (seq, hd), &mut out);
+            #[cfg(feature = "softmax-bf16")]
+            {
+                for (b, &p) in t.probs(seq).iter_mut().zip(probs) {
+                    *b = to_bf16(p);
+                }
+                t.values_of_probs((seq, hd), &mut out);
+            }
         });
         (scores, out)
     }

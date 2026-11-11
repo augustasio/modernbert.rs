@@ -161,7 +161,9 @@ pub fn backend() -> &'static str {
             }
         };
     }
-    if cfg!(feature = "scatter-bf16") {
+    if cfg!(feature = "softmax-bf16") {
+        with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant-attnbf16-scatterbf16-softmaxbf16")
+    } else if cfg!(feature = "scatter-bf16") {
         with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant-attnbf16-scatterbf16")
     } else if cfg!(feature = "attn-bf16") {
         with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant-attnbf16")
@@ -336,6 +338,34 @@ fn exp(x: f64) -> f64 {
         crate::expf::exp_f32(x as f32) as f64
     } else {
         x.exp()
+    }
+}
+
+/// Rung 29: [`softmax_in_place`]'s rung 12 arithmetic, but the last pass
+/// writes each probability rounded to bf16 into `out`, for `P V`, instead of
+/// back into `values` for a later pass to round. `values` is left holding
+/// the unnormalised exponentials.
+#[cfg(feature = "softmax-bf16")]
+pub fn softmax_into_bf16(values: &mut [f32], out: &mut [u16]) {
+    use crate::onednn::to_bf16;
+    assert_eq!(values.len(), out.len(), "softmax_into_bf16: lengths differ");
+    let max = if cfg!(feature = "lane-max") {
+        crate::f32math::lane_max(values, f32::NEG_INFINITY, |v| v)
+    } else {
+        values.iter().copied().fold(f32::NEG_INFINITY, f32::max)
+    };
+    if !max.is_finite() {
+        // Every entry is masked. Leave zeros rather than produce NaN.
+        out.fill(0);
+        return;
+    }
+    for v in values.iter_mut() {
+        *v = crate::expf::exp_f32(*v - max);
+    }
+    let total = crate::f32math::lane_sum(values, |v| v);
+    let inv = 1.0 / total;
+    for (p, &v) in out.iter_mut().zip(values.iter()) {
+        *p = to_bf16(v * inv);
     }
 }
 

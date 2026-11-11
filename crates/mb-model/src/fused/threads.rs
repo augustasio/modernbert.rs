@@ -552,8 +552,16 @@ fn attend_by_head(ws: &mut Workspace, rope: &RopeTable, window: Option<usize>, s
                         scatter_head_bf16(qkv, rows, rope, (head, hd), scale, q, k, v_t)
                     });
                     stage(14, || t.scores((seq, hd), scores));
-                    stage(15, || softmax_rows(scores, window, seq));
-                    stage(16, || t.values(scores, (seq, hd), out));
+                    #[cfg(not(feature = "softmax-bf16"))]
+                    {
+                        stage(15, || softmax_rows(scores, window, seq));
+                        stage(16, || t.values(scores, (seq, hd), out));
+                    }
+                    #[cfg(feature = "softmax-bf16")]
+                    {
+                        stage(15, || softmax_rows_bf16(scores, window, seq, t.probs(seq)));
+                        stage(16, || t.values_of_probs((seq, hd), out));
+                    }
                 });
             }
         }
@@ -638,8 +646,27 @@ fn attend_head(
     });
 }
 
+/// Rung 29: [`softmax_rows`], with the probabilities written rounded to
+/// bf16 into `probs`, `[seq, seq]`, the buffer `P V` reads. `scores` is left
+/// holding scratch.
+#[cfg(feature = "softmax-bf16")]
+fn softmax_rows_bf16(scores: &mut [f32], window: Option<usize>, seq: usize, probs: &mut [u16]) {
+    for t in 0..seq {
+        let (first, end) = match window {
+            None => (0, seq),
+            Some(w) => (t.saturating_sub(w), (t + w + 1).min(seq)),
+        };
+        let row = &mut scores[t * seq..(t + 1) * seq];
+        let p = &mut probs[t * seq..(t + 1) * seq];
+        crate::ops::softmax_into_bf16(&mut row[first..end], &mut p[first..end]);
+        p[..first].fill(0);
+        p[end..].fill(0);
+    }
+}
+
 /// Each row of one head's `[seq, seq]` scores into probabilities over the
 /// keys its query sees; the keys outside the window get 0.
+#[cfg(any(test, not(feature = "softmax-bf16")))]
 fn softmax_rows(scores: &mut [f32], window: Option<usize>, seq: usize) {
     for t in 0..seq {
         let (first, end) = match window {
@@ -923,6 +950,32 @@ mod scatter_bf16_tests {
                         "V {head} {t} {i}"
                     );
                 }
+            }
+        }
+    }
+}
+
+/// Rung 29: the bf16 softmax must write exactly the f32 softmax's
+/// probabilities, rounded to bf16, zeros outside the window included. Runs
+/// anywhere: it calls no oneDNN.
+#[cfg(all(test, feature = "softmax-bf16"))]
+mod softmax_bf16_tests {
+    use super::*;
+    use crate::onednn::to_bf16;
+
+    #[test]
+    fn the_bf16_softmax_rounds_the_f32_softmax() {
+        for (seq, window) in [(37, None), (160, None), (160, Some(64)), (300, Some(64))] {
+            let scores: Vec<f32> = (0..seq * seq)
+                .map(|i| (((i * 7919) % 2003) as f32 - 1001.0) / 97.0)
+                .collect();
+            let mut want = scores.clone();
+            softmax_rows(&mut want, window, seq);
+            let mut scratch = scores.clone();
+            let mut probs = vec![0xFFFFu16; seq * seq];
+            softmax_rows_bf16(&mut scratch, window, seq, &mut probs);
+            for (i, (&p, &w)) in probs.iter().zip(&want).enumerate() {
+                assert_eq!(p, to_bf16(w), "seq {seq} window {window:?} at {i}");
             }
         }
     }

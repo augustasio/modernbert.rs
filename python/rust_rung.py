@@ -60,6 +60,7 @@ EXPECTED_BACKEND = {
     26: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant",
     27: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant-attnbf16",
     28: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant-attnbf16-scatterbf16",
+    29: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant-attnbf16-scatterbf16-softmaxbf16",
 }
 DESCRIPTION = {
     4: "candle-transformers encoder with a mask-only head, candle CPU (gemm) matmul",
@@ -85,6 +86,7 @@ DESCRIPTION = {
     26: "rung 24 with the s8 input rounded inside the norm and GELU loops that compute it",
     27: "rung 26 with the attention products Q K^T and P V as bf16 matmuls through oneDNN, f32 sums",
     28: "rung 27 with the attention scatter writing Q, K and V in bf16 straight into the products' buffers",
+    29: "rung 28 with the attention softmax writing P in bf16 straight into the buffer P V reads",
 }
 
 

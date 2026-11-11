@@ -710,6 +710,16 @@ the time. The motive: at two threads rung 27's scatter takes about 8 thread-ms p
 request, and the conversion passes sit inside the two products' 12.5. The expected gain
 is small: about 1 to 3 ms per request.
 
+**Rung 29's bound, set on 2026-11-11 before any rung 29 logit was seen.** Rung 29's
+logits equal rung 28's (so rung 27's), bit for bit, over all 7,600 examples. The design:
+built on rung 28. The attention softmax's last pass, which multiplies each exponential
+by the inverse total, writes the probability rounded to bf16 straight into the buffer
+`P V` reads, zeros outside the window included. Rung 28 wrote the f32 probabilities back
+into the scores, and `P V` made a second pass over the `[seq, seq]` block to round them.
+The rounding is the same on the same f32 value. The motive: the second pass reads and
+writes every one of about 25,000 probabilities per head; at two threads rung 28's `P V`
+takes 4.0 thread-ms with it. The expected gain is small: about 0.5 to 1.5 ms per request.
+
 **Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
 uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
 libraries:

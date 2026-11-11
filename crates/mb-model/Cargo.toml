@@ -106,6 +106,10 @@ attn-bf16 = ["fuse-quant"]
 # f32 copies that a second pass rounds and transposes. Rung 27's logits, bit
 # for bit. Built on rung 27.
 scatter-bf16 = ["attn-bf16"]
+# Rung 29: the attention softmax writes P rounded to bf16 straight into the
+# buffer `P V` reads, instead of f32 probabilities that a second pass rounds.
+# Rung 28's logits, bit for bit. Built on rung 28; needs rung 12's f32 math.
+softmax-bf16 = ["scatter-bf16", "f32-math"]
 # Analysis only, never a rung: wall time per stage of the threaded layer,
 # printed at the end of `eval_agnews` (`stage_times.rs`).
 stage-times = []
