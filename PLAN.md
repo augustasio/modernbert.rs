@@ -661,6 +661,16 @@ s8 or u8 input, so any difference is a bug. The design: the s8 matmuls take thei
 as u8 (s8 + 128, the type x86's `vpdpbusd` multiplies by s8), and 128 * sum(w) per output
 column, computed once at load, comes off each sum before it is scaled back.
 
+**Rung 25's bound, set on 2026-11-11 before it was run.** Its logits must equal rung 24's
+bit for bit on all 7,600 examples, both run on the same pod: a maximum is exact in any
+order, so any difference is a bug. The design: the three largest-value searches on the
+hot path (the softmax's row maximum, and the largest magnitude of each int8 input row,
+plain and smoothed) keep 16 running maxima, one per lane, and take the largest of the 16
+at the end, as `lane_sum` does for sums. A single running maximum is a chain where each
+step waits for the one before, so it cannot vectorise. The motive: at two threads, the
+softmax took 9.4 thread-ms per example, about 1 ns per value
+(`results/bench/cloud_turin_q8split24/`).
+
 **Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
 uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
 libraries:

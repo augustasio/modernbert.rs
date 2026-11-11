@@ -307,12 +307,42 @@ unsafe fn run_matmul(
 /// gets 1, so nothing divides by zero.
 #[cfg(feature = "int8")]
 pub fn int8_scale(values: &[f32]) -> f32 {
-    let largest = values.iter().fold(0.0f32, |most, x| most.max(x.abs()));
+    let largest = if cfg!(feature = "lane-max") {
+        crate::f32math::lane_max(values, 0.0, f32::abs)
+    } else {
+        values.iter().fold(0.0f32, |most, x| most.max(x.abs()))
+    };
     if largest > 0.0 {
         127.0 / largest
     } else {
         1.0
     }
+}
+
+/// Rung 23: the largest `|x * f|` over a row and its smoothing factors. Rung
+/// 25 keeps 16 running maxima, as [`crate::f32math::lane_max`] does, so the
+/// loop vectorises; the answer is the same, bit for bit.
+#[cfg(feature = "int8")]
+fn largest_smoothed(row: &[f32], smooth: &[f32]) -> f32 {
+    if !cfg!(feature = "lane-max") {
+        return row
+            .iter()
+            .zip(smooth)
+            .fold(0.0f32, |most, (&x, &f)| most.max((x * f).abs()));
+    }
+    const LANES: usize = 16;
+    let mut acc = [0.0f32; LANES];
+    let pairs = row.chunks_exact(LANES).zip(smooth.chunks_exact(LANES));
+    for (x, f) in pairs {
+        for i in 0..LANES {
+            acc[i] = acc[i].max((x[i] * f[i]).abs());
+        }
+    }
+    let tail = row.len() / LANES * LANES;
+    for (i, (&x, &f)) in row[tail..].iter().zip(&smooth[tail..]).enumerate() {
+        acc[i] = acc[i].max((x * f).abs());
+    }
+    acc.iter().copied().fold(0.0f32, f32::max)
 }
 
 /// One block of rows to quantize: its first row, its s8 rows, its scales.
@@ -432,10 +462,7 @@ pub fn linear_int8_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
                     } else {
                         // Rung 23: the row divided by s first, channel by channel.
                         let smooth = &weight.int8_smooth;
-                        let largest = row
-                            .iter()
-                            .zip(smooth)
-                            .fold(0.0f32, |most, (&x, &f)| most.max((x * f).abs()));
+                        let largest = largest_smoothed(row, smooth);
                         *scale = if largest > 0.0 { 127.0 / largest } else { 1.0 };
                         for ((q, &x), &f) in q_row.iter_mut().zip(row).zip(smooth) {
                             *q = to_matmul_input(x * f * *scale);

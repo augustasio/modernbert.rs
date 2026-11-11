@@ -46,6 +46,30 @@ pub fn lane_sum(values: &[f32], f: impl Fn(f32) -> f32) -> f32 {
     acc[0]
 }
 
+/// Rung 25: the largest `f(v)` over `values`, or `start` if that is larger,
+/// with 16 running maxima, one per lane.
+///
+/// A single running maximum, `values.iter().fold(start, f32::max)`, is a
+/// chain: each step waits for the one before, so the loop cannot vectorise.
+/// Sixteen maxima are sixteen independent chains, one vector wide. Unlike a
+/// sum, a maximum is exact in any order, so the answer is the fold's, bit for
+/// bit (no value here is NaN).
+#[inline(always)]
+pub fn lane_max(values: &[f32], start: f32, f: impl Fn(f32) -> f32) -> f32 {
+    let mut acc = [start; LANES];
+    let chunks = values.chunks_exact(LANES);
+    let rest = chunks.remainder();
+    for chunk in chunks {
+        for i in 0..LANES {
+            acc[i] = acc[i].max(f(chunk[i]));
+        }
+    }
+    for (i, &v) in rest.iter().enumerate() {
+        acc[i] = acc[i].max(f(v));
+    }
+    acc.iter().copied().fold(start, f32::max)
+}
+
 /// The error function in f32: Abramowitz and Stegun 7.1.26, the same formula
 /// and coefficients as the f64 `ops::erf`, and as PyTorch's NEON
 /// `Vectorized<float>::erf`.
@@ -78,6 +102,20 @@ mod tests {
             assert_eq!(lane_sum(&values, |v| v), want, "{n} values");
         }
         assert_eq!(lane_sum(&[1.0, 2.0, 3.0], |v| v * v), 14.0);
+    }
+
+    #[test]
+    fn the_lane_max_equals_the_fold() {
+        for n in [0usize, 1, 15, 16, 17, 160, 1031] {
+            // Mixed signs, the largest magnitude negative and late.
+            let values: Vec<f32> = (0..n)
+                .map(|i| ((i * 7919) % 101) as f32 * if i % 3 == 0 { -1.5 } else { 1.0 })
+                .collect();
+            let plain = values.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+            assert_eq!(lane_max(&values, f32::NEG_INFINITY, |v| v), plain, "{n}");
+            let abs = values.iter().fold(0.0f32, |m, v| m.max(v.abs()));
+            assert_eq!(lane_max(&values, 0.0, f32::abs), abs, "{n} abs");
+        }
     }
 
     /// The case that sinks a plain f32 sum: one large value, then many small

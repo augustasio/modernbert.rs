@@ -343,7 +343,11 @@ fn exp(x: f64) -> f64 {
 /// whole sequence, so f32 accumulation drifts enough to matter at the 1e-4
 /// tolerance.
 pub fn softmax_in_place(values: &mut [f32]) {
-    let max = values.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+    let max = if cfg!(feature = "lane-max") {
+        crate::f32math::lane_max(values, f32::NEG_INFINITY, |v| v)
+    } else {
+        values.iter().copied().fold(f32::NEG_INFINITY, f32::max)
+    };
     if !max.is_finite() {
         // Every entry is masked. Leave zeros rather than produce NaN.
         values.fill(0.0);
