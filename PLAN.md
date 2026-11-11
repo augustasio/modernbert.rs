@@ -981,3 +981,10 @@ Changes to the plan made after seeing data, with the reason.
   three interleaved rounds (`results/bench/cloud_turin_serve25/`). The compiler had
   already vectorised the fold. Kept as a negative result; later rungs build on rung 24.
   The 2-thread profile behind it: `results/bench/cloud_turin_q8split24/`.
+- **Rung 26 is exact and about as fast as rung 24** (2026-11-11, Zen 5). Rounding the s8
+  input inside the norm and GELU loops gives rung 24's logits bit for bit, as bound. The
+  separate rounding pass drops from 6.0 to 1.1 ms at two threads, but the norms and the
+  GELU gate grow by about 5 ms: the arithmetic was the cost, not the pass or the
+  dispatch. Behind the server at 8x2 the worker p50 is 1 to 6 ms lower in all three
+  interleaved rounds, and the best rate within the budget is a tie
+  (`results/bench/cloud_turin_serve26/`). Later rungs build on rung 26.
