@@ -89,6 +89,8 @@ int8-u8 = ["int8-smooth"]
 # Rung 25: the largest-value searches in the softmax and the int8 row scales
 # keep 16 running maxima, one per lane, so they vectorise. A maximum is exact
 # in any order, so the logits are rung 24's, bit for bit. Built on rung 24.
+# Measured slower (results/bench/cloud_turin_serve25): a negative result,
+# kept; later rungs build on rung 24, not on this.
 lane-max = ["int8-u8"]
 # Analysis only, never a rung: wall time per stage of the threaded layer,
 # printed at the end of `eval_agnews` (`stage_times.rs`).

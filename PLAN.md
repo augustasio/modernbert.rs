@@ -961,3 +961,10 @@ Changes to the plan made after seeing data, with the reason.
   (`cloud_turin_final8x2/`). Trap: `cpu5c` sometimes gives an EPYC 4564P (Zen 4), idle but
   1.5x slower; the orchestrator now rejects any host that is not a 9575F at load under 40.
   Next lever: the 12 ms of quantize and dequantize, then attention.
+- **Rung 25 is exact and slower** (2026-11-11, Zen 5). Sixteen running maxima in the
+  softmax and the int8 row scales give rung 24's logits bit for bit, as bound, but the
+  quantize loop slows from 6.0 to 10.9 ms and the softmax from 9.4 to 11.4 thread-ms at two
+  threads, and the server holds the budget to 40 to 45/s against rung 24's 50 to 55/s in
+  three interleaved rounds (`results/bench/cloud_turin_serve25/`). The compiler had
+  already vectorised the fold. Kept as a negative result; later rungs build on rung 24.
+  The 2-thread profile behind it: `results/bench/cloud_turin_q8split24/`.
