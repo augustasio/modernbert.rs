@@ -1003,3 +1003,11 @@ Changes to the plan made after seeing data, with the reason.
   dispatch. Behind the server at 8x2 the worker p50 is 1 to 6 ms lower in all three
   interleaved rounds, and the best rate within the budget is a tie
   (`results/bench/cloud_turin_serve26/`). Later rungs build on rung 26.
+- **Rung 27 passes its bound, and attention is about 1.6x faster** (2026-11-11, Zen 5).
+  bf16 `Q K^T` and `P V` through oneDNN: agreement 7565/7600 (99.54%), calibrated
+  accuracy 84.92% [84.12, 85.75] against 84.78%, worst logit difference 0.813; in-run
+  gate 3.253 and 2 x 35/7600. At two threads the two products drop from 29.5 to 12.5
+  thread-ms and attention from 26 to 17 ms wall. Behind the server at 8x2, three
+  interleaved rounds: worker p50 5 to 11 ms lower, and the budget held 5/s further in two
+  rounds, a tie in the third; 60/s, about 193,000 examples per dollar
+  (`results/bench/cloud_turin_serve27/`). Later rungs build on rung 27.

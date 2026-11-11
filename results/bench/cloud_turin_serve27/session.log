@@ -1,0 +1,110 @@
+wrote weights/ModernBERT-Large-Instruct/smooth_scales.safetensors (221406b4b84a), widest max/min scale ratio 71.5
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+CPU(s):                                  128
+Model name:                              AMD EPYC 9575F 64-Core Processor
+Cpus_allowed_list:	4,11-12,14-15,18,29-30,40,42-43,46,49,59,62-63,68,75-76,78-79,82,93-94,104,106-107,110,113,123,126-127
+== tier3 27 09:24:18Z
+ 7600 / 7600  0.0245 s per example
+wrote results/rung27_logits.npy and its .json, batches of 16
+
+rung 27 against rung 0
+  agreement      7565/7600  wilson [0.9936022249024495, 0.9966867021851823]
+  |logit diff|   median 1.16e-01  p99 4.50e-01  max 8.13e-01
+  raw acc        0.7163  [0.7064473684210526, 0.7263157894736842]
+  calibrated acc 0.8492  [0.8411842105263158, 0.8575]
+  p_cf vs rung 0 max abs 3.23e-02, max rel 1.51e-01
+== bound: agreement 7565/7600 (need 7524), calibrated 0.8492 (need 0.8378), pass=True; max diff 0.813
+== verdict 1 3.253 0.009211
+== stage times rung26 t2 round 1 load 22.63
+   64 / 64  0.120 s per example, about 0 min left
+stage attn_norm        1.57 ms/example    27 calls
+stage wqkv            21.92 ms/example    28 calls
+stage attention       26.28 ms/example    27 calls
+stage gather_heads     0.98 ms/example    27 calls
+stage attn_wo          8.46 ms/example    28 calls
+stage add_mlp_norm     1.79 ms/example    28 calls
+stage wi              35.37 ms/example    28 calls
+stage gelu_gate        7.85 ms/example    28 calls
+stage mlp_wo          15.16 ms/example    28 calls
+stage add              0.37 ms/example    28 calls
+stage q8_quantize      1.31 ms/example    29 calls
+stage q8_onednn       71.81 ms/example   112 calls
+stage q8_dequantize    6.20 ms/example   112 calls
+stage att_scatter      8.46 ms/example   432 calls
+stage att_scores      15.32 ms/example   432 calls
+stage att_softmax      9.55 ms/example   432 calls
+stage att_pv          14.17 ms/example   432 calls
+stage layers_total   119.75 ms/example (without the q8_ and att_ lines)
+== stage times rung27 t2 round 1 load 21.38
+   64 / 64  0.110 s per example, about 0 min left
+stage attn_norm        1.56 ms/example    27 calls
+stage wqkv            21.82 ms/example    28 calls
+stage attention       16.49 ms/example    27 calls
+stage gather_heads     1.12 ms/example    27 calls
+stage attn_wo          8.55 ms/example    28 calls
+stage add_mlp_norm     1.80 ms/example    28 calls
+stage wi              35.39 ms/example    28 calls
+stage gelu_gate        7.50 ms/example    28 calls
+stage mlp_wo          15.42 ms/example    28 calls
+stage add              0.36 ms/example    28 calls
+stage q8_quantize      1.30 ms/example    29 calls
+stage q8_onednn       72.09 ms/example   112 calls
+stage q8_dequantize    6.18 ms/example   112 calls
+stage att_scatter      8.11 ms/example   432 calls
+stage att_scores       6.32 ms/example   432 calls
+stage att_softmax      9.47 ms/example   432 calls
+stage att_pv           6.11 ms/example   432 calls
+stage layers_total   110.01 ms/example (without the q8_ and att_ lines)
+== stage times rung26 t2 round 2 load 19.33
+   64 / 64  0.122 s per example, about 0 min left
+stage attn_norm        1.57 ms/example    27 calls
+stage wqkv            22.44 ms/example    28 calls
+stage attention       26.05 ms/example    27 calls
+stage gather_heads     0.92 ms/example    27 calls
+stage attn_wo          8.61 ms/example    28 calls
+stage add_mlp_norm     1.83 ms/example    28 calls
+stage wi              36.52 ms/example    28 calls
+stage gelu_gate        7.70 ms/example    28 calls
+stage mlp_wo          15.40 ms/example    28 calls
+stage add              0.37 ms/example    28 calls
+stage q8_quantize      1.35 ms/example    29 calls
+stage q8_onednn       73.62 ms/example   112 calls
+stage q8_dequantize    6.32 ms/example   112 calls
+stage att_scatter      8.03 ms/example   432 calls
+stage att_scores      15.42 ms/example   432 calls
+stage att_softmax      9.67 ms/example   432 calls
+stage att_pv          14.14 ms/example   432 calls
+stage layers_total   121.40 ms/example (without the q8_ and att_ lines)
+== stage times rung27 t2 round 2 load 18.78
+   64 / 64  0.112 s per example, about 0 min left
+stage attn_norm        1.54 ms/example    27 calls
+stage wqkv            22.03 ms/example    28 calls
+stage attention       16.87 ms/example    27 calls
+stage gather_heads     1.16 ms/example    27 calls
+stage attn_wo          8.62 ms/example    28 calls
+stage add_mlp_norm     1.80 ms/example    28 calls
+stage wi              35.82 ms/example    28 calls
+stage gelu_gate        7.60 ms/example    28 calls
+stage mlp_wo          15.50 ms/example    28 calls
+stage add              0.37 ms/example    28 calls
+stage q8_quantize      1.29 ms/example    29 calls
+stage q8_onednn       72.67 ms/example   112 calls
+stage q8_dequantize    6.37 ms/example   112 calls
+stage att_scatter      8.42 ms/example   432 calls
+stage att_scores       6.42 ms/example   432 calls
+stage att_softmax      9.50 ms/example   432 calls
+stage att_pv           6.20 ms/example   432 calls
+stage layers_total   111.31 ms/example (without the q8_ and att_ lines)
+== serve rung27 8x2 round 1 09:28:06Z load 18.32
+{"best_rate_within_budget":60.0,"budget_ms":200.0,"changed_allowed":161.08196800000002,"changed_predictions":68,"changed_share":0.003888380603842635,"checked":17488,"summary":true,"valid":true}
+== serve rung26 8x2 round 1 09:33:32Z load 17.89
+{"best_rate_within_budget":55.0,"budget_ms":200.0,"changed_allowed":131.431759,"changed_predictions":61,"changed_share":0.0042750017520498985,"checked":14269,"summary":true,"valid":true}
+== serve rung27 8x2 round 2 09:38:13Z load 61.57
+{"best_rate_within_budget":50.0,"budget_ms":200.0,"changed_allowed":103.34742,"changed_predictions":54,"changed_share":0.004812834224598931,"checked":11220,"summary":true,"valid":true}
+== serve rung26 8x2 round 2 09:42:09Z load 39.55
+{"best_rate_within_budget":45.0,"budget_ms":200.0,"changed_allowed":78.063225,"changed_predictions":37,"changed_share":0.004365781710914454,"checked":8475,"summary":true,"valid":true}
+== serve rung27 8x2 round 3 09:45:20Z load 24.94
+{"best_rate_within_budget":60.0,"budget_ms":200.0,"changed_allowed":158.723952,"changed_predictions":100,"changed_share":0.005803156917363045,"checked":17232,"summary":true,"valid":true}
+== serve rung26 8x2 round 3 09:50:47Z load 23.62
+{"best_rate_within_budget":60.0,"budget_ms":200.0,"changed_allowed":158.723952,"changed_predictions":91,"changed_share":0.005280872794800371,"checked":17232,"summary":true,"valid":true}
+== R27_DONE 09:56:13Z
