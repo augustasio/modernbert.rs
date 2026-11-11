@@ -4,6 +4,7 @@ This mirrors crates/mb-model/src/bin/worker.rs. The harness starts it, it loads 
 prints one `ready` line, then answers `run` requests on stdin until `quit`.
 
     python/.venv/bin/python python/worker.py --rung {0,1,2,3}
+    python/.venv/bin/python python/worker.py --rung {1,3} --int8   # baseline_int8.py
 
 Rules from the protocol, and where they are kept here:
   * Thread counts are explicit: MB_THREADS goes to torch.set_num_threads, and for rung 3
@@ -152,6 +153,40 @@ def build_rung1(weights: str):
     return torch_forward(ladder.load_mask_head_model(VERBALIZER_IDS, weights))
 
 
+def build_torch_int8(weights: str):
+    """The PyTorch int8 baseline: rung 1 with dynamic int8 linears (baseline_int8.py)."""
+    import baseline_int8  # noqa: PLC0415
+
+    return torch_forward(baseline_int8.torch_int8_model(VERBALIZER_IDS, weights))
+
+
+def build_onnx_int8(threads: int):
+    """The ONNX Runtime int8 baseline (baseline_int8.py), configured as rung 3."""
+    import numpy as np  # noqa: PLC0415
+
+    import baseline_int8  # noqa: PLC0415
+
+    if not os.path.exists(baseline_int8.ONNX_INT8_PATH):
+        fail(
+            f"no int8 model at {baseline_int8.ONNX_INT8_PATH}; run `baseline_int8.py quantize-onnx`"
+        )
+    score = baseline_int8.onnx_int8_score(threads=threads)
+
+    def forward(ids, mask):
+        input_ids = np.array([ids], dtype=np.int64)
+        item = {
+            "input_ids": input_ids,
+            "attention_mask": np.ones_like(input_ids),
+            "mask_position": np.array([mask], dtype=np.int64),
+        }
+        started = time.perf_counter()
+        logits = score(item)
+        seconds = time.perf_counter() - started
+        return seconds, logits.reshape(-1).tolist()
+
+    return forward
+
+
 def build_rung2(weights: str):
     """Rung 1 under torch.compile, configured exactly as rung2_compile.py configures it.
 
@@ -261,7 +296,10 @@ def parse_batch(request: dict) -> tuple[list[int], list[int], list[list[int]]]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rung", type=int, choices=[0, 1, 2, 3], required=True)
+    parser.add_argument("--int8", action="store_true", help="the int8 baseline of rung 1 or 3")
     args = parser.parse_args()
+    if args.int8 and args.rung not in (1, 3):
+        fail("--int8 is the baseline of rung 1 (PyTorch) or rung 3 (ONNX Runtime)")
 
     weights = os.environ.get("MB_WEIGHTS") or fail("MB_WEIGHTS is not set")
     try:
@@ -273,14 +311,15 @@ def main() -> None:
         # One inductor compile worker, as in rung2_compile.py. Set before torch is imported.
         os.environ.setdefault("TORCHINDUCTOR_COMPILE_THREADS", "1")
 
-    ready = {"ready": True, "variant": f"rung{args.rung}", "threads": threads}
+    variant = f"rung{args.rung}-int8" if args.int8 else f"rung{args.rung}"
+    ready = {"ready": True, "variant": variant, "threads": threads}
     if os.environ.get("MB_STOP_BEFORE_LOAD"):
         stop_before_load(args.rung, threads)
     started = time.perf_counter()
     try:
         if args.rung == 3:
-            forward = build_rung3(threads)
-            ready["backend"] = "onnxruntime-cpu"
+            forward = build_onnx_int8(threads) if args.int8 else build_rung3(threads)
+            ready["backend"] = "onnxruntime-cpu-int8" if args.int8 else "onnxruntime-cpu"
         else:
             import torch  # noqa: PLC0415
 
@@ -289,7 +328,7 @@ def main() -> None:
             if args.rung == 0:
                 forward = build_rung0(weights)
             elif args.rung == 1:
-                forward = build_rung1(weights)
+                forward = build_torch_int8(weights) if args.int8 else build_rung1(weights)
             else:
                 forward, compile_seconds = build_rung2(weights)
                 ready["compile_seconds"] = compile_seconds
