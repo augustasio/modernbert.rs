@@ -83,34 +83,36 @@ impl Mlp {
     /// `x` is `[seq, hidden_size]` and so is the result.
     pub fn forward(&self, x: &Matrix) -> Matrix {
         // One projection gives both halves: `[seq, 2 * intermediate_size]`.
-        let mut projected = linear(x, &self.wi);
+        let mut projected = crate::stage(6, || linear(x, &self.wi));
 
         let intermediate = self.intermediate_size;
         let mut gated = Matrix::zeros(projected.rows, intermediate);
 
-        for row in 0..projected.rows {
-            // Trap 2: `chunk(2, dim=-1)` is a split down the middle, so the
-            // first `intermediate` columns are one branch and the last
-            // `intermediate` columns are the other. Nothing is interleaved.
-            let (input_half, gate_half) = projected.row_mut(row).split_at_mut(intermediate);
+        crate::stage(7, || {
+            for row in 0..projected.rows {
+                // Trap 2: `chunk(2, dim=-1)` is a split down the middle, so the
+                // first `intermediate` columns are one branch and the last
+                // `intermediate` columns are the other. Nothing is interleaved.
+                let (input_half, gate_half) = projected.row_mut(row).split_at_mut(intermediate);
 
-            // Trap 1: the activation goes on the FIRST half, the one the
-            // reference calls `input`. The second half, confusingly called
-            // `gate`, is multiplied in raw.
-            //
-            // Trap 3: this is the erf GELU. `gelu_erf_in_place` is the exact
-            // form; the tanh approximation differs by up to 3e-4, which is
-            // three times the whole fp32 tolerance, and this line runs in all
-            // 28 layers.
-            gelu_erf_in_place(input_half);
+                // Trap 1: the activation goes on the FIRST half, the one the
+                // reference calls `input`. The second half, confusingly called
+                // `gate`, is multiplied in raw.
+                //
+                // Trap 3: this is the erf GELU. `gelu_erf_in_place` is the exact
+                // form; the tanh approximation differs by up to 3e-4, which is
+                // three times the whole fp32 tolerance, and this line runs in all
+                // 28 layers.
+                gelu_erf_in_place(input_half);
 
-            let out = gated.row_mut(row);
-            for i in 0..intermediate {
-                out[i] = input_half[i] * gate_half[i];
+                let out = gated.row_mut(row);
+                for i in 0..intermediate {
+                    out[i] = input_half[i] * gate_half[i];
+                }
             }
-        }
+        });
 
-        linear(&gated, &self.wo)
+        crate::stage(8, || linear(&gated, &self.wo))
     }
 }
 

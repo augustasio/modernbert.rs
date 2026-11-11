@@ -37,4 +37,17 @@ pub mod rope;
 pub mod safetensors;
 #[cfg(feature = "stage-times")]
 pub mod stage_times;
+
+/// Run `work` as stage `index` of `stage_times::STAGES`: timed in a
+/// `stage-times` build (analysis only), plainly otherwise.
+#[inline(always)]
+pub(crate) fn stage<T>(index: usize, work: impl FnOnce() -> T) -> T {
+    #[cfg(feature = "stage-times")]
+    return crate::stage_times::timed(index, work);
+    #[cfg(not(feature = "stage-times"))]
+    {
+        let _ = index;
+        work()
+    }
+}
 pub mod tensor;

@@ -500,41 +500,50 @@ impl ModernBert {
 
         // Layer 0 has no attention norm (trap: it is `nn.Identity`, not a
         // norm with unit weight), so its projection reads `h` itself.
-        let attn_in = match &layer.attn_norm {
+        // `stage` times each step in a `stage-times` build (analysis only).
+        let attn_in = crate::stage(0, || match &layer.attn_norm {
             Some(w) => {
                 layer_norm_into(&ws.h, w, c.norm_eps, &mut ws.normed);
                 &ws.normed
             }
             None => &ws.h,
-        };
-        linear_into(attn_in, &attn.wqkv, &mut ws.qkv);
-        scatter_heads(ws, rope);
+        });
+        crate::stage(1, || linear_into(attn_in, &attn.wqkv, &mut ws.qkv));
+        crate::stage(2, || scatter_heads(ws, rope));
 
         let window = if layer.is_global {
             None
         } else {
             Some(c.local_window_each_side())
         };
-        attend(ws, window, 1.0 / (attn.head_dim as f32).sqrt());
+        crate::stage(2, || {
+            attend(ws, window, 1.0 / (attn.head_dim as f32).sqrt())
+        });
 
         // The projection gets its own buffer. See the module comment for why
         // it is not added onto h inside the matmul.
-        linear_into(&ws.context, &attn.wo, &mut ws.projection);
+        crate::stage(4, || linear_into(&ws.context, &attn.wo, &mut ws.projection));
 
         // h += projection, then mlp_norm(h), row by row in one pass. Pre-norm:
         // the add is onto the un-normed h.
-        for row in 0..ws.h.rows {
-            let h = ws.h.row_mut(row);
-            for (x, p) in h.iter_mut().zip(ws.projection.row(row)) {
-                *x += p;
+        crate::stage(5, || {
+            for row in 0..ws.h.rows {
+                let h = ws.h.row_mut(row);
+                for (x, p) in h.iter_mut().zip(ws.projection.row(row)) {
+                    *x += p;
+                }
+                layer_norm_row(h, &layer.mlp_norm, c.norm_eps, ws.normed.row_mut(row));
             }
-            layer_norm_row(h, &layer.mlp_norm, c.norm_eps, ws.normed.row_mut(row));
-        }
+        });
 
-        linear_into(&ws.normed, &layer.mlp.wi, &mut ws.projected);
-        gelu_gate(&ws.projected, &mut ws.gated);
-        linear_into(&ws.gated, &layer.mlp.wo, &mut ws.projection);
-        add_in_place(&mut ws.h, &ws.projection);
+        crate::stage(6, || {
+            linear_into(&ws.normed, &layer.mlp.wi, &mut ws.projected)
+        });
+        crate::stage(7, || gelu_gate(&ws.projected, &mut ws.gated));
+        crate::stage(8, || {
+            linear_into(&ws.gated, &layer.mlp.wo, &mut ws.projection)
+        });
+        crate::stage(9, || add_in_place(&mut ws.h, &ws.projection));
     }
 }
 

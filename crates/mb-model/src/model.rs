@@ -237,17 +237,18 @@ impl ModernBert {
         };
 
         // Residual adds go onto the un-normed h.
-        let attn_in = match &layer.attn_norm {
+        // `stage` times each step in a `stage-times` build (analysis only).
+        let attn_in = crate::stage(0, || match &layer.attn_norm {
             Some(w) => layer_norm(h, w, c.norm_eps),
             None => h.clone(),
-        };
+        });
         let attn_out = layer.attn.forward(&attn_in, rope, masks, layer.is_global);
-        add_in_place(h, &attn_out);
-
-        let mlp_out = layer
-            .mlp
-            .forward(&layer_norm(h, &layer.mlp_norm, c.norm_eps));
-        add_in_place(h, &mlp_out);
+        let mlp_in = crate::stage(5, || {
+            add_in_place(h, &attn_out);
+            layer_norm(h, &layer.mlp_norm, c.norm_eps)
+        });
+        let mlp_out = layer.mlp.forward(&mlp_in);
+        crate::stage(9, || add_in_place(h, &mlp_out));
     }
 
     /// The logits for `token_ids` at `position`, which for AG News is the

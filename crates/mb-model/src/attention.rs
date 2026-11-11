@@ -337,7 +337,7 @@ impl Attention {
         );
 
         // One projection gives all three: `[seq, 3 * hidden_size]`.
-        let qkv = linear(x, &self.wqkv);
+        let qkv = crate::stage(1, || linear(x, &self.wqkv));
         let (mut query, mut key, value) = self.split_qkv(&qkv);
 
         // Trap 3: RoPE rotates Q and K, and never V. Position is a property
@@ -351,8 +351,10 @@ impl Attention {
         // types. The reference sizes a local layer's cached table to
         // `local_attention`, which bounds the cache and nothing else;
         // positions are never wrapped into `0..127`.
-        apply_rope(&mut query, rope, self.num_heads, self.head_dim);
-        apply_rope(&mut key, rope, self.num_heads, self.head_dim);
+        crate::stage(2, || {
+            apply_rope(&mut query, rope, self.num_heads, self.head_dim);
+            apply_rope(&mut key, rope, self.num_heads, self.head_dim);
+        });
 
         let seq_len = x.rows;
         let scale = self.scale();
@@ -361,37 +363,39 @@ impl Attention {
         // queries. The full `[heads, seq, seq]` tensor is never materialised.
         let mut probabilities = vec![0.0f32; seq_len];
 
-        for head in 0..self.num_heads {
-            // The stride written out: head `h` owns columns
-            // `h * head_dim .. (h + 1) * head_dim` of every row.
-            let offset = head * self.head_dim;
+        crate::stage(2, || {
+            for head in 0..self.num_heads {
+                // The stride written out: head `h` owns columns
+                // `h * head_dim .. (h + 1) * head_dim` of every row.
+                let offset = head * self.head_dim;
 
-            for q in 0..seq_len {
-                attention_row(
-                    query.row(q),
-                    &key,
-                    offset,
-                    self.head_dim,
-                    masks.additive_row(q, is_global),
-                    scale,
-                    &mut probabilities,
-                );
+                for q in 0..seq_len {
+                    attention_row(
+                        query.row(q),
+                        &key,
+                        offset,
+                        self.head_dim,
+                        masks.additive_row(q, is_global),
+                        scale,
+                        &mut probabilities,
+                    );
 
-                // `attn_weights @ value`, for this head and this query.
-                let out = &mut context.row_mut(q)[offset..offset + self.head_dim];
-                for (k, &p) in probabilities.iter().enumerate() {
-                    let v = &value.row(k)[offset..offset + self.head_dim];
-                    for d in 0..self.head_dim {
-                        out[d] += p * v[d];
+                    // `attn_weights @ value`, for this head and this query.
+                    let out = &mut context.row_mut(q)[offset..offset + self.head_dim];
+                    for (k, &p) in probabilities.iter().enumerate() {
+                        let v = &value.row(k)[offset..offset + self.head_dim];
+                        for d in 0..self.head_dim {
+                            out[d] += p * v[d];
+                        }
                     }
                 }
             }
-        }
+        });
 
         // Merging the heads is a no-op here: `context` already holds the
         // heads side by side in the row, which is what
         // `transpose(1, 2).contiguous().view(bs, -1, dim)` produces.
-        linear(&context, &self.wo)
+        crate::stage(4, || linear(&context, &self.wo))
     }
 }
 
