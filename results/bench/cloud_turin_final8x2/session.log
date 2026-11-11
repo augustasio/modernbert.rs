@@ -1,0 +1,30 @@
+wrote weights/ModernBERT-Large-Instruct/smooth_scales.safetensors (221406b4b84a), widest max/min scale ratio 71.5
+Cpus_allowed_list:	4,7,9,15,18,26,28,30-31,34,42,47,56,59,61,63,68,71,73,79,82,90,92,94-95,98,106,111,120,123,125,127
+CPU(s):                                  128
+Model name:                              AMD EPYC 9575F 64-Core Processor
+Thread(s) per core:                      2
+NUMA node0 CPU(s):                       0-127
+== siblings: 4:[4,68] 7:[7,71] 9:[9,73] 15:[15,79] 18:[18,82] 26:[26,90] 
+== cpu.max max 100000
+== check b1 t2 places=cores: 0.103 s per example, about 0 min left
+== check b1 t4 places=cores: 0.076 s per example, about 0 min left
+== serve rung24 8x2 round 1 04:12:13Z load 26.45
+== worker 5507 
+== worker 5511 OMP_PLACES={4},{7}
+== worker 5513 OMP_PLACES={9},{15}
+{"best_rate_within_budget":60.0,"budget_ms":200.0,"changed_allowed":185.62928300000002,"changed_predictions":93,"changed_share":0.004614697563638168,"checked":20153,"summary":true,"valid":true}
+== serve rung19 8x2 round 1 04:19:10Z load 24.83
+{"best_rate_within_budget":20.0,"budget_ms":200.0,"changed_allowed":3.9976,"changed_predictions":0,"changed_share":0.0,"checked":4066,"summary":true,"valid":true}
+== serve rung23 8x2 round 1 04:22:20Z load 14.47
+{"best_rate_within_budget":55.0,"budget_ms":200.0,"changed_allowed":156.283037,"changed_predictions":82,"changed_share":0.0048329109447751515,"checked":16967,"summary":true,"valid":true}
+== serve rung22 8x2 round 1 04:28:31Z load 40.42
+{"best_rate_within_budget":35.0,"budget_ms":200.0,"changed_allowed":38.816424,"changed_predictions":18,"changed_share":0.002074688796680498,"checked":8676,"summary":true,"valid":true}
+== serve rung24 8x2 round 2 04:33:13Z load 39.43
+{"best_rate_within_budget":45.0,"budget_ms":200.0,"changed_allowed":107.068664,"changed_predictions":47,"changed_share":0.004043358568479009,"checked":11624,"summary":true,"valid":true}
+== serve rung19 8x2 round 2 04:37:54Z load 44.45
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_allowed":3.9976,"changed_predictions":1,"changed_share":0.0005984440454817474,"checked":1671,"summary":true,"valid":true}
+== serve rung23 8x2 round 2 04:39:34Z load 51.51
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":84.04116400000001,"changed_predictions":33,"changed_share":0.0036168347216133274,"checked":9124,"summary":true,"valid":true}
+== serve rung22 8x2 round 2 04:43:30Z load 44.62
+{"best_rate_within_budget":25.0,"budget_ms":200.0,"changed_allowed":34.002399999999994,"changed_predictions":12,"changed_share":0.002377179080824089,"checked":5048,"summary":true,"valid":true}
+== F24_DONE 04:46:41Z

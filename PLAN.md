@@ -939,3 +939,15 @@ Changes to the plan made after seeing data, with the reason.
   worker p50 1 to 2 ms lower. So u8 input is exact but not a measurable gain at batch 1
   (`results/bench/cloud_turin_serve24/SUMMARY.md`). The matmuls are no longer the main
   lever; the next step is a profile of the rest of the forward pass.
+- **Where rung 24's time goes, and the best server layout** (2026-11-11, Zen 5). A
+  `stage-times` build (analysis only) splits a batch-1 request on 4 threads: the four s8
+  matmuls take 56 ms, of which oneDNN computes 44 and our quantize and dequantize loops
+  12; attention is 13 ms; the rest about 5 (`results/bench/cloud_turin_layout24/`).
+  Server layouts for rung 24: 8 workers of 2 threads beat 4x4 (about 1.3x), 8x4 on SMT
+  (about 10% over 4x4), 16x1 and 16x2 on SMT (one request is already 140 to 180 ms), and
+  dynamic batching (doubles p99) (`cloud_turin_layout24b/`, `cloud_turin_batch24/`). The
+  whole int8 ladder at 8x2 on one quiet host: rung 19 20/s, 22 35/s, 23 55/s, 24 60/s
+  within the budget, so rung 24 serves about 193,000 examples per dollar
+  (`cloud_turin_final8x2/`). Trap: `cpu5c` sometimes gives an EPYC 4564P (Zen 4), idle but
+  1.5x slower; the orchestrator now rejects any host that is not a 9575F at load under 40.
+  Next lever: the 12 ms of quantize and dequantize, then attention.
