@@ -10,8 +10,9 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-/// The stages, in the order a layer runs them.
-pub const STAGES: [&str; 10] = [
+/// The stages, in the order a layer runs them. The last three are inside the
+/// four matmul stages (int8 builds only), so the total leaves them out.
+pub const STAGES: [&str; 13] = [
     "attn_norm",
     "wqkv",
     "attention",
@@ -22,7 +23,13 @@ pub const STAGES: [&str; 10] = [
     "gelu_gate",
     "mlp_wo",
     "add",
+    "q8_quantize",
+    "q8_onednn",
+    "q8_dequantize",
 ];
+
+/// How many of [`STAGES`] make up a layer; the rest are inside them.
+const LAYER_STAGES: usize = 10;
 
 static NANOS: [AtomicU64; STAGES.len()] = [const { AtomicU64::new(0) }; STAGES.len()];
 static CALLS: [AtomicU64; STAGES.len()] = [const { AtomicU64::new(0) }; STAGES.len()];
@@ -43,14 +50,16 @@ pub fn report(examples: usize) -> String {
     let mut total = 0.0;
     for (i, name) in STAGES.iter().enumerate() {
         let ms = NANOS[i].load(Ordering::Relaxed) as f64 / 1e6 / per;
-        total += ms;
+        if i < LAYER_STAGES {
+            total += ms;
+        }
         let calls = CALLS[i].load(Ordering::Relaxed) as f64 / per;
         out.push_str(&format!(
             "stage {name:13} {ms:7.2} ms/example  {calls:4.0} calls\n"
         ));
     }
     out.push_str(&format!(
-        "stage {:13} {total:7.2} ms/example\n",
+        "stage {:13} {total:7.2} ms/example (without the q8_ lines)\n",
         "layers_total"
     ));
     out

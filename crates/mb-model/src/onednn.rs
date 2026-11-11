@@ -411,81 +411,98 @@ pub fn linear_int8_into(input: &Matrix, weight: &Matrix, out: &mut Matrix) {
         // (rung 20 on Zen 5: 30 ms of s8 matmul in 79 ms an example), so they
         // run in blocks of rows across the pool.
         let per = rows_per_block(m);
-        let blocks: Vec<Mutex<QuantBlock>> = src
-            .chunks_mut(per * k)
-            .zip(scales.chunks_mut(per))
-            .enumerate()
-            .map(|(b, (q, s))| Mutex::new((b * per, q, s)))
-            .collect();
-        on_pool(blocks.len(), &|b| {
-            let mut block = blocks[b].lock().expect("no block panics while held");
-            let (first, q, s) = &mut *block;
-            for (i, (q_row, scale)) in q.chunks_mut(k).zip(s.iter_mut()).enumerate() {
-                let row = &input.data[(*first + i) * k..(*first + i + 1) * k];
-                if weight.int8_smooth.is_empty() {
-                    *scale = int8_scale(row);
-                    for (q, &x) in q_row.iter_mut().zip(row) {
-                        // `as` saturates, and the scale keeps every value in range.
-                        *q = to_matmul_input(x * *scale);
-                    }
-                } else {
-                    // Rung 23: the row divided by s first, channel by channel.
-                    let smooth = &weight.int8_smooth;
-                    let largest = row
-                        .iter()
-                        .zip(smooth)
-                        .fold(0.0f32, |most, (&x, &f)| most.max((x * f).abs()));
-                    *scale = if largest > 0.0 { 127.0 / largest } else { 1.0 };
-                    for ((q, &x), &f) in q_row.iter_mut().zip(row).zip(smooth) {
-                        *q = to_matmul_input(x * f * *scale);
+        stage(10, || {
+            let blocks: Vec<Mutex<QuantBlock>> = src
+                .chunks_mut(per * k)
+                .zip(scales.chunks_mut(per))
+                .enumerate()
+                .map(|(b, (q, s))| Mutex::new((b * per, q, s)))
+                .collect();
+            on_pool(blocks.len(), &|b| {
+                let mut block = blocks[b].lock().expect("no block panics while held");
+                let (first, q, s) = &mut *block;
+                for (i, (q_row, scale)) in q.chunks_mut(k).zip(s.iter_mut()).enumerate() {
+                    let row = &input.data[(*first + i) * k..(*first + i + 1) * k];
+                    if weight.int8_smooth.is_empty() {
+                        *scale = int8_scale(row);
+                        for (q, &x) in q_row.iter_mut().zip(row) {
+                            // `as` saturates, and the scale keeps every value in range.
+                            *q = to_matmul_input(x * *scale);
+                        }
+                    } else {
+                        // Rung 23: the row divided by s first, channel by channel.
+                        let smooth = &weight.int8_smooth;
+                        let largest = row
+                            .iter()
+                            .zip(smooth)
+                            .fold(0.0f32, |most, (&x, &f)| most.max((x * f).abs()));
+                        *scale = if largest > 0.0 { 127.0 / largest } else { 1.0 };
+                        for ((q, &x), &f) in q_row.iter_mut().zip(row).zip(smooth) {
+                            *q = to_matmul_input(x * f * *scale);
+                        }
                     }
                 }
-            }
+            });
+            drop(blocks);
         });
-        drop(blocks);
         // SAFETY: `src` holds M * K bytes (s8, or u8 for rung 24),
         // `weight.int8` N * K s8 (checked above) and `dst` M * N s32. The sums
         // fit: at most 5248 terms of at most 255 * 127.
-        unsafe {
+        stage(11, || unsafe {
             run_matmul(
                 (m, k, n),
                 (src.as_mut_ptr().cast(), INPUT_TYPE),
                 (weight.int8.as_ptr() as *mut c_void, DNNL_S8),
                 (dst.as_mut_ptr().cast(), DNNL_S32),
             );
-        }
-        let blocks: Vec<Mutex<(usize, &mut [f32])>> = out.data[..m * n]
-            .chunks_mut(per * n)
-            .enumerate()
-            .map(|(b, o)| Mutex::new((b * per, o)))
-            .collect();
-        on_pool(blocks.len(), &|b| {
-            let mut block = blocks[b].lock().expect("no block panics while held");
-            let (first, o) = &mut *block;
-            for (i, o_row) in o.chunks_mut(n).enumerate() {
-                let r = *first + i;
-                let unscale_input = 1.0 / scales[r];
-                let sums = &dst[r * n..(r + 1) * n];
-                #[cfg(not(feature = "int8-u8"))]
-                for ((y, &sum), &unscale_weight) in
-                    o_row.iter_mut().zip(sums).zip(&weight.int8_unscale)
-                {
-                    *y = sum as f32 * unscale_input * unscale_weight;
+        });
+        stage(12, || {
+            let blocks: Vec<Mutex<(usize, &mut [f32])>> = out.data[..m * n]
+                .chunks_mut(per * n)
+                .enumerate()
+                .map(|(b, o)| Mutex::new((b * per, o)))
+                .collect();
+            on_pool(blocks.len(), &|b| {
+                let mut block = blocks[b].lock().expect("no block panics while held");
+                let (first, o) = &mut *block;
+                for (i, o_row) in o.chunks_mut(n).enumerate() {
+                    let r = *first + i;
+                    let unscale_input = 1.0 / scales[r];
+                    let sums = &dst[r * n..(r + 1) * n];
+                    #[cfg(not(feature = "int8-u8"))]
+                    for ((y, &sum), &unscale_weight) in
+                        o_row.iter_mut().zip(sums).zip(&weight.int8_unscale)
+                    {
+                        *y = sum as f32 * unscale_input * unscale_weight;
+                    }
+                    // Rung 24: the u8 input was s8 + 128, so take 128 * sum(w) off
+                    // each sum first. Exact in s32, so the logits match rung 23's.
+                    #[cfg(feature = "int8-u8")]
+                    for (((y, &sum), &unscale_weight), &shift) in o_row
+                        .iter_mut()
+                        .zip(sums)
+                        .zip(&weight.int8_unscale)
+                        .zip(&weight.int8_shift)
+                    {
+                        *y = (sum - shift) as f32 * unscale_input * unscale_weight;
+                    }
                 }
-                // Rung 24: the u8 input was s8 + 128, so take 128 * sum(w) off
-                // each sum first. Exact in s32, so the logits match rung 23's.
-                #[cfg(feature = "int8-u8")]
-                for (((y, &sum), &unscale_weight), &shift) in o_row
-                    .iter_mut()
-                    .zip(sums)
-                    .zip(&weight.int8_unscale)
-                    .zip(&weight.int8_shift)
-                {
-                    *y = (sum - shift) as f32 * unscale_input * unscale_weight;
-                }
-            }
+            });
         });
     });
+}
+
+/// Analysis only: time `work` as stage `index` under `stage-times`.
+#[cfg(feature = "int8")]
+#[inline(always)]
+fn stage<T>(index: usize, work: impl FnOnce() -> T) -> T {
+    #[cfg(feature = "stage-times")]
+    return crate::stage_times::timed(index, work);
+    #[cfg(not(feature = "stage-times"))]
+    {
+        let _ = index;
+        work()
+    }
 }
 
 #[cfg(test)]
