@@ -1,0 +1,23 @@
+wrote weights/ModernBERT-Large-Instruct/smooth_scales.safetensors (221406b4b84a), widest max/min scale ratio 71.5
+Cpus_allowed_list:	1,11,14,21,28-32,37-38,43,45,49-50,62,65,75,78,85,92-96,101-102,107,109,113-114,126
+               total        used        free      shared  buff/cache   available
+Mem:             503          52         178           0         272         446
+== serve rung24 8x2_b1_w0 round 1 01:49:34Z load 46.91
+{"bound_to_cores":true,"max_batch":1,"max_wait_ms":0.0,"port":8090,"ready":true,"smt":false,"threads":2,"workers":8}
+{"best_rate_within_budget":45.0,"budget_ms":200.0,"changed_allowed":79.39882,"changed_predictions":34,"changed_share":0.00394431554524362,"checked":8620,"summary":true,"valid":true}
+== serve rung24 8x2_b4_w0 round 1 01:52:44Z load 61.61
+{"bound_to_cores":true,"max_batch":4,"max_wait_ms":0.0,"port":8090,"ready":true,"smt":false,"threads":2,"workers":8}
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":14,"changed_share":0.0036880927291886197,"checked":3796,"summary":true,"valid":true}
+== serve rung24 8x2_b4_w5 round 1 01:54:24Z load 45.90
+{"bound_to_cores":true,"max_batch":4,"max_wait_ms":5.0,"port":8090,"ready":true,"smt":false,"threads":2,"workers":8}
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":14,"changed_share":0.0036880927291886197,"checked":3796,"summary":true,"valid":true}
+== serve rung24 8x2_b1_w0 round 2 01:56:03Z load 48.53
+{"bound_to_cores":true,"max_batch":1,"max_wait_ms":0.0,"port":8090,"ready":true,"smt":false,"threads":2,"workers":8}
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":16,"changed_share":0.004260985352862849,"checked":3755,"summary":true,"valid":true}
+== serve rung24 8x2_b4_w0 round 2 01:57:43Z load 48.93
+{"bound_to_cores":true,"max_batch":4,"max_wait_ms":0.0,"port":8090,"ready":true,"smt":false,"threads":2,"workers":8}
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":16,"changed_share":0.004260985352862849,"checked":3755,"summary":true,"valid":true}
+== serve rung24 8x2_b4_w5 round 2 01:59:24Z load 74.60
+{"bound_to_cores":true,"max_batch":4,"max_wait_ms":5.0,"port":8090,"ready":true,"smt":false,"threads":2,"workers":8}
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":16,"changed_share":0.004260985352862849,"checked":3755,"summary":true,"valid":true}
+== B24_DONE 02:01:05Z
