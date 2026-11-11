@@ -536,8 +536,26 @@ fn attend_by_head(ws: &mut Workspace, rope: &RopeTable, window: Option<usize>, s
                 &mut v[part.clone()],
             );
             let seq = rows.len();
-            stage(13, || scatter_head(qkv, rows, rope, head, hd, q, k, v));
-            attend_head(q, k, v, &mut out[part], scores, window, scale, seq, hd);
+            #[cfg(not(feature = "scatter-bf16"))]
+            {
+                stage(13, || scatter_head(qkv, rows, rope, head, hd, q, k, v));
+                attend_head(q, k, v, &mut out[part], scores, window, scale, seq, hd);
+            }
+            // Rung 28: the f32 Q, K and V are not used; the scatter writes bf16.
+            #[cfg(feature = "scatter-bf16")]
+            {
+                let _ = (q, k, v);
+                let (out, scores) = (&mut out[part], &mut scores[..seq * seq]);
+                crate::onednn::with_head_matmuls(|t| {
+                    let (q, k, v_t) = t.inputs(seq, hd);
+                    stage(13, || {
+                        scatter_head_bf16(qkv, rows, rope, (head, hd), scale, q, k, v_t)
+                    });
+                    stage(14, || t.scores((seq, hd), scores));
+                    stage(15, || softmax_rows(scores, window, seq));
+                    stage(16, || t.values(scores, (seq, hd), out));
+                });
+            }
         }
     });
 }
@@ -548,6 +566,7 @@ fn attend_by_head(ws: &mut Workspace, rope: &RopeTable, window: Option<usize>, s
 ///
 /// The rotation is the arithmetic of [`crate::rope::apply_rope`], term for
 /// term, so it rounds the same.
+#[cfg(any(test, not(feature = "scatter-bf16")))]
 #[allow(clippy::too_many_arguments)]
 fn scatter_head(
     qkv: &Matrix,
@@ -590,6 +609,7 @@ fn scatter_head(
 
 /// One head of rung 10's `attend_sgemm`, into the head's own `[seq,
 /// head_dim]` block.
+#[cfg(not(feature = "scatter-bf16"))]
 #[allow(clippy::too_many_arguments)]
 fn attend_head(
     query: &[f32],
@@ -609,25 +629,82 @@ fn attend_head(
         #[cfg(not(feature = "attn-bf16"))]
         sgemm_strided(seq, seq, hd, scale, query, hd, key_t, seq, scores, seq)
     });
-    stage(15, || {
-        for t in 0..seq {
-            let (first, end) = match window {
-                None => (0, seq),
-                Some(w) => (t.saturating_sub(w), (t + w + 1).min(seq)),
-            };
-            let row = &mut scores[t * seq..(t + 1) * seq];
-            // f64 accumulation, as in rung 7. See `ops::softmax_in_place`.
-            softmax_in_place(&mut row[first..end]);
-            row[..first].fill(0.0);
-            row[end..].fill(0.0);
-        }
-    });
+    stage(15, || softmax_rows(scores, window, seq));
     stage(16, || {
         #[cfg(feature = "attn-bf16")]
         crate::onednn::head_values_bf16(scores, values, (seq, hd), out);
         #[cfg(not(feature = "attn-bf16"))]
         sgemm_strided(seq, hd, seq, 1.0, scores, seq, values, hd, out, hd)
     });
+}
+
+/// Each row of one head's `[seq, seq]` scores into probabilities over the
+/// keys its query sees; the keys outside the window get 0.
+fn softmax_rows(scores: &mut [f32], window: Option<usize>, seq: usize) {
+    for t in 0..seq {
+        let (first, end) = match window {
+            None => (0, seq),
+            Some(w) => (t.saturating_sub(w), (t + w + 1).min(seq)),
+        };
+        let row = &mut scores[t * seq..(t + 1) * seq];
+        // f64 accumulation, as in rung 7. See `ops::softmax_in_place`.
+        softmax_in_place(&mut row[first..end]);
+        row[..first].fill(0.0);
+        row[end..].fill(0.0);
+    }
+}
+
+/// Rung 28: [`scatter_head`], but into bf16 and the layouts the two products
+/// of [`crate::onednn::HeadMatmuls`] read: Q multiplied by `scale`, `[seq,
+/// hd]`; K not transposed, `[seq, hd]`; V transposed, `[hd, seq]`.
+///
+/// Each value is the f32 that rung 27 stored, rounded the way rung 27 rounds
+/// it, so the logits are rung 27's bit for bit.
+#[cfg(feature = "scatter-bf16")]
+#[allow(clippy::too_many_arguments)]
+fn scatter_head_bf16(
+    qkv: &Matrix,
+    rows: std::ops::Range<usize>,
+    rope: &RopeTable,
+    (head, hd): (usize, usize),
+    scale: f32,
+    q: &mut [u16],
+    k: &mut [u16],
+    v_t: &mut [u16],
+) {
+    use crate::onednn::to_bf16;
+    let hidden = qkv.cols / 3;
+    let seq = rows.len();
+    let half = hd / 2;
+    let src = head * hd;
+    for t in 0..seq {
+        let fused = qkv.row(rows.start + t);
+        let cos = rope.cos_row(t);
+        let sin = rope.sin_row(t);
+
+        // Read both halves of each pair before writing either. Rung 27
+        // rounded the rotated f32 times the scale; this is the same sum.
+        let x = &fused[src..src + hd];
+        let q = &mut q[t * hd..(t + 1) * hd];
+        for i in 0..half {
+            let (lo, hi) = (x[i], x[i + half]);
+            q[i] = to_bf16((lo * cos[i] - hi * sin[i]) * scale);
+            q[i + half] = to_bf16((hi * cos[i] + lo * sin[i]) * scale);
+        }
+
+        let x = &fused[hidden + src..hidden + src + hd];
+        let k = &mut k[t * hd..(t + 1) * hd];
+        for i in 0..half {
+            let (lo, hi) = (x[i], x[i + half]);
+            k[i] = to_bf16(lo * cos[i] - hi * sin[i]);
+            k[i + half] = to_bf16(hi * cos[i] + lo * sin[i]);
+        }
+
+        let x = &fused[2 * hidden + src..2 * hidden + src + hd];
+        for (i, &x) in x.iter().enumerate() {
+            v_t[i * seq + t] = to_bf16(x);
+        }
+    }
 }
 
 /// The largest head the stack buffers of [`attend_mask_head`] take.
@@ -793,6 +870,59 @@ mod fuse_quant_tests {
                 gelu_gate_rows_q8(&projected, &mut gated, (&weight, blocks), per);
                 let (q, scales) = separately(&gated, &weight);
                 assert_eq!(q8.rounded(), (&q[..], &scales[..]), "{per} rows a block");
+            }
+        }
+    }
+}
+
+/// Rung 28: the bf16 scatter must write exactly rung 27's values, which are
+/// rung 10's f32 scatter rounded to bf16, Q times the scale, in the products'
+/// layouts. Runs anywhere: it calls no oneDNN.
+#[cfg(all(test, feature = "scatter-bf16"))]
+mod scatter_bf16_tests {
+    use super::*;
+    use crate::onednn::to_bf16;
+
+    #[test]
+    fn the_bf16_scatter_rounds_the_f32_scatter() {
+        let (heads, hd) = (3, 64);
+        let (first, seq) = (5, 37);
+        let rope = RopeTable::new(hd, 64, 160_000.0);
+        let mut qkv = Matrix::zeros(first + seq + 2, 3 * heads * hd);
+        for (i, x) in qkv.data.iter_mut().enumerate() {
+            *x = (((i * 7919) % 1009) as f32 - 504.0) / 37.0;
+        }
+        let scale = 0.125;
+        let rows = first..first + seq;
+        for head in 0..heads {
+            let mut f = [
+                vec![0.0f32; seq * hd],
+                vec![0.0; seq * hd],
+                vec![0.0; seq * hd],
+            ];
+            let [q, k_t, v] = &mut f;
+            scatter_head(&qkv, rows.clone(), &rope, head, hd, q, k_t, v);
+            let mut b = [vec![0u16; seq * hd], vec![0; seq * hd], vec![0; seq * hd]];
+            let [bq, bk, bv_t] = &mut b;
+            scatter_head_bf16(&qkv, rows.clone(), &rope, (head, hd), scale, bq, bk, bv_t);
+            for t in 0..seq {
+                for i in 0..hd {
+                    assert_eq!(
+                        bq[t * hd + i],
+                        to_bf16(q[t * hd + i] * scale),
+                        "Q {head} {t} {i}"
+                    );
+                    assert_eq!(
+                        bk[t * hd + i],
+                        to_bf16(k_t[i * seq + t]),
+                        "K {head} {t} {i}"
+                    );
+                    assert_eq!(
+                        bv_t[i * seq + t],
+                        to_bf16(v[t * hd + i]),
+                        "V {head} {t} {i}"
+                    );
+                }
             }
         }
     }

@@ -161,7 +161,9 @@ pub fn backend() -> &'static str {
             }
         };
     }
-    if cfg!(feature = "attn-bf16") {
+    if cfg!(feature = "scatter-bf16") {
+        with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant-attnbf16-scatterbf16")
+    } else if cfg!(feature = "attn-bf16") {
         with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant-attnbf16")
     } else if cfg!(feature = "fuse-quant") {
         with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant")

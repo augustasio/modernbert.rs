@@ -624,13 +624,23 @@ fn matmul_and_dequantize(
 /// Inside the pool's parallel region oneDNN runs serially on the calling
 /// thread, as rung 18 makes MKL do.
 #[cfg(feature = "attn-bf16")]
-struct HeadMatmuls {
+pub struct HeadMatmuls {
+    primitives: Primitives,
+    /// The bf16 inputs. Rung 27: the two inputs of the current product.
+    /// Rung 28: Q (then P) and K, written by the scatter.
+    a: Vec<u16>,
+    b: Vec<u16>,
+    /// Rung 28: V transposed, `[hd, seq]`, written by the scatter.
+    #[cfg(feature = "scatter-bf16")]
+    values_t: Vec<u16>,
+}
+
+/// One thread's oneDNN stream and its matmul primitives, by shape.
+#[cfg(feature = "attn-bf16")]
+struct Primitives {
     stream: Handle,
     /// Most recently used last.
     cached: Vec<CachedMatmul>,
-    /// The bf16 copies of the two inputs of the current product.
-    a: Vec<u16>,
-    b: Vec<u16>,
 }
 
 /// One matmul primitive for one shape `(m, k, n)`, bf16 x bf16 into f32, with
@@ -718,7 +728,7 @@ impl Drop for CachedMatmul {
 }
 
 #[cfg(feature = "attn-bf16")]
-impl HeadMatmuls {
+impl Primitives {
     fn new() -> Self {
         let mut stream: Handle = std::ptr::null_mut();
         // SAFETY: a valid out-pointer; the stream lives until `drop`.
@@ -728,19 +738,17 @@ impl HeadMatmuls {
                 "stream_create (attention)",
             );
         }
-        HeadMatmuls {
+        Primitives {
             stream,
             cached: Vec::with_capacity(SHAPES_KEPT),
-            a: Vec::new(),
-            b: Vec::new(),
         }
     }
 
     /// `dst = a @ b.T` for the shape `(m, k, n)`: `a` is `[M, K]` and `b`
-    /// `[N, K]`, both already in `self.a` and `self.b`; `dst` is `[M, N]` f32.
-    fn run(&mut self, (m, k, n): (usize, usize, usize), dst: &mut [f32]) {
+    /// `[N, K]`, both bf16; `dst` is `[M, N]` f32.
+    fn run(&mut self, (m, k, n): (usize, usize, usize), a: &[u16], b: &[u16], dst: &mut [f32]) {
         assert!(
-            self.a.len() >= m * k && self.b.len() >= n * k,
+            a.len() >= m * k && b.len() >= n * k,
             "the bf16 inputs are short"
         );
         assert!(dst.len() >= m * n, "the output is short");
@@ -755,9 +763,10 @@ impl HeadMatmuls {
             }
         };
         let c = &self.cached[at];
+        // oneDNN takes `void *` for every argument but only writes the dst.
         let pointers: [*mut c_void; 3] = [
-            self.a.as_mut_ptr().cast(),
-            self.b.as_mut_ptr().cast(),
+            a.as_ptr().cast_mut().cast(),
+            b.as_ptr().cast_mut().cast(),
             dst.as_mut_ptr().cast(),
         ];
         let args = [DNNL_ARG_SRC, DNNL_ARG_WEIGHTS, DNNL_ARG_DST];
@@ -785,7 +794,7 @@ impl HeadMatmuls {
 }
 
 #[cfg(feature = "attn-bf16")]
-impl Drop for HeadMatmuls {
+impl Drop for Primitives {
     fn drop(&mut self) {
         self.cached.clear();
         // SAFETY: made in `new`, destroyed once, after its primitives.
@@ -796,13 +805,62 @@ impl Drop for HeadMatmuls {
 }
 
 #[cfg(feature = "attn-bf16")]
+impl HeadMatmuls {
+    fn new() -> Self {
+        HeadMatmuls {
+            primitives: Primitives::new(),
+            a: Vec::new(),
+            b: Vec::new(),
+            #[cfg(feature = "scatter-bf16")]
+            values_t: Vec::new(),
+        }
+    }
+}
+
+/// Rung 28: the scatter writes Q, K and V in bf16 straight into these
+/// buffers, in the layouts the two products read. Rung 27 wrote them in f32
+/// first, then made a second pass to round them (and to transpose K back).
+#[cfg(feature = "scatter-bf16")]
+impl HeadMatmuls {
+    /// The buffers the scatter fills for one head of `seq` tokens: Q (scaled)
+    /// and K as `[seq, hd]`, and V transposed, `[hd, seq]`.
+    pub fn inputs(&mut self, seq: usize, hd: usize) -> (&mut [u16], &mut [u16], &mut [u16]) {
+        self.a.resize(seq * hd, 0);
+        self.b.resize(seq * hd, 0);
+        self.values_t.resize(seq * hd, 0);
+        (&mut self.a, &mut self.b, &mut self.values_t)
+    }
+
+    /// `scores = (scale * Q) K^T`, from the buffers of [`Self::inputs`].
+    pub fn scores(&mut self, (seq, hd): (usize, usize), scores: &mut [f32]) {
+        self.primitives.run(
+            (seq, hd, seq),
+            &self.a[..seq * hd],
+            &self.b[..seq * hd],
+            scores,
+        );
+    }
+
+    /// `out = P V`. P is rounded to bf16 into the buffer Q used, which the
+    /// scores are done with.
+    pub fn values(&mut self, probs: &[f32], (seq, hd): (usize, usize), out: &mut [f32]) {
+        self.a.resize(seq * seq, 0);
+        for (b, &p) in self.a.iter_mut().zip(&probs[..seq * seq]) {
+            *b = to_bf16(p);
+        }
+        self.primitives
+            .run((seq, seq, hd), &self.a, &self.values_t[..seq * hd], out);
+    }
+}
+
+#[cfg(feature = "attn-bf16")]
 thread_local! {
     static HEAD_MATMULS: RefCell<Option<HeadMatmuls>> = const { RefCell::new(None) };
 }
 
 /// Run `work` with this thread's [`HeadMatmuls`], made on first use.
 #[cfg(feature = "attn-bf16")]
-fn with_head_matmuls<T>(work: impl FnOnce(&mut HeadMatmuls) -> T) -> T {
+pub fn with_head_matmuls<T>(work: impl FnOnce(&mut HeadMatmuls) -> T) -> T {
     HEAD_MATMULS.with(|cell| {
         let mut slot = cell.borrow_mut();
         work(slot.get_or_insert_with(HeadMatmuls::new))
@@ -815,7 +873,7 @@ fn with_head_matmuls<T>(work: impl FnOnce(&mut HeadMatmuls) -> T) -> T {
 ///
 /// Q is scaled before it is rounded. With a power-of-two scale (1/8 for a
 /// head of 64) that is exact, so it equals scaling the sums afterwards.
-#[cfg(feature = "attn-bf16")]
+#[cfg(all(feature = "attn-bf16", not(feature = "scatter-bf16")))]
 pub fn head_scores_bf16(
     query: &[f32],
     key_t: &[f32],
@@ -835,13 +893,13 @@ pub fn head_scores_bf16(
                 t.b[token * hd + i] = to_bf16(x);
             }
         }
-        t.run((seq, hd, seq), scores);
+        t.primitives.run((seq, hd, seq), &t.a, &t.b, scores);
     });
 }
 
 /// Rung 27: one head's output, `out = P V`, as a bf16 matmul with f32 sums.
 /// `probs` is `[seq, seq]`, `values` `[seq, hd]`, `out` `[seq, hd]`.
-#[cfg(feature = "attn-bf16")]
+#[cfg(all(feature = "attn-bf16", not(feature = "scatter-bf16")))]
 pub fn head_values_bf16(probs: &[f32], values: &[f32], (seq, hd): (usize, usize), out: &mut [f32]) {
     with_head_matmuls(|t| {
         t.a.resize(seq * seq, 0);
@@ -855,7 +913,7 @@ pub fn head_values_bf16(probs: &[f32], values: &[f32], (seq, hd): (usize, usize)
                 t.b[i * seq + token] = to_bf16(x);
             }
         }
-        t.run((seq, seq, hd), out);
+        t.primitives.run((seq, seq, hd), &t.a, &t.b, out);
     });
 }
 
@@ -889,6 +947,51 @@ mod attention_bf16_tests {
             .collect()
     }
 
+    /// Both products, `(scale * Q) K^T` and `P V`, through rung 27's calls.
+    #[cfg(not(feature = "scatter-bf16"))]
+    fn products(
+        query: &[f32],
+        key_t: &[f32],
+        values: &[f32],
+        probs: &[f32],
+        scale: f32,
+        (seq, hd): (usize, usize),
+    ) -> (Vec<f32>, Vec<f32>) {
+        let mut scores = vec![0.0f32; seq * seq];
+        head_scores_bf16(query, key_t, scale, (seq, hd), &mut scores);
+        let mut out = vec![0.0f32; seq * hd];
+        head_values_bf16(probs, values, (seq, hd), &mut out);
+        (scores, out)
+    }
+
+    /// Both products through rung 28's calls, with the bf16 inputs written
+    /// in the layouts its scatter writes.
+    #[cfg(feature = "scatter-bf16")]
+    fn products(
+        query: &[f32],
+        key_t: &[f32],
+        values: &[f32],
+        probs: &[f32],
+        scale: f32,
+        (seq, hd): (usize, usize),
+    ) -> (Vec<f32>, Vec<f32>) {
+        let mut scores = vec![0.0f32; seq * seq];
+        let mut out = vec![0.0f32; seq * hd];
+        with_head_matmuls(|t| {
+            let (q, k, v_t) = t.inputs(seq, hd);
+            for token in 0..seq {
+                for i in 0..hd {
+                    q[token * hd + i] = to_bf16(query[token * hd + i] * scale);
+                    k[token * hd + i] = to_bf16(key_t[i * seq + token]);
+                    v_t[i * seq + token] = to_bf16(values[token * hd + i]);
+                }
+            }
+            t.scores((seq, hd), &mut scores);
+            t.values(probs, (seq, hd), &mut out);
+        });
+        (scores, out)
+    }
+
     /// Check both products for one head of `seq` tokens.
     fn check_head(seq: usize, hd: usize, seed: usize) {
         let (query, key_t, values) = (
@@ -897,8 +1000,9 @@ mod attention_bf16_tests {
             varied(seq * hd, seed + 2),
         );
         let scale = 0.125;
-        let mut scores = vec![0.0f32; seq * seq];
-        head_scores_bf16(&query, &key_t, scale, (seq, hd), &mut scores);
+        // Any [seq, seq] matrix will do as P for the check.
+        let probs = varied(seq * seq, seed + 3);
+        let (scores, out) = products(&query, &key_t, &values, &probs, scale, (seq, hd));
         for r in 0..seq {
             for c in 0..seq {
                 let want: f64 = (0..hd)
@@ -911,10 +1015,6 @@ mod attention_bf16_tests {
                 );
             }
         }
-        // Any [seq, seq] matrix will do as P for the check.
-        let probs = varied(seq * seq, seed + 3);
-        let mut out = vec![0.0f32; seq * hd];
-        head_values_bf16(&probs, &values, (seq, hd), &mut out);
         for r in 0..seq {
             for i in 0..hd {
                 let want: f64 = (0..seq)

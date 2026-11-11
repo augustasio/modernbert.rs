@@ -101,6 +101,11 @@ fuse-quant = ["int8-u8"]
 # as oneDNN bf16 matmuls with f32 sums, in place of MKL's f32 sgemm; Q, K, V
 # and the probabilities are rounded to bf16 on the way in. Built on rung 26.
 attn-bf16 = ["fuse-quant"]
+# Rung 28: the attention scatter (RoPE on Q and K, the head layout) writes Q,
+# K and V in bf16 straight into the buffers the two products read, instead of
+# f32 copies that a second pass rounds and transposes. Rung 27's logits, bit
+# for bit. Built on rung 27.
+scatter-bf16 = ["attn-bf16"]
 # Analysis only, never a rung: wall time per stage of the threaded layer,
 # printed at the end of `eval_agnews` (`stage_times.rs`).
 stage-times = []

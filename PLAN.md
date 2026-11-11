@@ -699,6 +699,17 @@ motive: the two products take 13.5 ms of a 94 ms request at two threads
 multiply-adds of f32 FMA per instruction. The in-run gate is set from its Tier 3 run, by
 rung 17's rule.
 
+**Rung 28's bound, set on 2026-11-11 before any rung 28 logit was seen.** Rung 28's
+logits equal rung 27's, bit for bit, over all 7,600 examples, so its Tier 3 numbers are
+rung 27's. The design: built on rung 27. The attention scatter (RoPE on Q and K, and the
+per-head layout) writes Q, K and V in bf16 straight into the buffers the two products
+read: Q times the scale and K as `[seq, hd]`, V transposed as `[hd, seq]`. Rung 27 wrote
+them in f32 (K transposed), and a second pass read them back to round them and to undo
+K's transpose. Each value is the same f32 rounded the same way, so nothing changes but
+the time. The motive: at two threads rung 27's scatter takes about 8 thread-ms per
+request, and the conversion passes sit inside the two products' 12.5. The expected gain
+is small: about 1 to 3 ms per request.
+
 **Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
 uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
 libraries:
