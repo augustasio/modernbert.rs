@@ -97,6 +97,10 @@ lane-max = ["int8-u8"]
 # separate pass inside the matmul. The same rounding on the same values, so
 # the logits are rung 24's, bit for bit. Built on rung 24, not on rung 25.
 fuse-quant = ["int8-u8"]
+# Rung 27: the attention products Q K^T and P V of every layer but the last
+# as oneDNN bf16 matmuls with f32 sums, in place of MKL's f32 sgemm; Q, K, V
+# and the probabilities are rounded to bf16 on the way in. Built on rung 26.
+attn-bf16 = ["fuse-quant"]
 # Analysis only, never a rung: wall time per stage of the threaded layer,
 # printed at the end of `eval_agnews` (`stage_times.rs`).
 stage-times = []

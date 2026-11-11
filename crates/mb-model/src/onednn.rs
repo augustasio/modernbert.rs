@@ -94,6 +94,10 @@ extern "C" {
         nargs: i32,
         args: *const ExecArg,
     ) -> i32;
+    #[cfg(feature = "attn-bf16")]
+    fn dnnl_memory_set_data_handle(memory: Handle, handle: *mut c_void) -> i32;
+    #[cfg(feature = "attn-bf16")]
+    fn dnnl_stream_destroy(stream: Handle) -> i32;
 }
 
 /// The CPU engine and one in-order stream, made once for the process.
@@ -602,6 +606,259 @@ fn matmul_and_dequantize(
     });
 }
 
+/// Rung 27: one head's attention products as bf16 matmuls, on the thread
+/// that runs the head.
+///
+/// Two traps, both from running inside the attention's threads:
+///
+/// - **One stream per thread.** Several heads run at once, one per thread of
+///   the pool, and a oneDNN stream must not be used by two threads at a time.
+///   The process-wide stream in [`context`] serves the linear layers, which
+///   run from one thread; each attention thread gets its own here.
+/// - **A primitive per shape, kept.** Building the matmul primitive for each
+///   call costs about as much as the product itself at these sizes (a few
+///   hundred thousand multiply-adds), and every head of an example has the
+///   same shapes. So each thread keeps the primitives of its last few shapes,
+///   with memories whose data pointer is set on each call.
+///
+/// Inside the pool's parallel region oneDNN runs serially on the calling
+/// thread, as rung 18 makes MKL do.
+#[cfg(feature = "attn-bf16")]
+struct HeadMatmuls {
+    stream: Handle,
+    /// Most recently used last.
+    cached: Vec<CachedMatmul>,
+    /// The bf16 copies of the two inputs of the current product.
+    a: Vec<u16>,
+    b: Vec<u16>,
+}
+
+/// One matmul primitive for one shape `(m, k, n)`, bf16 x bf16 into f32, with
+/// its descriptors and memories.
+#[cfg(feature = "attn-bf16")]
+struct CachedMatmul {
+    shape: (usize, usize, usize),
+    pd: Handle,
+    primitive: Handle,
+    mds: [Handle; 3],
+    mems: [Handle; 3],
+}
+
+/// How many shapes each thread keeps. One example needs two (the scores and
+/// `P V`); a batch of several lengths needs two per length.
+#[cfg(feature = "attn-bf16")]
+const SHAPES_KEPT: usize = 8;
+
+#[cfg(feature = "attn-bf16")]
+impl CachedMatmul {
+    fn new((m, k, n): (usize, usize, usize)) -> Self {
+        let engine = context().engine;
+        // The same layouts as `run_matmul`: src `[M, K]`, weights a `[K, N]`
+        // view of an `[N, K]` buffer, dst `[M, N]`.
+        let mds = [
+            desc(m, k, k, 1, DNNL_BF16),
+            desc(k, n, 1, k, DNNL_BF16),
+            desc(m, n, n, 1, DNNL_F32),
+        ];
+        let mut pd: Handle = std::ptr::null_mut();
+        let mut primitive: Handle = std::ptr::null_mut();
+        let mut mems: [Handle; 3] = [std::ptr::null_mut(); 3];
+        // SAFETY: every out-pointer is a valid local, and the descriptors
+        // live until `drop`. The memories are made with no data; each call
+        // sets their data pointers before it executes.
+        unsafe {
+            ok(
+                dnnl_matmul_primitive_desc_create(
+                    &mut pd,
+                    engine,
+                    mds[0],
+                    mds[1],
+                    std::ptr::null_mut(),
+                    mds[2],
+                    std::ptr::null_mut(),
+                ),
+                "matmul_primitive_desc_create (attention)",
+            );
+            ok(
+                dnnl_primitive_create(&mut primitive, pd),
+                "primitive_create (attention)",
+            );
+            for (mem, &md) in mems.iter_mut().zip(&mds) {
+                ok(
+                    dnnl_memory_create(mem, md, engine, std::ptr::null_mut()),
+                    "memory_create (attention)",
+                );
+            }
+        }
+        CachedMatmul {
+            shape: (m, k, n),
+            pd,
+            primitive,
+            mds,
+            mems,
+        }
+    }
+}
+
+#[cfg(feature = "attn-bf16")]
+impl Drop for CachedMatmul {
+    fn drop(&mut self) {
+        // SAFETY: every handle was made in `new` and is destroyed once, here.
+        unsafe {
+            for mem in self.mems {
+                dnnl_memory_destroy(mem);
+            }
+            dnnl_primitive_destroy(self.primitive);
+            dnnl_primitive_desc_destroy(self.pd);
+            for md in self.mds {
+                dnnl_memory_desc_destroy(md);
+            }
+        }
+    }
+}
+
+#[cfg(feature = "attn-bf16")]
+impl HeadMatmuls {
+    fn new() -> Self {
+        let mut stream: Handle = std::ptr::null_mut();
+        // SAFETY: a valid out-pointer; the stream lives until `drop`.
+        unsafe {
+            ok(
+                dnnl_stream_create(&mut stream, context().engine, DNNL_STREAM_IN_ORDER),
+                "stream_create (attention)",
+            );
+        }
+        HeadMatmuls {
+            stream,
+            cached: Vec::with_capacity(SHAPES_KEPT),
+            a: Vec::new(),
+            b: Vec::new(),
+        }
+    }
+
+    /// `dst = a @ b.T` for the shape `(m, k, n)`: `a` is `[M, K]` and `b`
+    /// `[N, K]`, both already in `self.a` and `self.b`; `dst` is `[M, N]` f32.
+    fn run(&mut self, (m, k, n): (usize, usize, usize), dst: &mut [f32]) {
+        assert!(
+            self.a.len() >= m * k && self.b.len() >= n * k,
+            "the bf16 inputs are short"
+        );
+        assert!(dst.len() >= m * n, "the output is short");
+        let at = match self.cached.iter().position(|c| c.shape == (m, k, n)) {
+            Some(at) => at,
+            None => {
+                if self.cached.len() == SHAPES_KEPT {
+                    self.cached.remove(0);
+                }
+                self.cached.push(CachedMatmul::new((m, k, n)));
+                self.cached.len() - 1
+            }
+        };
+        let c = &self.cached[at];
+        let pointers: [*mut c_void; 3] = [
+            self.a.as_mut_ptr().cast(),
+            self.b.as_mut_ptr().cast(),
+            dst.as_mut_ptr().cast(),
+        ];
+        let args = [DNNL_ARG_SRC, DNNL_ARG_WEIGHTS, DNNL_ARG_DST];
+        let args: [ExecArg; 3] = std::array::from_fn(|i| ExecArg {
+            arg: args[i],
+            memory: c.mems[i],
+        });
+        // SAFETY: the buffers hold at least M * K, N * K and M * N values of
+        // the memories' types (asserted above) and outlive the call; the
+        // stream wait means oneDNN is done with them before this returns.
+        unsafe {
+            for (mem, ptr) in c.mems.iter().zip(pointers) {
+                ok(
+                    dnnl_memory_set_data_handle(*mem, ptr),
+                    "memory_set_data_handle",
+                );
+            }
+            ok(
+                dnnl_primitive_execute(c.primitive, self.stream, 3, args.as_ptr()),
+                "primitive_execute (attention)",
+            );
+            ok(dnnl_stream_wait(self.stream), "stream_wait (attention)");
+        }
+    }
+}
+
+#[cfg(feature = "attn-bf16")]
+impl Drop for HeadMatmuls {
+    fn drop(&mut self) {
+        self.cached.clear();
+        // SAFETY: made in `new`, destroyed once, after its primitives.
+        unsafe {
+            dnnl_stream_destroy(self.stream);
+        }
+    }
+}
+
+#[cfg(feature = "attn-bf16")]
+thread_local! {
+    static HEAD_MATMULS: RefCell<Option<HeadMatmuls>> = const { RefCell::new(None) };
+}
+
+/// Run `work` with this thread's [`HeadMatmuls`], made on first use.
+#[cfg(feature = "attn-bf16")]
+fn with_head_matmuls<T>(work: impl FnOnce(&mut HeadMatmuls) -> T) -> T {
+    HEAD_MATMULS.with(|cell| {
+        let mut slot = cell.borrow_mut();
+        work(slot.get_or_insert_with(HeadMatmuls::new))
+    })
+}
+
+/// Rung 27: one head's scores, `scores = (scale * Q) K^T`, as a bf16 matmul
+/// with f32 sums. `query` is `[seq, hd]`, `key_t` rung 10's transposed K,
+/// `[hd, seq]`, and `scores` `[seq, seq]`.
+///
+/// Q is scaled before it is rounded. With a power-of-two scale (1/8 for a
+/// head of 64) that is exact, so it equals scaling the sums afterwards.
+#[cfg(feature = "attn-bf16")]
+pub fn head_scores_bf16(
+    query: &[f32],
+    key_t: &[f32],
+    scale: f32,
+    (seq, hd): (usize, usize),
+    scores: &mut [f32],
+) {
+    with_head_matmuls(|t| {
+        t.a.resize(seq * hd, 0);
+        for (b, &x) in t.a.iter_mut().zip(&query[..seq * hd]) {
+            *b = to_bf16(x * scale);
+        }
+        // K back to `[seq, hd]`, the `[N, K]` layout the weights side takes.
+        t.b.resize(seq * hd, 0);
+        for i in 0..hd {
+            for (token, &x) in key_t[i * seq..(i + 1) * seq].iter().enumerate() {
+                t.b[token * hd + i] = to_bf16(x);
+            }
+        }
+        t.run((seq, hd, seq), scores);
+    });
+}
+
+/// Rung 27: one head's output, `out = P V`, as a bf16 matmul with f32 sums.
+/// `probs` is `[seq, seq]`, `values` `[seq, hd]`, `out` `[seq, hd]`.
+#[cfg(feature = "attn-bf16")]
+pub fn head_values_bf16(probs: &[f32], values: &[f32], (seq, hd): (usize, usize), out: &mut [f32]) {
+    with_head_matmuls(|t| {
+        t.a.resize(seq * seq, 0);
+        for (b, &p) in t.a.iter_mut().zip(&probs[..seq * seq]) {
+            *b = to_bf16(p);
+        }
+        // V transposed, `[hd, seq]`: the `[N, K]` layout the weights side takes.
+        t.b.resize(seq * hd, 0);
+        for (token, row) in values[..seq * hd].chunks(hd).enumerate() {
+            for (i, &x) in row.iter().enumerate() {
+                t.b[i * seq + token] = to_bf16(x);
+            }
+        }
+        t.run((seq, seq, hd), out);
+    });
+}
+
 /// Analysis only: time `work` as stage `index` under `stage-times`.
 #[cfg(feature = "int8")]
 #[inline(always)]
@@ -612,6 +869,82 @@ fn stage<T>(index: usize, work: impl FnOnce() -> T) -> T {
     {
         let _ = index;
         work()
+    }
+}
+
+/// Rung 27: the attention products must be the exact sums of the
+/// bf16-rounded inputs (up to f32 summation order), from several threads at
+/// once and across a change of shape.
+#[cfg(all(test, feature = "attn-bf16"))]
+mod attention_bf16_tests {
+    use super::*;
+
+    fn bf16_value(x: f32) -> f64 {
+        f32::from_bits((to_bf16(x) as u32) << 16) as f64
+    }
+
+    fn varied(len: usize, seed: usize) -> Vec<f32> {
+        (0..len)
+            .map(|i| (((i * 7919 + seed * 104729) % 2003) as f32 - 1001.0) / 211.0)
+            .collect()
+    }
+
+    /// Check both products for one head of `seq` tokens.
+    fn check_head(seq: usize, hd: usize, seed: usize) {
+        let (query, key_t, values) = (
+            varied(seq * hd, seed),
+            varied(hd * seq, seed + 1),
+            varied(seq * hd, seed + 2),
+        );
+        let scale = 0.125;
+        let mut scores = vec![0.0f32; seq * seq];
+        head_scores_bf16(&query, &key_t, scale, (seq, hd), &mut scores);
+        for r in 0..seq {
+            for c in 0..seq {
+                let want: f64 = (0..hd)
+                    .map(|i| bf16_value(query[r * hd + i] * scale) * bf16_value(key_t[i * seq + c]))
+                    .sum();
+                let got = scores[r * seq + c] as f64;
+                assert!(
+                    (got - want).abs() <= 1e-4 * (1.0 + want.abs()),
+                    "scores {r},{c}: {got} vs {want}"
+                );
+            }
+        }
+        // Any [seq, seq] matrix will do as P for the check.
+        let probs = varied(seq * seq, seed + 3);
+        let mut out = vec![0.0f32; seq * hd];
+        head_values_bf16(&probs, &values, (seq, hd), &mut out);
+        for r in 0..seq {
+            for i in 0..hd {
+                let want: f64 = (0..seq)
+                    .map(|t| bf16_value(probs[r * seq + t]) * bf16_value(values[t * hd + i]))
+                    .sum();
+                let got = out[r * hd + i] as f64;
+                assert!(
+                    (got - want).abs() <= 1e-4 * (1.0 + want.abs()),
+                    "out {r},{i}: {got} vs {want}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_products_are_the_sums_of_the_rounded_inputs() {
+        // Two lengths on one thread, then back: the shape cache must follow.
+        for seq in [37, 160, 37] {
+            check_head(seq, 64, seq);
+        }
+        // Four threads at once, each with its own stream.
+        std::thread::scope(|s| {
+            for t in 0..4 {
+                s.spawn(move || {
+                    for seq in [29, 131] {
+                        check_head(seq, 64, 10 * t + seq);
+                    }
+                });
+            }
+        });
     }
 }
 

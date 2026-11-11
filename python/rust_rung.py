@@ -57,6 +57,8 @@ EXPECTED_BACKEND = {
     22: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial",
     23: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth",
     24: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8",
+    26: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant",
+    27: "mkl-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant-attnbf16",
 }
 DESCRIPTION = {
     4: "candle-transformers encoder with a mask-only head, candle CPU (gemm) matmul",
@@ -79,6 +81,8 @@ DESCRIPTION = {
     22: "rung 20 with s8 only for the MLP's Wi and the attention's Wo, the rest bf16",
     23: "rung 22 plus Wqkv and the MLP's Wo in s8, smoothed (SmoothQuant, alpha 0.5, train-split scales)",
     24: "rung 23 with the s8 matmuls' input passed as u8 (s8 + 128), the shift taken off exactly",
+    26: "rung 24 with the s8 input rounded inside the norm and GELU loops that compute it",
+    27: "rung 26 with the attention products Q K^T and P V as bf16 matmuls through oneDNN, f32 sums",
 }
 
 

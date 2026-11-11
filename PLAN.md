@@ -684,6 +684,21 @@ keep rung 24's separate pass. The motive: at two threads the separate passes tak
 of a 94 ms request (`results/bench/cloud_turin_q8split24/`). The arithmetic of the
 rounding moves with it, so the expected gain is smaller: about 2 to 4 ms.
 
+**Rung 27's bound, set on 2026-11-11 before any rung 27 logit was seen.** Rung 17's bound
+again: over all 7,600 examples, agreement with rung 0 of at least 99.0% (at most 76
+changed predictions) and calibrated accuracy within 1.0 point of 84.78%. Rung 26 changes
+35 predictions, so this leaves room for 41 more. The design: built on rung 26. The two
+attention products of every layer but the last, `Q K^T` and `P V`, become oneDNN bf16
+matmuls with f32 sums, one per head as before, in place of MKL's f32 `sgemm`. Q, K and V
+are rounded to bf16 (to nearest even, as rung 17 rounds) as they are copied into the
+matmul's buffers, and the probabilities P after the softmax, which stays f32. Q is
+multiplied by the score scale before it is rounded; the scale is 1/8 here, a power of
+two, so that changes nothing. The last layer's mask-row attention stays f32. The
+motive: the two products take 13.5 ms of a 94 ms request at two threads
+(`results/bench/cloud_turin_q8split24/`), and Zen 5's `vdpbf16ps` does twice the
+multiply-adds of f32 FMA per instruction. The in-run gate is set from its Tier 3 run, by
+rung 17's rule.
+
 **Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
 uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
 libraries:

@@ -34,6 +34,7 @@
 //! runs inline and still allocates nothing.
 
 use super::{gelu_gate_row, Workspace};
+#[cfg(not(feature = "attn-bf16"))]
 use crate::accelerate::sgemm_strided;
 use crate::model::ModernBert;
 use crate::ops::{layer_norm_row, softmax_in_place};
@@ -603,6 +604,9 @@ fn attend_head(
 ) {
     let scores = &mut scores[..seq * seq];
     stage(14, || {
+        #[cfg(feature = "attn-bf16")]
+        crate::onednn::head_scores_bf16(query, key_t, scale, (seq, hd), scores);
+        #[cfg(not(feature = "attn-bf16"))]
         sgemm_strided(seq, seq, hd, scale, query, hd, key_t, seq, scores, seq)
     });
     stage(15, || {
@@ -619,6 +623,9 @@ fn attend_head(
         }
     });
     stage(16, || {
+        #[cfg(feature = "attn-bf16")]
+        crate::onednn::head_values_bf16(scores, values, (seq, hd), out);
+        #[cfg(not(feature = "attn-bf16"))]
         sgemm_strided(seq, hd, seq, 1.0, scores, seq, values, hd, out, hd)
     });
 }
