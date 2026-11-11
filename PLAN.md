@@ -671,6 +671,19 @@ step waits for the one before, so it cannot vectorise. The motive: at two thread
 softmax took 9.4 thread-ms per example, about 1 ns per value
 (`results/bench/cloud_turin_q8split24/`).
 
+**Rung 26's bound, set on 2026-11-11 before it was run.** Its logits must equal rung 24's
+bit for bit on all 7,600 examples, both run on the same pod: the rounding is the same
+function on the same f32 values, only moved, so any difference is a bug. The design: built
+on rung 24, not on rung 25. Three of the four s8 matmuls (Wqkv, Wi, the MLP's Wo) take
+their input from a loop over rows that we already run on the pool: the attention norm,
+the residual add with the MLP norm, and the GELU gate. Rung 26 rounds each row to s8 (u8)
+in that loop, right after computing it, while the row is still in the core's cache, and
+the matmul then reads the rounded rows. This removes a separate pass over the input and
+one pool dispatch per matmul. The attention's Wo and layer 0's Wqkv (no norm before it)
+keep rung 24's separate pass. The motive: at two threads the separate passes take 6.0 ms
+of a 94 ms request (`results/bench/cloud_turin_q8split24/`). The arithmetic of the
+rounding moves with it, so the expected gain is smaller: about 2 to 4 ms.
+
 **Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
 uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
 libraries:

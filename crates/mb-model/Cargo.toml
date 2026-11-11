@@ -92,6 +92,11 @@ int8-u8 = ["int8-smooth"]
 # Measured slower (results/bench/cloud_turin_serve25): a negative result,
 # kept; later rungs build on rung 24, not on this.
 lane-max = ["int8-u8"]
+# Rung 26: Wqkv, Wi and the MLP's Wo take their s8 (u8) input already rounded
+# by the row loop that computes it (the norms and the GELU gate), instead of a
+# separate pass inside the matmul. The same rounding on the same values, so
+# the logits are rung 24's, bit for bit. Built on rung 24, not on rung 25.
+fuse-quant = ["int8-u8"]
 # Analysis only, never a rung: wall time per stage of the threaded layer,
 # printed at the end of `eval_agnews` (`stage_times.rs`).
 stage-times = []

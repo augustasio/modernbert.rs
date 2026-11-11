@@ -131,6 +131,10 @@ pub struct Workspace {
     /// How many threads rung 11 splits the work across. Earlier rungs
     /// ignore it.
     threads: usize,
+    /// Rung 26: the next s8 matmul's input, rounded by the loop that
+    /// computed it.
+    #[cfg(feature = "fuse-quant")]
+    q8: crate::onednn::Int8Input,
 }
 
 impl Workspace {
@@ -164,6 +168,8 @@ impl Workspace {
             num_heads: config.num_attention_heads,
             head_dim: config.head_dim(),
             threads: 1,
+            #[cfg(feature = "fuse-quant")]
+            q8: crate::onednn::Int8Input::default(),
         };
         ws.set_seq_len(max_seq);
         ws

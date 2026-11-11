@@ -145,6 +145,19 @@ impl ModernBert {
         let layer = &self.layers[index];
         // Layer 0 has no attention norm (trap: it is `nn.Identity`, not a
         // norm with unit weight), so its projection reads `h` itself.
+        // Rung 26: the norm rounds each row for Wqkv as it writes it.
+        #[cfg(feature = "fuse-quant")]
+        if let (Some(w), false) = (&layer.attn_norm, layer.attn.wqkv.int8.is_empty()) {
+            let eps = self.config.norm_eps;
+            let wqkv = &layer.attn.wqkv;
+            stage(0, || {
+                layer_norm_rows_q8(&ws.h, w, eps, &mut ws.normed, ws.threads, wqkv, &mut ws.q8)
+            });
+            stage(1, || {
+                crate::onednn::linear_int8_from(&mut ws.q8, wqkv, &mut ws.qkv)
+            });
+            return;
+        }
         let attn_in = match &layer.attn_norm {
             Some(w) => {
                 let eps = self.config.norm_eps;
@@ -270,7 +283,23 @@ impl ModernBert {
         // is onto the un-normed h.
         let width = ws.h.cols;
         let block = rows_per_block(ws.h.rows, threads) * width;
+        // Rung 26: the norm rounds each row for Wi as it writes it.
+        #[cfg(feature = "fuse-quant")]
+        let fuse_wi = !layer.mlp.wi.int8.is_empty();
+        #[cfg(not(feature = "fuse-quant"))]
+        let fuse_wi = false;
         stage(5, || {
+            #[cfg(feature = "fuse-quant")]
+            if fuse_wi {
+                let q8 = ws.q8.prepare(ws.h.rows, width);
+                add_norm_rows_q8(
+                    (&mut ws.h, &ws.projection, &mut ws.normed),
+                    (&layer.mlp_norm, c.norm_eps),
+                    (&layer.mlp.wi, q8),
+                    block / width,
+                );
+                return;
+            }
             let blocks =
                 ws.h.data
                     .chunks_mut(block)
@@ -291,12 +320,30 @@ impl ModernBert {
         });
 
         stage(6, || {
+            #[cfg(feature = "fuse-quant")]
+            if fuse_wi {
+                crate::onednn::linear_int8_from(&mut ws.q8, &layer.mlp.wi, &mut ws.projected);
+                return;
+            }
+            let _ = fuse_wi;
             crate::ops::linear_into(&ws.normed, &layer.mlp.wi, &mut ws.projected)
         });
 
         // gelu(input) * gate, by blocks of rows.
+        // Rung 26: the GELU gate rounds each row for the MLP's Wo.
+        #[cfg(feature = "fuse-quant")]
+        let fuse_wo = !layer.mlp.wo.int8.is_empty();
+        #[cfg(not(feature = "fuse-quant"))]
+        let fuse_wo = false;
         stage(7, || {
             ws.gated.resize_rows(ws.projected.rows);
+            #[cfg(feature = "fuse-quant")]
+            if fuse_wo {
+                let q8 = ws.q8.prepare(ws.gated.rows, ws.gated.cols);
+                let per = rows_per_block(ws.projected.rows, threads);
+                gelu_gate_rows_q8(&ws.projected, &mut ws.gated, (&layer.mlp.wo, q8), per);
+                return;
+            }
             let (wide, narrow) = (ws.projected.cols, ws.gated.cols);
             let rows = rows_per_block(ws.projected.rows, threads);
             let blocks = ws
@@ -312,6 +359,12 @@ impl ModernBert {
         });
 
         stage(8, || {
+            #[cfg(feature = "fuse-quant")]
+            if fuse_wo {
+                crate::onednn::linear_int8_from(&mut ws.q8, &layer.mlp.wo, &mut ws.projection);
+                return;
+            }
+            let _ = fuse_wo;
             crate::ops::linear_into(&ws.gated, &layer.mlp.wo, &mut ws.projection)
         });
 
@@ -328,6 +381,98 @@ impl ModernBert {
             });
         });
     }
+}
+
+/// Rung 26: a block of rows of an s8 matmul's input, and their scales.
+#[cfg(feature = "fuse-quant")]
+type Q8<'a> = (&'a mut [i8], &'a mut [f32]);
+
+/// Rung 26: [`layer_norm_rows`], each row also rounded for `weight`'s s8
+/// matmul right after it is written, while it is still in cache.
+#[cfg(feature = "fuse-quant")]
+fn layer_norm_rows_q8(
+    input: &Matrix,
+    norm: &[f32],
+    eps: f32,
+    out: &mut Matrix,
+    threads: usize,
+    weight: &Matrix,
+    q8: &mut crate::onednn::Int8Input,
+) {
+    out.resize_rows(input.rows);
+    let width = input.cols;
+    let per = rows_per_block(input.rows, threads);
+    let (q, scales) = q8.prepare(input.rows, width);
+    let blocks = input
+        .data
+        .chunks(per * width)
+        .zip(out.data.chunks_mut(per * width))
+        .zip(q.chunks_mut(per * width).zip(scales.chunks_mut(per)));
+    in_parallel(blocks, |((x, y), (q, scales))| {
+        let rows = x.chunks(width).zip(y.chunks_mut(width));
+        for (i, (x, y)) in rows.enumerate() {
+            layer_norm_row(x, norm, eps, y);
+            scales[i] = crate::onednn::quantize_row(y, weight, &mut q[i * width..(i + 1) * width]);
+        }
+    });
+}
+
+/// Rung 26: `h += projection`, then the MLP norm into `normed`, each normed
+/// row also rounded for `weight`'s s8 matmul right after it is written.
+/// `per` rows to a block.
+#[cfg(feature = "fuse-quant")]
+fn add_norm_rows_q8(
+    (h, projection, normed): (&mut Matrix, &Matrix, &mut Matrix),
+    (norm, eps): (&[f32], f32),
+    (weight, (q, scales)): (&Matrix, Q8),
+    per: usize,
+) {
+    let width = h.cols;
+    let blocks = h
+        .data
+        .chunks_mut(per * width)
+        .zip(projection.data.chunks(per * width))
+        .zip(normed.data.chunks_mut(per * width))
+        .zip(q.chunks_mut(per * width).zip(scales.chunks_mut(per)));
+    in_parallel(blocks, |(((h, p), normed), (q, scales))| {
+        let rows = h
+            .chunks_mut(width)
+            .zip(p.chunks(width))
+            .zip(normed.chunks_mut(width));
+        for (i, ((h, p), normed)) in rows.enumerate() {
+            for (x, p) in h.iter_mut().zip(p) {
+                *x += p;
+            }
+            layer_norm_row(h, norm, eps, normed);
+            scales[i] =
+                crate::onednn::quantize_row(normed, weight, &mut q[i * width..(i + 1) * width]);
+        }
+    });
+}
+
+/// Rung 26: the GELU gate of every row, each gated row also rounded for
+/// `weight`'s s8 matmul right after it is written. `per` rows to a block.
+#[cfg(feature = "fuse-quant")]
+fn gelu_gate_rows_q8(
+    projected: &Matrix,
+    gated: &mut Matrix,
+    (weight, (q, scales)): (&Matrix, Q8),
+    per: usize,
+) {
+    let (wide, narrow) = (projected.cols, gated.cols);
+    let blocks = projected
+        .data
+        .chunks(per * wide)
+        .zip(gated.data.chunks_mut(per * narrow))
+        .zip(q.chunks_mut(per * narrow).zip(scales.chunks_mut(per)));
+    in_parallel(blocks, |((projected, gated), (q, scales))| {
+        let rows = projected.chunks(wide).zip(gated.chunks_mut(narrow));
+        for (i, (p, g)) in rows.enumerate() {
+            gelu_gate_row(p, g);
+            scales[i] =
+                crate::onednn::quantize_row(g, weight, &mut q[i * narrow..(i + 1) * narrow]);
+        }
+    });
 }
 
 /// Rung 10's scatter and attention, a run of heads per thread.
@@ -551,5 +696,97 @@ fn gather_heads(ws: &mut Workspace) {
             }
         }
         region += heads * seq * hd;
+    }
+}
+
+/// Rung 26: the fused loops must round exactly what rung 24's separate pass
+/// rounds: the same bytes and the same scales, row for row, whatever the
+/// split into blocks.
+#[cfg(all(test, feature = "fuse-quant"))]
+mod fuse_quant_tests {
+    use super::*;
+    use crate::onednn::{quantize_row, Int8Input};
+
+    /// A matrix of varied values with no pattern a block split could hide.
+    fn varied(rows: usize, cols: usize, seed: usize) -> Matrix {
+        let mut m = Matrix::zeros(rows, cols);
+        for (i, x) in m.data.iter_mut().enumerate() {
+            *x = (((i * 7919 + seed) % 1009) as f32 - 504.0) / 37.0;
+        }
+        m
+    }
+
+    /// Rung 24's rounding of every row of `rows`, one row at a time.
+    fn separately(rows: &Matrix, weight: &Matrix) -> (Vec<i8>, Vec<f32>) {
+        let mut q = vec![0i8; rows.rows * rows.cols];
+        let mut scales = vec![0.0f32; rows.rows];
+        for r in 0..rows.rows {
+            let q_row = &mut q[r * rows.cols..(r + 1) * rows.cols];
+            scales[r] = quantize_row(rows.row(r), weight, q_row);
+        }
+        (q, scales)
+    }
+
+    /// One plain weight and one smoothed, `n` rows of `k`.
+    fn weights(n: usize, k: usize) -> [Matrix; 2] {
+        let plain = Matrix::zeros(n, k);
+        let mut smoothed = Matrix::zeros(n, k);
+        smoothed.int8_smooth = (0..k).map(|j| 0.5 + (j % 7) as f32 / 4.0).collect();
+        [plain, smoothed]
+    }
+
+    #[test]
+    fn the_norm_rounds_what_the_separate_pass_rounds() {
+        let (rows, width) = (7, 48);
+        let norm: Vec<f32> = (0..width).map(|j| 1.0 + j as f32 / 64.0).collect();
+        for weight in weights(3, width) {
+            for threads in [1, 2, 3, 8] {
+                let input = varied(rows, width, threads);
+                let mut normed = Matrix::zeros(0, width);
+                let mut q8 = Int8Input::default();
+                layer_norm_rows_q8(&input, &norm, 1e-5, &mut normed, threads, &weight, &mut q8);
+                let (q, scales) = separately(&normed, &weight);
+                assert_eq!(q8.rounded(), (&q[..], &scales[..]), "{threads} threads");
+            }
+        }
+    }
+
+    #[test]
+    fn the_add_and_norm_round_what_the_separate_pass_rounds() {
+        let (rows, width) = (7, 48);
+        let norm: Vec<f32> = (0..width).map(|j| 1.0 - j as f32 / 128.0).collect();
+        for weight in weights(3, width) {
+            for per in [1, 2, 3, 7] {
+                let mut h = varied(rows, width, 1);
+                let projection = varied(rows, width, 2);
+                let mut normed = Matrix::zeros(rows, width);
+                let mut q8 = Int8Input::default();
+                let blocks = q8.prepare(rows, width);
+                add_norm_rows_q8(
+                    (&mut h, &projection, &mut normed),
+                    (&norm, 1e-5),
+                    (&weight, blocks),
+                    per,
+                );
+                let (q, scales) = separately(&normed, &weight);
+                assert_eq!(q8.rounded(), (&q[..], &scales[..]), "{per} rows a block");
+            }
+        }
+    }
+
+    #[test]
+    fn the_gelu_gate_rounds_what_the_separate_pass_rounds() {
+        let (rows, narrow) = (7, 40);
+        for weight in weights(3, narrow) {
+            for per in [1, 2, 3, 7] {
+                let projected = varied(rows, 2 * narrow, 3);
+                let mut gated = Matrix::zeros(rows, narrow);
+                let mut q8 = Int8Input::default();
+                let blocks = q8.prepare(rows, narrow);
+                gelu_gate_rows_q8(&projected, &mut gated, (&weight, blocks), per);
+                let (q, scales) = separately(&gated, &weight);
+                assert_eq!(q8.rounded(), (&q[..], &scales[..]), "{per} rows a block");
+            }
+        }
     }
 }
