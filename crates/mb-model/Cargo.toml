@@ -115,6 +115,11 @@ softmax-bf16 = ["scatter-bf16", "f32-math"]
 # `as i8` cast compiled to scalar code. The same integer for every value the
 # scales allow, so rung 28's logits, bit for bit. Built on rung 28.
 round-simd = ["scatter-bf16"]
+# Rung 31: `exp_f32` builds 2^n with the same 1.5 * 2^23 shift instead of the
+# saturating `n as i32` cast, which compiled to scalar code inside every loop
+# over `exp` (the GELU gate's erf and the softmax). The same 2^n for every n
+# the clamp allows, so rung 30's logits, bit for bit. Built on rung 30.
+exp-simd = ["round-simd"]
 # Analysis only, never a rung: wall time per stage of the threaded layer,
 # printed at the end of `eval_agnews` (`stage_times.rs`).
 stage-times = []

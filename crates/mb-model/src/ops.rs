@@ -161,7 +161,9 @@ pub fn backend() -> &'static str {
             }
         };
     }
-    if cfg!(feature = "round-simd") {
+    if cfg!(feature = "exp-simd") {
+        with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant-attnbf16-scatterbf16-roundsimd-expsimd")
+    } else if cfg!(feature = "round-simd") {
         with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant-attnbf16-scatterbf16-roundsimd")
     } else if cfg!(feature = "softmax-bf16") {
         with_blas!("-fused-expf-attention-sgemm-threads-f32math-owned-batch-maskrows-bf16-serialblas-omppool-int8-partial-smooth-u8-fusequant-attnbf16-scatterbf16-softmaxbf16")

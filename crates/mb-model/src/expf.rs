@@ -59,7 +59,11 @@ pub fn exp_f32(x: f32) -> f32 {
 
     // 2^n: n + 127 in the exponent field, zero mantissa. The clamp keeps n
     // in [-126, 127], so the field stays in [1, 254].
-    let two_n = f32::from_bits(((n as i32 + 127) as u32) << 23);
+    let two_n = if cfg!(feature = "exp-simd") {
+        two_to_the(n)
+    } else {
+        f32::from_bits(((n as i32 + 127) as u32) << 23)
+    };
     let y = exp_r * two_n;
     if x < MIN_X {
         0.0
@@ -68,11 +72,40 @@ pub fn exp_f32(x: f32) -> f32 {
     }
 }
 
+/// Rung 31: `2^n` for an integer-valued `n` in [-126, 127], with no
+/// float-to-int cast.
+///
+/// The cast `n as i32` saturates (NaN gives 0, out of range gives the end of
+/// the range), and on x86 the compiler builds that one lane at a time: per 16
+/// values, 16 scalar converts, 32 compares and 32 conditional moves. It was most
+/// of the cost of every loop over `exp_f32`. The same trick as rung 30's
+/// rounding avoids it. Between 2^23 and 2^24 floats are exactly 1 apart, so
+/// for an integer m in [0, 2^22), `1.5 * 2^23 + m` is exact and its mantissa is
+/// `2^22 + m`. With m = n + 127, shifting those bits left by 23 drops the
+/// sign, the exponent and the 2^22 bit, and leaves m in the exponent field.
+#[inline(always)]
+fn two_to_the(n: f32) -> f32 {
+    const SHIFT: f32 = 12_582_912.0; // 1.5 * 2^23
+    f32::from_bits((n + (127.0 + SHIFT)).to_bits() << 23)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     /// Distance in units in the last place between two positive f32 values.
+    /// Rung 31's bound in miniature: the shift gives the cast's 2^n for every
+    /// n the clamp allows, so `exp_f32` is unchanged bit for bit. (An
+    /// exhaustive run over all 4,278,190,082 non-NaN f32 inputs of the whole
+    /// function also found no difference.)
+    #[test]
+    fn two_to_the_equals_the_cast() {
+        for n in -126..=127 {
+            let want = f32::from_bits(((n + 127) as u32) << 23);
+            assert_eq!(two_to_the(n as f32).to_bits(), want.to_bits(), "{n}");
+        }
+    }
+
     fn ulps(a: f32, b: f32) -> u32 {
         (a.to_bits() as i64 - b.to_bits() as i64).unsigned_abs() as u32
     }
