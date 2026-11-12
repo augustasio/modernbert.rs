@@ -28,7 +28,7 @@ Best rate within the 200 ms budget, and examples per dollar at $1.12/h (rate x 3
 
 | Rung | r1 | r2 | Examples per dollar (r1) |
 |---|---|---|---|
-| 19 (omp-pool, fp32) | 20/s | none | about 64,000 |
+| 19 (omp-pool, bf16 matmuls) | 20/s | none | about 64,000 |
 | 22 (int8-partial) | 35/s | 25/s | about 112,000 |
 | 23 (int8-smooth) | 55/s | 40/s | about 177,000 |
 | 24 (int8-u8) | 60/s | 45/s | about 193,000 |
@@ -38,7 +38,7 @@ threshold, and every rung lost 5 to 15/s there. Read round 1 as the result and r
 as what a busier neighbour costs. Rungs 23 and 24 differ by one rate step here, inside
 the host noise; the earlier interleaved runs found them equal.
 
-- **Rung 19** (fp32) takes about 133 ms per request on 2 threads, so the p99 is at the
+- **Rung 19** (bf16 matmuls) takes about 133 ms per request on 2 threads, so the p99 is at the
   budget before a queue forms. 8x2 does not help it: 4x4 also gave about 20/s.
 - **Int8 is what makes 8x2 work.** At about 90 ms per request, a request fits in half
   the budget, so eight of them at once can absorb the queue.
