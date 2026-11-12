@@ -1,0 +1,117 @@
+== at a02d844 Int8 baselines: Tier 3 and a serving run on a busy host
+== versions torch 2.15.0+cpu ort 1.31.1 ov 2026.4.1-22982-e213a147257-releases/2026/4 nncf 3.4.0
+wrote weights/ModernBERT-Large-Instruct/smooth_scales.safetensors (221406b4b84a), widest max/min scale ratio 71.5
+CPU(s):                                  128
+Model name:                              AMD EPYC 9575F 64-Core Processor
+== export 04:03:21Z
+exported, opset {'ai.onnx': 20}, 1563 nodes
+wrote /root/mb/weights/onnx/rung1_mask_head_int8.onnx
+wrote /root/mb/weights/openvino/rung1_mask_head_int8.xml from 300 train prompts
+6f1b9624a3a5fbfd235d391dfe25515e8b913a70c0f95947966557cd050de24e  weights/onnx/rung1_mask_head_int8.onnx
+c9664db53af14426f09e81796c9cd415a1d4f09b93affe90302f31d88d2af790  weights/openvino/rung1_mask_head_int8.bin
+== gates torch: --gate-logit 48.835 --gate-share 0.218421  onnx: --gate-logit 37.510 --gate-share 0.100526  openvino: --gate-logit 36.247 --gate-share 0.028158
+== serve rung28 8x2 round 1 04:04:58Z load 9.40
+{"best_rate_within_budget":70.0,"budget_ms":200.0,"changed_allowed":192.279625,"changed_predictions":88,"changed_share":0.004215568862275449,"checked":20875,"summary":true,"valid":true}
+   end load 72.75
+== serve openvino_int8 8x2 round 1 04:15:46Z load 22.47
+{"best_rate_within_budget":50.0,"budget_ms":200.0,"changed_allowed":282.115002,"changed_predictions":152,"changed_share":0.015171174767940913,"checked":10019,"summary":true,"valid":true}
+   end load 31.04
+== serve rung28aa 8x2 round 1 04:25:10Z load 23.39
+{"best_rate_within_budget":70.0,"budget_ms":200.0,"changed_allowed":192.279625,"changed_predictions":88,"changed_share":0.004215568862275449,"checked":20875,"summary":true,"valid":true}
+   end load 17.40
+== serve openvino_int8 4x4 round 1 04:31:23Z load 16.08
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":268.852584,"changed_predictions":146,"changed_share":0.015291160452450775,"checked":9548,"summary":true,"valid":true}
+   end load 14.70
+== serve rung28 4x4 round 1 04:36:53Z load 13.60
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":87.946628,"changed_predictions":39,"changed_share":0.004084625052366988,"checked":9548,"summary":true,"valid":true}
+   end load 17.59
+== serve torch_int8 2x8 round 1 04:42:17Z load 16.34
+{"best_rate_within_budget":25.0,"budget_ms":200.0,"changed_allowed":1659.9996,"changed_predictions":632,"changed_share":0.11436844010133912,"checked":5526,"summary":true,"valid":true}
+   end load 38.29
+== serve torch_int8 4x4 round 1 04:46:47Z load 21.92
+{"best_rate_within_budget":35.0,"budget_ms":200.0,"changed_allowed":2085.483708,"changed_predictions":1053,"changed_share":0.11028487641390868,"checked":9548,"summary":true,"valid":true}
+   end load 29.83
+== serve onnx_int8 4x4 round 1 04:52:48Z load 22.24
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":763.9976,"changed_predictions":324,"changed_share":0.04999228514118192,"checked":6481,"summary":true,"valid":true}
+   end load 19.73
+== serve onnx_int8_nospin 4x4 round 1 04:58:59Z load 18.87
+{"best_rate_within_budget":30.0,"budget_ms":200.0,"changed_allowed":763.9976,"changed_predictions":324,"changed_share":0.04999228514118192,"checked":6481,"summary":true,"valid":true}
+   end load 8.85
+== serve rung28 1x16 round 1 05:05:10Z load 8.85
+{"best_rate_within_budget":20.0,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":19,"changed_share":0.004143947655398037,"checked":4585,"summary":true,"valid":true}
+   end load 31.74
+== host still busy (load 33.23), running anyway
+== serve openvino_int8 1x16 round 1 05:17:46Z load 33.42
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_allowed":214.0008,"changed_predictions":15,"changed_share":0.022488755622188907,"checked":667,"summary":true,"valid":true}
+   end load 41.21
+== ROUND_DONE 1 05:19:24Z
+== host still busy (load 34.48), running anyway
+== serve rung28 8x2 round 2 05:27:25Z load 34.33
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":15,"changed_share":0.0039082855653986455,"checked":3838,"summary":true,"valid":true}
+   end load 42.28
+== serve openvino_int8 8x2 round 2 05:33:47Z load 21.05
+{"best_rate_within_budget":50.0,"budget_ms":200.0,"changed_allowed":279.721572,"changed_predictions":128,"changed_share":0.012885041272397826,"checked":9934,"summary":true,"valid":true}
+   end load 13.57
+== serve rung28aa 8x2 round 2 05:40:12Z load 12.80
+{"best_rate_within_budget":80.0,"budget_ms":200.0,"changed_allowed":190.52032400000002,"changed_predictions":80,"changed_share":0.0038677238445175015,"checked":20684,"summary":true,"valid":true}
+   end load 13.76
+== serve openvino_int8 4x4 round 2 05:46:25Z load 12.82
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":269.33127,"changed_predictions":125,"changed_share":0.013068478829064296,"checked":9565,"summary":true,"valid":true}
+   end load 33.80
+== serve rung28 4x4 round 2 05:52:45Z load 20.76
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":88.103215,"changed_predictions":34,"changed_share":0.0035546262415054888,"checked":9565,"summary":true,"valid":true}
+   end load 14.89
+== serve torch_int8 2x8 round 2 05:58:09Z load 15.14
+{"best_rate_within_budget":20.0,"budget_ms":200.0,"changed_allowed":1659.9996,"changed_predictions":482,"changed_share":0.12022948366176103,"checked":4009,"summary":true,"valid":true}
+   end load 21.56
+== serve torch_int8 4x4 round 2 06:01:24Z load 20.31
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":2089.196865,"changed_predictions":1051,"changed_share":0.10987976999477261,"checked":9565,"summary":true,"valid":true}
+   end load 21.18
+== serve onnx_int8 4x4 round 2 06:07:06Z load 21.18
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":763.9976,"changed_predictions":303,"changed_share":0.04699860400186133,"checked":6447,"summary":true,"valid":true}
+   end load 19.85
+== serve onnx_int8_nospin 4x4 round 2 06:13:16Z load 19.85
+{"best_rate_within_budget":25.0,"budget_ms":200.0,"changed_allowed":763.9976,"changed_predictions":303,"changed_share":0.04699860400186133,"checked":6447,"summary":true,"valid":true}
+   end load 9.58
+== serve rung28 1x16 round 2 06:19:27Z load 8.97
+{"best_rate_within_budget":20.0,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":15,"changed_share":0.0032278889606197547,"checked":4647,"summary":true,"valid":true}
+   end load 20.64
+== serve openvino_int8 1x16 round 2 06:24:03Z load 19.31
+{"best_rate_within_budget":10.0,"budget_ms":200.0,"changed_allowed":214.0008,"changed_predictions":27,"changed_share":0.012368300503893724,"checked":2183,"summary":true,"valid":true}
+   end load 29.47
+== ROUND_DONE 2 06:27:11Z
+== serve rung28 8x2 round 3 06:27:31Z load 21.82
+{"best_rate_within_budget":70.0,"budget_ms":200.0,"changed_allowed":194.048137,"changed_predictions":116,"changed_share":0.005506241989841933,"checked":21067,"summary":true,"valid":true}
+   end load 14.19
+== serve openvino_int8 8x2 round 3 06:33:44Z load 13.05
+{"best_rate_within_budget":50.0,"budget_ms":200.0,"changed_allowed":288.76029,"changed_predictions":132,"changed_share":0.012871769868356898,"checked":10255,"summary":true,"valid":true}
+   end load 14.09
+== serve rung28aa 8x2 round 3 06:40:09Z load 13.53
+{"best_rate_within_budget":70.0,"budget_ms":200.0,"changed_allowed":194.048137,"changed_predictions":116,"changed_share":0.005506241989841933,"checked":21067,"summary":true,"valid":true}
+   end load 15.85
+== serve openvino_int8 4x4 round 3 06:46:21Z load 15.85
+{"best_rate_within_budget":50.0,"budget_ms":200.0,"changed_allowed":273.526812,"changed_predictions":119,"changed_share":0.012250360304714844,"checked":9714,"summary":true,"valid":true}
+   end load 11.32
+== serve rung28 4x4 round 3 06:51:51Z load 11.32
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":89.475654,"changed_predictions":56,"changed_share":0.005764875437512868,"checked":9714,"summary":true,"valid":true}
+   end load 14.89
+== serve torch_int8 2x8 round 3 06:57:15Z load 13.78
+{"best_rate_within_budget":25.0,"budget_ms":200.0,"changed_allowed":1659.9996,"changed_predictions":602,"changed_share":0.10621030345800989,"checked":5668,"summary":true,"valid":true}
+   end load 21.04
+== serve torch_int8 4x4 round 3 07:01:16Z load 21.04
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":2121.741594,"changed_predictions":1046,"changed_share":0.10767963763640107,"checked":9714,"summary":true,"valid":true}
+   end load 28.55
+== serve onnx_int8 4x4 round 3 07:07:12Z load 23.24
+{"best_rate_within_budget":40.0,"budget_ms":200.0,"changed_allowed":763.9976,"changed_predictions":333,"changed_share":0.04961263408820024,"checked":6712,"summary":true,"valid":true}
+   end load 16.36
+== serve onnx_int8_nospin 4x4 round 3 07:13:23Z load 15.05
+{"best_rate_within_budget":20.0,"budget_ms":200.0,"changed_allowed":763.9976,"changed_predictions":242,"changed_share":0.049580004097521,"checked":4881,"summary":true,"valid":true}
+   end load 14.20
+== serve rung28 1x16 round 3 07:18:49Z load 13.06
+{"best_rate_within_budget":20.0,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":27,"changed_share":0.0056402757468142885,"checked":4787,"summary":true,"valid":true}
+   end load 12.34
+== serve openvino_int8 1x16 round 3 07:23:25Z load 11.35
+{"best_rate_within_budget":15.0,"budget_ms":200.0,"changed_allowed":214.0008,"changed_predictions":46,"changed_share":0.013426736719206071,"checked":3426,"summary":true,"valid":true}
+   end load 16.19
+== ROUND_DONE 3 07:27:19Z
+== QUIET_DONE 07:27:19Z
