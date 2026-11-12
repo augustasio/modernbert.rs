@@ -1081,3 +1081,11 @@ Changes to the plan made after seeing data, with the reason.
   quiet 70/s). The expected gain, about 3% of the layers' time, is under one rate step,
   so a rerun would also read as a tie. The gate split (5.1 to 1.3 thread-ms on the
   rounding, layers 3% faster) stands as rung 30's result.
+- **Rung 31 passes its bound and is faster** (2026-11-12, `results/bench/cloud_turin_serve31/`).
+  Logits equal rung 30's, bit for bit, on all 7,600 examples, on the same pod. Building
+  exp's 2^n by the 1.5 * 2^23 shift removed the scalar converts from the gate and softmax
+  loops: the gate falls from 5.4 to 2.8 ms (wall, two threads), the softmax from 9.3 to
+  4.7 thread-ms, the layers from 77.4 to 72.5 ms. Behind the server at 8x2 it held 75,
+  75 and 80/s against rung 30's 70, 70 and 70, on a quiet host. Rung 31 is the new best
+  rung.
+

@@ -1,0 +1,32 @@
+rung30 0000000000037e70 <mb_model::fused::threads::in_parallel::<((&[f32], &mut [f32]), (&mut [i8], &mut [f lines=281 zmm=0 scalar_cvt=0 cmov=3
+rung30 000000000003a210 <<mb_model::fused::threads::in_parallel<((&[f32], &mut [f32]), (&mut [i8], &mut [f3 lines=13 zmm=0 scalar_cvt=0 cmov=0
+rung30 000000000003a890 <mb_model::fused::threads::softmax_rows>: lines=145 zmm=0 scalar_cvt=0 cmov=4
+rung30 000000000003bc10 <mb_model::fused::threads::gelu_gate_rows_q8>: lines=217 zmm=0 scalar_cvt=0 cmov=5
+rung30 000000000003d880 <<alloc::vec::Vec<std::sync::poison::mutex::Mutex<core::option::Option<((&[f32], &m lines=332 zmm=0 scalar_cvt=0 cmov=12
+rung30 000000000004ec50 <<serde_json::de::Deserializer<serde_json::read::SliceRead>>::parse_decimal_overflo lines=97 zmm=0 scalar_cvt=0 cmov=2
+rung30 000000000004eda0 <<serde_json::de::Deserializer<serde_json::read::SliceRead>>::parse_exponent_overfl lines=52 zmm=0 scalar_cvt=0 cmov=0
+rung30 0000000000052690 <mb_model::fused::gelu_gate_row>: lines=343 zmm=74 scalar_cvt=17 cmov=36
+rung30 00000000000548f0 <mb_model::ops::softmax_in_place>: lines=720 zmm=101 scalar_cvt=21 cmov=42
+rung30 0000000000059220 <<serde_json::de::Deserializer<serde_json::read::StrRead>>::parse_decimal_overflow> lines=97 zmm=0 scalar_cvt=0 cmov=2
+rung30 0000000000059370 <<serde_json::de::Deserializer<serde_json::read::StrRead>>::parse_exponent_overflow lines=52 zmm=0 scalar_cvt=0 cmov=0
+rung30 00000000000831d0 <std::sys::pal::unix::stack_overflow::thread_info::set_current_info>: lines=966 zmm=0 scalar_cvt=0 cmov=2
+rung30 00000000000842f0 <std::sys::pal::unix::stack_overflow::imp::make_handler>: lines=183 zmm=0 scalar_cvt=0 cmov=1
+rung30 0000000000084600 <std::sys::pal::unix::stack_overflow::imp::signal_handler>: lines=169 zmm=0 scalar_cvt=0 cmov=0
+rung30 0000000000090de0 <<hashbrown::raw::Fallibility>::capacity_overflow>: lines=22 zmm=0 scalar_cvt=0 cmov=0
+rung30 0000000000094200 <alloc::raw_vec::capacity_overflow>: lines=9 zmm=0 scalar_cvt=0 cmov=0
+rung31 0000000000037e60 <mb_model::fused::threads::in_parallel::<((&[f32], &mut [f32]), (&mut [i8], &mut [f lines=281 zmm=0 scalar_cvt=0 cmov=3
+rung31 000000000003a200 <<mb_model::fused::threads::in_parallel<((&[f32], &mut [f32]), (&mut [i8], &mut [f3 lines=13 zmm=0 scalar_cvt=0 cmov=0
+rung31 000000000003a880 <mb_model::fused::threads::softmax_rows>: lines=145 zmm=0 scalar_cvt=0 cmov=4
+rung31 000000000003bc00 <mb_model::fused::threads::gelu_gate_rows_q8>: lines=217 zmm=0 scalar_cvt=0 cmov=5
+rung31 000000000003d870 <<alloc::vec::Vec<std::sync::poison::mutex::Mutex<core::option::Option<((&[f32], &m lines=332 zmm=0 scalar_cvt=0 cmov=12
+rung31 000000000004e8a0 <<serde_json::de::Deserializer<serde_json::read::SliceRead>>::parse_decimal_overflo lines=97 zmm=0 scalar_cvt=0 cmov=2
+rung31 000000000004e9f0 <<serde_json::de::Deserializer<serde_json::read::SliceRead>>::parse_exponent_overfl lines=52 zmm=0 scalar_cvt=0 cmov=0
+rung31 00000000000518b0 <mb_model::ops::softmax_in_place>: lines=545 zmm=98 scalar_cvt=0 cmov=0
+rung31 0000000000056000 <mb_model::fused::gelu_gate_row>: lines=211 zmm=72 scalar_cvt=0 cmov=2
+rung31 0000000000058820 <<serde_json::de::Deserializer<serde_json::read::StrRead>>::parse_decimal_overflow> lines=97 zmm=0 scalar_cvt=0 cmov=2
+rung31 0000000000058970 <<serde_json::de::Deserializer<serde_json::read::StrRead>>::parse_exponent_overflow lines=52 zmm=0 scalar_cvt=0 cmov=0
+rung31 00000000000827d0 <std::sys::pal::unix::stack_overflow::thread_info::set_current_info>: lines=966 zmm=0 scalar_cvt=0 cmov=2
+rung31 00000000000838f0 <std::sys::pal::unix::stack_overflow::imp::make_handler>: lines=183 zmm=0 scalar_cvt=0 cmov=1
+rung31 0000000000083c00 <std::sys::pal::unix::stack_overflow::imp::signal_handler>: lines=169 zmm=0 scalar_cvt=0 cmov=0
+rung31 00000000000903e0 <<hashbrown::raw::Fallibility>::capacity_overflow>: lines=22 zmm=0 scalar_cvt=0 cmov=0
+rung31 0000000000093800 <alloc::raw_vec::capacity_overflow>: lines=9 zmm=0 scalar_cvt=0 cmov=0

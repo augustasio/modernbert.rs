@@ -1,0 +1,22 @@
+== rung31 t2 round 3 load 21.41
+   64 / 64  0.073 s per example, about 0 min left
+stage attn_norm        0.54 ms/example    27 calls
+stage wqkv            15.44 ms/example    28 calls
+stage attention        8.99 ms/example    27 calls
+stage gather_heads     0.45 ms/example    27 calls
+stage attn_wo          5.43 ms/example    28 calls
+stage add_mlp_norm     0.60 ms/example    28 calls
+stage wi              25.65 ms/example    28 calls
+stage gelu_gate        2.81 ms/example    28 calls
+stage mlp_wo          12.27 ms/example    28 calls
+stage add              0.17 ms/example    28 calls
+stage q8_quantize      0.24 ms/example    29 calls
+stage q8_onednn       55.41 ms/example   112 calls
+stage q8_dequantize    2.37 ms/example   112 calls
+stage att_scatter      5.25 ms/example   432 calls
+stage att_scores       3.87 ms/example   432 calls
+stage att_softmax      4.72 ms/example   432 calls
+stage att_pv           3.79 ms/example   432 calls
+stage gate_math        4.24 ms/example  4451 calls
+stage gate_quant       0.93 ms/example  4451 calls
+stage layers_total    72.34 ms/example (without the q8_ and att_ lines)
