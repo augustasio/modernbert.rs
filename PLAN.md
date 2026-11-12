@@ -732,6 +732,23 @@ GELU gate with its quantize in 2.5 ms at two threads, rung 28 in 7.3
 rounding at 5.1 of its 15 thread-ms (`results/bench/cloud_turin_gate_split/`). The
 expected gain is about 3 ms per request at two threads.
 
+**Rung 31's bound, set on 2026-11-12 before any rung 31 logit was seen.** Rung 31's
+logits equal rung 30's, bit for bit, over all 7,600 examples, both run on the same pod.
+The design: built on rung 30. `exp_f32` builds 2^n by adding 127 + 1.5 * 2^23 to the
+integer-valued n and shifting the bits left by 23, in place of the saturating
+`n as i32` cast. The two give the same 2^n for every n the clamp allows (a test over all
+254), and the whole function gives the same bits on every one of the 4,278,190,082
+non-NaN f32 inputs (an exhaustive run). The motive: rung 30's gate split left about 10
+thread-ms of the GELU gate's arithmetic, and the compiled loop for Zen 5 shows the cast
+built one lane at a time (per 16 values: 16 scalar converts, 32 compares, 32
+conditional moves). The softmax calls the same `exp_f32`, so it gains too.
+
+The bound first agreed for this rung assumed a cheaper erf that changes the numbers. It
+stays on record for any later rung that does: over all 7,600 examples, the new erf
+within 1e-6 of the f64 formula for every f32 input (an exhaustive test); agreement with
+the rung before of at least 99.8% (at most 15 changed predictions); calibrated accuracy
+within 0.2 points of it; and rung 17's bound against rung 0.
+
 **Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
 uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
 libraries:
