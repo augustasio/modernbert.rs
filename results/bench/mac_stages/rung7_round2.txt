@@ -1,0 +1,21 @@
+64 examples, matmul backend accelerate, loading the model
+   64 / 64  0.412 s per example, about 0 min left
+stage attn_norm        5.63 ms/example    28 calls
+stage wqkv            31.40 ms/example    28 calls
+stage attention      244.19 ms/example    56 calls
+stage gather_heads     0.00 ms/example     0 calls
+stage attn_wo         11.01 ms/example    28 calls
+stage add_mlp_norm     6.31 ms/example    28 calls
+stage wi              49.11 ms/example    28 calls
+stage gelu_gate       32.41 ms/example    28 calls
+stage mlp_wo          27.03 ms/example    28 calls
+stage add              0.49 ms/example    28 calls
+stage q8_quantize      0.00 ms/example     0 calls
+stage q8_onednn        0.00 ms/example     0 calls
+stage q8_dequantize    0.00 ms/example     0 calls
+stage att_scatter      0.00 ms/example     0 calls
+stage att_scores       0.00 ms/example     0 calls
+stage att_softmax      0.00 ms/example     0 calls
+stage att_pv           0.00 ms/example     0 calls
+stage layers_total   407.58 ms/example (without the q8_ and att_ lines)
+wrote results/bench/mac_stages/o.npy and its .json

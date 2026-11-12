@@ -1,0 +1,21 @@
+64 examples, matmul backend accelerate-fused-expf-attention-sgemm-threads-f32math, loading the model
+   64 / 64  0.125 s per example, about 0 min left
+stage attn_norm        1.22 ms/example    27 calls
+stage wqkv            29.38 ms/example    28 calls
+stage attention        8.06 ms/example    28 calls
+stage gather_heads     0.40 ms/example    28 calls
+stage attn_wo          9.94 ms/example    28 calls
+stage add_mlp_norm     1.47 ms/example    28 calls
+stage wi              42.43 ms/example    28 calls
+stage gelu_gate        4.49 ms/example    28 calls
+stage mlp_wo          25.55 ms/example    28 calls
+stage add              1.26 ms/example    28 calls
+stage q8_quantize      0.00 ms/example     0 calls
+stage q8_onednn        0.00 ms/example     0 calls
+stage q8_dequantize    0.00 ms/example     0 calls
+stage att_scatter      7.31 ms/example   448 calls
+stage att_scores       7.09 ms/example   448 calls
+stage att_softmax      8.19 ms/example   448 calls
+stage att_pv           3.63 ms/example   448 calls
+stage layers_total   124.21 ms/example (without the q8_ and att_ lines)
+wrote results/bench/mac_stages/o.npy and its .json
