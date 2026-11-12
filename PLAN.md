@@ -1056,3 +1056,11 @@ Changes to the plan made after seeing data, with the reason.
   loses 0.45 thread-ms and the softmax gains about 0.9, so the work moved. Behind the
   server the two tie at matched load (`results/bench/cloud_turin_serve29/`). Later rungs
   build on rung 28.
+
+- **Rung 30 measured by its stage times, not by its rate.** Rung 30 met its bound: its
+  logits equal rung 28's, bit for bit, on all 7,600 examples, on the same pod. Its
+  serving test (`results/bench/cloud_turin_serve30/`) ran on a host whose load rose from
+  23 to 156, and only rung 30's first test was quiet (65/s, within one step of rung 28's
+  quiet 70/s). The expected gain, about 3% of the layers' time, is under one rate step,
+  so a rerun would also read as a tie. The gate split (5.1 to 1.3 thread-ms on the
+  rounding, layers 3% faster) stands as rung 30's result.

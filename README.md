@@ -93,6 +93,11 @@ What it says:
   calibrated on train prompts) is about 4% slower per request than rung 28. An op-by-op
   profile shows the matmuls tie; OpenVINO wins on a fused GELU gate and loses on layout
   copies ([results/bench/cloud_turin_profile_openvino/SUMMARY.md](results/bench/cloud_turin_profile_openvino/SUMMARY.md)).
+- **Rung 30 takes a third off the gate, exactly.** It rounds to int8 by adding 1.5 * 2^23
+  instead of a saturating cast: 5.1 to 1.3 thread-ms per request, logits bit-identical to
+  rung 28 on all 7,600 examples. The layers get about 3% faster, which is under one rate
+  step, so serving reads it as a tie
+  ([results/bench/cloud_turin_serve30/SUMMARY.md](results/bench/cloud_turin_serve30/SUMMARY.md)).
 - **For the lowest latency, give one request all the cores.** Rung 28 as one worker of 16
   threads answers in about 35 ms (p50) with a p99 of 66 to 79 ms at 5 requests per
   second, but serves only up to 20/s within 200 ms. Eight workers of two threads serve
