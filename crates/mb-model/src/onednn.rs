@@ -366,13 +366,34 @@ const INPUT_TYPE: i32 = DNNL_S8;
 #[cfg(feature = "int8")]
 #[inline]
 fn to_matmul_input(scaled: f32) -> i8 {
-    // `as` saturates, and the scale keeps every value in range.
-    let q = scaled.round_ties_even() as i8;
+    let q = if cfg!(feature = "round-simd") {
+        round_to_s8(scaled)
+    } else {
+        // `as` saturates, and the scale keeps every value in range.
+        scaled.round_ties_even() as i8
+    };
     if cfg!(feature = "int8-u8") {
         ((q as u8) ^ 0x80) as i8
     } else {
         q
     }
+}
+
+/// Rung 30: `scaled` rounded to the nearest integer, ties to even, as an s8.
+///
+/// Adding 1.5 * 2^23 moves the value into the f32 range where the spacing is
+/// exactly 1, so the addition itself rounds it, to nearest even, as
+/// `round_ties_even` does; the integer is then the low bits of the mantissa.
+/// This holds for |x| < 2^22. The scales keep every value within [-127, 127]
+/// up to rounding, and the clamp to [-128, 127] matches the saturating `as`
+/// cast it replaces, so the result is the same integer. Unlike that cast, it
+/// vectorises: on Zen 5 the cast compiled to scalar `vroundss`/`vcvttss2si`.
+#[cfg(feature = "int8")]
+#[inline]
+fn round_to_s8(scaled: f32) -> i8 {
+    const SHIFT: f32 = 12_582_912.0; // 1.5 * 2^23
+    let clamped = scaled.max(-128.0).min(127.0);
+    (clamped + SHIFT).to_bits() as u8 as i8
 }
 
 /// Rows per block when a loop over `rows` is split across the pool: about
@@ -1079,6 +1100,21 @@ mod attention_bf16_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Rung 30's rounding equals the cast it replaces for every f32 from -300
+    /// to 300 (about 2.2 billion values, the ties and the saturation included).
+    #[cfg(feature = "int8")]
+    #[test]
+    fn s8_rounding_equals_the_saturating_cast() {
+        let (low, high) = ((-300.0f32).to_bits(), 300.0f32.to_bits());
+        // Negative values count up in bits from -0 to -300; positive from 0.
+        let negatives = (1u32 << 31)..=low;
+        let positives = 0u32..=high;
+        for bits in negatives.chain(positives) {
+            let x = f32::from_bits(bits);
+            assert_eq!(round_to_s8(x), x.round_ties_even() as i8, "{x}");
+        }
+    }
 
     #[test]
     fn rounding_is_to_nearest_even() {

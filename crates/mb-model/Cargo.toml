@@ -110,6 +110,11 @@ scatter-bf16 = ["attn-bf16"]
 # buffer `P V` reads, instead of f32 probabilities that a second pass rounds.
 # Rung 28's logits, bit for bit. Built on rung 28; needs rung 12's f32 math.
 softmax-bf16 = ["scatter-bf16", "f32-math"]
+# Rung 30 (candidate): the int8 rounding (round to nearest even, then s8 or u8) by adding
+# 1.5 * 2^23 in f32 and keeping the low byte, which vectorises; the saturating
+# `as i8` cast compiled to scalar code. The same integer for every value the
+# scales allow, so rung 28's logits, bit for bit. Built on rung 28.
+round-simd = ["scatter-bf16"]
 # Analysis only, never a rung: wall time per stage of the threaded layer,
 # printed at the end of `eval_agnews` (`stage_times.rs`).
 stage-times = []
