@@ -12,10 +12,12 @@ use std::time::Instant;
 
 /// The stages, in the order a layer runs them. The `q8_` lines are inside the
 /// four matmul stages (int8 builds only) and the `att_` lines inside
-/// attention, so the total leaves them out. The `att_` lines run on every
+/// attention, and the `gate_` lines inside `gelu_gate` (the GELU gate's
+/// arithmetic, then the rounding of each gated row for the MLP's Wo), so the
+/// total leaves them out. The `att_` and `gate_` lines run on every
 /// thread at once and sum over the threads: divide by the thread count for
 /// wall time.
-pub const STAGES: [&str; 17] = [
+pub const STAGES: [&str; 19] = [
     "attn_norm",
     "wqkv",
     "attention",
@@ -33,6 +35,8 @@ pub const STAGES: [&str; 17] = [
     "att_scores",
     "att_softmax",
     "att_pv",
+    "gate_math",
+    "gate_quant",
 ];
 
 /// How many of [`STAGES`] make up a layer; the rest are inside them.

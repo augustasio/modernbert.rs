@@ -469,9 +469,10 @@ fn gelu_gate_rows_q8(
     in_parallel(blocks, |((projected, gated), (q, scales))| {
         let rows = projected.chunks(wide).zip(gated.chunks_mut(narrow));
         for (i, (p, g)) in rows.enumerate() {
-            gelu_gate_row(p, g);
-            scales[i] =
-                crate::onednn::quantize_row(g, weight, &mut q[i * narrow..(i + 1) * narrow]);
+            stage(17, || gelu_gate_row(p, g));
+            scales[i] = stage(18, || {
+                crate::onednn::quantize_row(g, weight, &mut q[i * narrow..(i + 1) * narrow])
+            });
         }
     });
 }
