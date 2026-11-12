@@ -150,6 +150,11 @@ def onnx_int8_score(path: str = ONNX_INT8_PATH, threads: int = 4):
     options = ort.SessionOptions()
     options.intra_op_num_threads = threads
     options.inter_op_num_threads = 1
+    # ONNX Runtime's pool spins between ops by default. With several workers on one
+    # host a spinning thread can hold a core another worker needs, so the serving test
+    # also measures it with spinning off (MB_ORT_SPIN=0), its documented knob for that.
+    if os.environ.get("MB_ORT_SPIN") == "0":
+        options.add_session_config_entry("session.intra_op.allow_spinning", "0")
     session = ort.InferenceSession(path, options, providers=["CPUExecutionProvider"])
     names = [value.name for value in session.get_inputs()]
 

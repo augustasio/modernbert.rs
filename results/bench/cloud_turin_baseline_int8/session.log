@@ -1,0 +1,78 @@
+== at 1d0e5a8 Error bars for the load test, and an OpenVINO static int8 baseline
+== versions torch 2.15.0+cpu ort 1.31.1 ov 2026.4.1-22982-e213a147257-releases/2026/4 nncf 3.4.0 x86
+wrote weights/ModernBERT-Large-Instruct/smooth_scales.safetensors (221406b4b84a), widest max/min scale ratio 71.5
+CPU(s):                                  128
+Model name:                              AMD EPYC 9575F 64-Core Processor
+== export 22:58:14Z
+wrote /root/mb/results/rung3_export.json
+exported, opset {'ai.onnx': 20}, 1563 nodes
+wrote /root/mb/weights/onnx/rung1_mask_head_int8.onnx
+Applying Fast Bias correction ━━━━━━━━━━━━━━━━━━━━━ 100% 1/1 • 0:00:00 • 0:00:00
+wrote /root/mb/weights/openvino/rung1_mask_head_int8.xml from 300 train prompts
+weights/onnx:
+total 2738324
+drwxr-xr-x 2 root root        116 Nov 11 22:58 .
+drwxr-xr-x 5 root root         83 Nov 11 22:59 ..
+-rw-r--r-- 1 root root    2771507 Nov 11 22:58 rung1_mask_head.onnx
+-rw-r--r-- 1 root root 1583341568 Nov 11 22:58 rung1_mask_head.onnx.data
+-rw-r--r-- 1 root root  400094127 Nov 11 22:58 rung1_mask_head_int8.onnx
+
+weights/openvino:
+total 390512
+drwxr-xr-x 2 root root        82 Nov 11 22:59 .
+drwxr-xr-x 5 root root        83 Nov 11 22:59 ..
+-rw-r--r-- 1 root root 398028761 Nov 11 22:59 rung1_mask_head_int8.bin
+-rw-r--r-- 1 root root   1853972 Nov 11 22:59 rung1_mask_head_int8.xml
+== tier3 torch 22:59:52Z
+wrote /root/mb/results/baseline_torch_int8.json
+torch_int8: agreement 6770/7600, calibrated 0.7109, max |diff| 12.209
+== tier3 onnx 23:05:11Z
+wrote /root/mb/results/baseline_onnx_int8.json
+onnx_int8: agreement 7218/7600, calibrated 0.8501, max |diff| 9.377
+== tier3 openvino 01:58:23Z
+wrote /root/mb/results/baseline_openvino_int8.json
+openvino_int8: agreement 7493/7600, calibrated 0.8612, max |diff| 9.062
+== gates torch: --gate-logit 48.835 --gate-share 0.218421  onnx: --gate-logit 37.510 --gate-share 0.100526  openvino: --gate-logit 36.247 --gate-share 0.028158
+== serve rung28 8x2 round 1 02:23:27Z load 8.05
+{"best_rate_within_budget":55.0,"budget_ms":200.0,"changed_allowed":129.73693500000002,"changed_predictions":71,"changed_share":0.005040823571175009,"checked":14085,"summary":true,"valid":true}
+== serve rung28aa 8x2 round 1 02:28:09Z load 33.80
+{"best_rate_within_budget":45.0,"budget_ms":200.0,"changed_allowed":78.321133,"changed_predictions":45,"changed_share":0.005292249794190286,"checked":8503,"summary":true,"valid":true}
+== serve rung28 1x16 round 1 02:31:21Z load 78.51
+{"best_rate_within_budget":10.0,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":13,"changed_share":0.005565068493150685,"checked":2336,"summary":true,"valid":true}
+== serve rung28 2x8 round 1 02:34:27Z load 84.78
+{"best_rate_within_budget":15.0,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":21,"changed_share":0.0059863169897377425,"checked":3508,"summary":true,"valid":true}
+== serve rung28 4x4 round 1 02:38:19Z load 87.41
+{"best_rate_within_budget":30.0,"budget_ms":200.0,"changed_allowed":82.13448700000001,"changed_predictions":40,"changed_share":0.00448581361444432,"checked":8917,"summary":true,"valid":true}
+== serve torch_int8 1x16 round 1 02:44:34Z load 88.34
+{"best_rate_within_budget":5.0,"budget_ms":200.0,"changed_allowed":1659.9996,"changed_predictions":185,"changed_share":0.1239946380697051,"checked":1492,"summary":true,"valid":true}
+== serve onnx_int8 1x16 round 1 02:47:44Z load 75.05
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_allowed":763.9976,"changed_predictions":14,"changed_share":0.04361370716510903,"checked":321,"summary":true,"valid":true}
+== serve openvino_int8 1x16 round 1 02:49:20Z load 67.14
+{"best_rate_within_budget":10.0,"budget_ms":200.0,"changed_allowed":214.0008,"changed_predictions":38,"changed_share":0.015683037556747832,"checked":2423,"summary":true,"valid":true}
+== serve torch_int8 2x8 round 1 02:53:13Z load 72.38
+{"best_rate_within_budget":30.0,"budget_ms":200.0,"changed_allowed":1962.731106,"changed_predictions":958,"changed_share":0.10661028266191853,"checked":8986,"summary":true,"valid":true}
+== serve onnx_int8 2x8 round 1 03:00:32Z load 72.32
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_allowed":763.9976,"changed_predictions":14,"changed_share":0.04361370716510903,"checked":321,"summary":true,"valid":true}
+== serve openvino_int8 2x8 round 1 03:02:09Z load 68.93
+{"best_rate_within_budget":15.0,"budget_ms":200.0,"changed_allowed":214.0008,"changed_predictions":54,"changed_share":0.015306122448979591,"checked":3528,"summary":true,"valid":true}
+== serve torch_int8 4x4 round 1 03:06:50Z load 74.77
+{"best_rate_within_budget":25.0,"budget_ms":200.0,"changed_allowed":1659.9996,"changed_predictions":695,"changed_share":0.10427606901725431,"checked":6665,"summary":true,"valid":true}
+== serve onnx_int8 4x4 round 1 03:13:20Z load 76.39
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_allowed":763.9976,"changed_predictions":14,"changed_share":0.04361370716510903,"checked":321,"summary":true,"valid":true}
+== serve openvino_int8 4x4 round 1 03:15:01Z load 72.31
+{"best_rate_within_budget":30.0,"budget_ms":200.0,"changed_allowed":253.027788,"changed_predictions":118,"changed_share":0.013131537947918985,"checked":8986,"summary":true,"valid":true}
+== serve torch_int8 8x2 round 1 03:22:07Z load 78.43
+{"best_rate_within_budget":5.0,"budget_ms":200.0,"changed_allowed":1659.9996,"changed_predictions":185,"changed_share":0.1239946380697051,"checked":1492,"summary":true,"valid":true}
+== serve onnx_int8 8x2 round 1 03:25:57Z load 68.37
+{"best_rate_within_budget":null,"budget_ms":200.0,"changed_allowed":763.9976,"changed_predictions":14,"changed_share":0.04361370716510903,"checked":321,"summary":true,"valid":true}
+== serve openvino_int8 8x2 round 1 03:27:42Z load 60.96
+{"best_rate_within_budget":25.0,"budget_ms":200.0,"changed_allowed":214.0008,"changed_predictions":90,"changed_share":0.01350337584396099,"checked":6665,"summary":true,"valid":true}
+== serve rung28 8x2 round 2 03:34:10Z load 65.63
+{"best_rate_within_budget":45.0,"budget_ms":200.0,"changed_allowed":78.965903,"changed_predictions":48,"changed_share":0.005598973521521055,"checked":8573,"summary":true,"valid":true}
+== serve rung28aa 8x2 round 2 03:37:22Z load 79.28
+{"best_rate_within_budget":45.0,"budget_ms":200.0,"changed_allowed":78.965903,"changed_predictions":48,"changed_share":0.005598973521521055,"checked":8573,"summary":true,"valid":true}
+== serve rung28 1x16 round 2 03:40:35Z load 83.30
+{"best_rate_within_budget":15.0,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":18,"changed_share":0.005382775119617225,"checked":3344,"summary":true,"valid":true}
+== serve rung28 2x8 round 2 03:44:26Z load 81.96
+{"best_rate_within_budget":25.0,"budget_ms":200.0,"changed_allowed":70.0036,"changed_predictions":37,"changed_share":0.005655762763680831,"checked":6542,"summary":true,"valid":true}
+== serve rung28 4x4 round 2 03:50:02Z load 88.27
