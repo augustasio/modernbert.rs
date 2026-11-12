@@ -1,0 +1,108 @@
+== at 52a8970 Profile OpenVINO's int8 model per node, for comparison with the stage timers
+wrote weights/ModernBERT-Large-Instruct/smooth_scales.safetensors (221406b4b84a), widest max/min scale ratio 71.5
+exported, opset {'ai.onnx': 20}, 1563 nodes
+wrote /root/mb/weights/openvino/rung1_mask_head_int8.xml from 300 train prompts
+CPU(s):                                  128
+Model name:                              AMD EPYC 9575F 64-Core Processor
+Cpus_allowed_list:	0,2,5,8,11,15,17,19,21,30,34,38,42,47-48,62,64,66,69,72,75,79,81,83,85,94,98,102,106,111-112,126
+== cpus 11,15 places {11},{15}
+== rung28 stage times t2 round 1 load 11.77
+   64 / 64  0.084 s per example, about 0 min left
+stage attn_norm        1.39 ms/example    27 calls
+stage wqkv            15.76 ms/example    28 calls
+stage attention       11.74 ms/example    27 calls
+stage gather_heads     0.41 ms/example    27 calls
+stage attn_wo          6.38 ms/example    28 calls
+stage add_mlp_norm     1.46 ms/example    28 calls
+stage wi              26.32 ms/example    28 calls
+stage gelu_gate        7.40 ms/example    28 calls
+stage mlp_wo          12.55 ms/example    28 calls
+stage add              0.18 ms/example    28 calls
+stage q8_quantize      1.09 ms/example    29 calls
+stage q8_onednn       56.73 ms/example   112 calls
+stage q8_dequantize    2.40 ms/example   112 calls
+stage att_scatter      5.70 ms/example   432 calls
+stage att_scores       3.93 ms/example   432 calls
+stage att_softmax      9.48 ms/example   432 calls
+stage att_pv           3.85 ms/example   432 calls
+stage layers_total    83.59 ms/example (without the q8_ and att_ lines)
+== openvino t2 round 1 load 11.06
+wall p50 84.9 ms, p90 92.9 ms, nodes 79.6 ms per example
+     54.71 ms  FullyConnected               brgemm_avx512_I8
+      4.52 ms  FullyConnectedQuantizedLegacy brgemm_avx512_i8
+      2.72 ms  Reorder                      jit_uni_bf16
+      2.60 ms  Subtract                     jit_avx512_bf16
+      2.39 ms  Softmax                      jit_avx512_bf16
+      1.64 ms  Reorder                      jit_uni_i8
+      1.35 ms  Transpose                    unknown_bf16
+      1.31 ms  MatMul                       brgemm_avx512_i8
+      0.98 ms  FullyConnected               brgemm_avx512_i8
+      0.95 ms  Add                          jit_avx512_bf16
+      0.87 ms  MatMul                       brgemm_avx512_I8
+      0.84 ms  Select                       jit_avx512_I8
+      0.81 ms  RoPE                         ref_any_bf16
+      0.75 ms  MVN                          jit_avx512_bf16
+      0.67 ms  Split                        ref_bf16
+      0.62 ms  Multiply                     jit_avx512_bf16
+      0.58 ms  IsNaN                        jit_avx512_bf16
+      0.43 ms  VariadicSplit                ref_bf16
+      0.42 ms  FakeQuantize                 jit_avx512_f32
+      0.16 ms  PowerStatic                  jit_avx512_bf16
+      0.09 ms  Transpose                    unknown_i8
+      0.03 ms  Gather                       ref_any_f32
+      0.03 ms  Cos                          ref_any_f32
+      0.03 ms  Sin                          ref_any_f32
+      0.03 ms  Convert                      ref_i64
+== rung28 stage times t2 round 2 load 9.90
+   64 / 64  0.082 s per example, about 0 min left
+stage attn_norm        1.36 ms/example    27 calls
+stage wqkv            15.72 ms/example    28 calls
+stage attention       11.25 ms/example    27 calls
+stage gather_heads     0.44 ms/example    27 calls
+stage attn_wo          6.31 ms/example    28 calls
+stage add_mlp_norm     1.40 ms/example    28 calls
+stage wi              25.75 ms/example    28 calls
+stage gelu_gate        7.28 ms/example    28 calls
+stage mlp_wo          12.20 ms/example    28 calls
+stage add              0.17 ms/example    28 calls
+stage q8_quantize      1.09 ms/example    29 calls
+stage q8_onednn       55.74 ms/example   112 calls
+stage q8_dequantize    2.38 ms/example   112 calls
+stage att_scatter      5.14 ms/example   432 calls
+stage att_scores       3.87 ms/example   432 calls
+stage att_softmax      9.31 ms/example   432 calls
+stage att_pv           3.83 ms/example   432 calls
+stage layers_total    81.89 ms/example (without the q8_ and att_ lines)
+== openvino t2 round 2 load 9.35
+wall p50 83.2 ms, p90 91.0 ms, nodes 77.8 ms per example
+     53.59 ms  FullyConnected               brgemm_avx512_I8
+      4.43 ms  FullyConnectedQuantizedLegacy brgemm_avx512_i8
+      2.67 ms  Reorder                      jit_uni_bf16
+      2.50 ms  Subtract                     jit_avx512_bf16
+      2.40 ms  Softmax                      jit_avx512_bf16
+      1.60 ms  Reorder                      jit_uni_i8
+      1.33 ms  Transpose                    unknown_bf16
+      1.28 ms  MatMul                       brgemm_avx512_i8
+      0.94 ms  FullyConnected               brgemm_avx512_i8
+      0.94 ms  Add                          jit_avx512_bf16
+      0.85 ms  MatMul                       brgemm_avx512_I8
+      0.81 ms  Select                       jit_avx512_I8
+      0.77 ms  RoPE                         ref_any_bf16
+      0.73 ms  MVN                          jit_avx512_bf16
+      0.64 ms  Split                        ref_bf16
+      0.60 ms  Multiply                     jit_avx512_bf16
+      0.56 ms  IsNaN                        jit_avx512_bf16
+      0.40 ms  VariadicSplit                ref_bf16
+      0.40 ms  FakeQuantize                 jit_avx512_f32
+      0.14 ms  PowerStatic                  jit_avx512_bf16
+      0.08 ms  Transpose                    unknown_i8
+      0.03 ms  Cos                          ref_any_f32
+      0.03 ms  Gather                       ref_any_f32
+      0.03 ms  Sin                          ref_any_f32
+      0.02 ms  Convert                      ref_i64
+total 1464
+drwxr-xr-x 2 root root      67 Nov 12 08:35 .
+drwxr-xr-x 4 root root     116 Nov 12 08:35 ..
+-rw-r--r-- 1 root root    5782 Nov 12 08:35 openvino_t2.json
+-rw-r--r-- 1 root root 1488527 Nov 12 08:35 runtime_model.xml
+== PROF_DONE 08:35:30Z

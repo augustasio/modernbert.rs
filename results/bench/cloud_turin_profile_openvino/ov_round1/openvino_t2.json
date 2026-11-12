@@ -1,0 +1,349 @@
+{
+  "threads": 2,
+  "examples": 64,
+  "wall_ms_p50": 84.89991596434265,
+  "wall_ms_p90": 92.89035995025188,
+  "nodes_ms_per_example": 79.58790624999942,
+  "by_node_type": {
+    "FullyConnected": 55.68121874999952,
+    "FullyConnectedQuantizedLegacy": 4.52237500000001,
+    "Reorder": 4.37293749999971,
+    "Subtract": 2.6005312500000333,
+    "Softmax": 2.3925312500000055,
+    "MatMul": 2.185312500000025,
+    "Transpose": 1.4352812500000545,
+    "Add": 0.9510468750000098,
+    "Select": 0.839000000000007,
+    "RoPE": 0.8094843750000289,
+    "MVN": 0.7462812500000034,
+    "Split": 0.6710781249999959,
+    "Multiply": 0.629250000000013,
+    "IsNaN": 0.576546874999992,
+    "VariadicSplit": 0.4318437499999954,
+    "FakeQuantize": 0.4185781250000083,
+    "PowerStatic": 0.1605781250000033,
+    "Gather": 0.03449999999999994,
+    "Cos": 0.031234374999999967,
+    "Sin": 0.029515624999999976,
+    "Convert": 0.02887499999999996,
+    "LogicalAnd": 0.009750000000000007,
+    "Concat": 0.007671875000000006,
+    "Range": 0.007250000000000006,
+    "LessEqual": 0.005593750000000004,
+    "Subgraph": 0.005031250000000003,
+    "GatherND": 0.0020000000000000013,
+    "GreaterEqual": 0.0010312500000000007,
+    "Broadcast": 0.0010000000000000007,
+    "Maximum": 0.0005781250000000004,
+    "Parameter": 0.0,
+    "Reshape": 0.0,
+    "ShapeOf": 0.0,
+    "Squeeze": 0.0,
+    "Abs": 0.0,
+    "Clamp": 0.0,
+    "Gelu": 0.0,
+    "Result": 0.0
+  },
+  "by_exec_type": [
+    [
+      "FullyConnected",
+      "brgemm_avx512_I8",
+      54.70617187499952
+    ],
+    [
+      "FullyConnectedQuantizedLegacy",
+      "brgemm_avx512_i8",
+      4.52237500000001
+    ],
+    [
+      "Reorder",
+      "jit_uni_bf16",
+      2.723890624999859
+    ],
+    [
+      "Subtract",
+      "jit_avx512_bf16",
+      2.6005312500000333
+    ],
+    [
+      "Softmax",
+      "jit_avx512_bf16",
+      2.3925312500000055
+    ],
+    [
+      "Reorder",
+      "jit_uni_i8",
+      1.6397500000000291
+    ],
+    [
+      "Transpose",
+      "unknown_bf16",
+      1.3498750000000397
+    ],
+    [
+      "MatMul",
+      "brgemm_avx512_i8",
+      1.3137968750000055
+    ],
+    [
+      "FullyConnected",
+      "brgemm_avx512_i8",
+      0.9750468750000002
+    ],
+    [
+      "Add",
+      "jit_avx512_bf16",
+      0.9510468750000098
+    ],
+    [
+      "MatMul",
+      "brgemm_avx512_I8",
+      0.8715156250000207
+    ],
+    [
+      "Select",
+      "jit_avx512_I8",
+      0.839000000000007
+    ],
+    [
+      "RoPE",
+      "ref_any_bf16",
+      0.8094843750000289
+    ],
+    [
+      "MVN",
+      "jit_avx512_bf16",
+      0.7462812500000034
+    ],
+    [
+      "Split",
+      "ref_bf16",
+      0.6710781249999959
+    ],
+    [
+      "Multiply",
+      "jit_avx512_bf16",
+      0.6224843750000125
+    ],
+    [
+      "IsNaN",
+      "jit_avx512_bf16",
+      0.576546874999992
+    ],
+    [
+      "VariadicSplit",
+      "ref_bf16",
+      0.4318437499999954
+    ],
+    [
+      "FakeQuantize",
+      "jit_avx512_f32",
+      0.4185781250000083
+    ],
+    [
+      "PowerStatic",
+      "jit_avx512_bf16",
+      0.1605781250000033
+    ],
+    [
+      "Transpose",
+      "unknown_i8",
+      0.08540625000000131
+    ],
+    [
+      "Gather",
+      "ref_any_f32",
+      0.03254687499999998
+    ],
+    [
+      "Cos",
+      "ref_any_f32",
+      0.031234374999999967
+    ],
+    [
+      "Sin",
+      "ref_any_f32",
+      0.029515624999999976
+    ],
+    [
+      "Convert",
+      "ref_i64",
+      0.02684374999999997
+    ],
+    [
+      "LogicalAnd",
+      "jit_avx512_I8",
+      0.009750000000000007
+    ],
+    [
+      "Reorder",
+      "jit_uni_f32",
+      0.009140625000000005
+    ],
+    [
+      "Range",
+      "ref_any_i32",
+      0.007250000000000006
+    ],
+    [
+      "Multiply",
+      "jit_avx512_i32",
+      0.006765625000000005
+    ],
+    [
+      "Concat",
+      "ref_f32",
+      0.005906250000000004
+    ],
+    [
+      "LessEqual",
+      "jit_avx512_i32",
+      0.005593750000000004
+    ],
+    [
+      "Subgraph",
+      "jit_avx512_bf16",
+      0.005031250000000003
+    ],
+    [
+      "Convert",
+      "ref_i32",
+      0.0020312500000000014
+    ],
+    [
+      "GatherND",
+      "ref_any_I8",
+      0.0020000000000000013
+    ],
+    [
+      "Gather",
+      "ref_any_bf16",
+      0.0019531250000000013
+    ],
+    [
+      "Concat",
+      "ref_i32",
+      0.0017656250000000014
+    ],
+    [
+      "GreaterEqual",
+      "jit_avx512_i32",
+      0.0010312500000000007
+    ],
+    [
+      "Broadcast",
+      "ref_i32",
+      0.0010000000000000007
+    ],
+    [
+      "Maximum",
+      "jit_avx512_i32",
+      0.0005781250000000004
+    ],
+    [
+      "Reorder",
+      "jit_uni_i32",
+      0.00015625000000000003
+    ],
+    [
+      "Parameter",
+      "unknown_i64",
+      0.0
+    ],
+    [
+      "FakeQuantize",
+      "undef",
+      0.0
+    ],
+    [
+      "Subtract",
+      "undef",
+      0.0
+    ],
+    [
+      "Multiply",
+      "undef",
+      0.0
+    ],
+    [
+      "Reshape",
+      "unknown_bf16",
+      0.0
+    ],
+    [
+      "ShapeOf",
+      "ref_i32",
+      0.0
+    ],
+    [
+      "Gather",
+      "unknown_i32",
+      0.0
+    ],
+    [
+      "Squeeze",
+      "unknown_i32",
+      0.0
+    ],
+    [
+      "Reshape",
+      "unknown_i32",
+      0.0
+    ],
+    [
+      "Reshape",
+      "unknown_f32",
+      0.0
+    ],
+    [
+      "Abs",
+      "jit_avx512_i32",
+      0.0
+    ],
+    [
+      "Clamp",
+      "undef",
+      0.0
+    ],
+    [
+      "LogicalAnd",
+      "undef",
+      0.0
+    ],
+    [
+      "Select",
+      "undef",
+      0.0
+    ],
+    [
+      "PowerStatic",
+      "undef",
+      0.0
+    ],
+    [
+      "Gelu",
+      "undef",
+      0.0
+    ],
+    [
+      "Add",
+      "undef",
+      0.0
+    ],
+    [
+      "Abs",
+      "undef",
+      0.0
+    ],
+    [
+      "Gather",
+      "unknown_bf16",
+      0.0
+    ],
+    [
+      "Result",
+      "unknown_f32",
+      0.0
+    ]
+  ]
+}

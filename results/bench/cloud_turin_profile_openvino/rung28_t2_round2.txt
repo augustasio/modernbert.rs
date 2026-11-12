@@ -1,0 +1,19 @@
+   64 / 64  0.082 s per example, about 0 min left
+stage attn_norm        1.36 ms/example    27 calls
+stage wqkv            15.72 ms/example    28 calls
+stage attention       11.25 ms/example    27 calls
+stage gather_heads     0.44 ms/example    27 calls
+stage attn_wo          6.31 ms/example    28 calls
+stage add_mlp_norm     1.40 ms/example    28 calls
+stage wi              25.75 ms/example    28 calls
+stage gelu_gate        7.28 ms/example    28 calls
+stage mlp_wo          12.20 ms/example    28 calls
+stage add              0.17 ms/example    28 calls
+stage q8_quantize      1.09 ms/example    29 calls
+stage q8_onednn       55.74 ms/example   112 calls
+stage q8_dequantize    2.38 ms/example   112 calls
+stage att_scatter      5.14 ms/example   432 calls
+stage att_scores       3.87 ms/example   432 calls
+stage att_softmax      9.31 ms/example   432 calls
+stage att_pv           3.83 ms/example   432 calls
+stage layers_total    81.89 ms/example (without the q8_ and att_ lines)
