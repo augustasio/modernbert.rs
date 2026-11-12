@@ -33,8 +33,8 @@ What it says:
   difference that is left is small and needs the higher-rate rerun.
 - **The A/A floor is one rate step.** Rung 28 against itself at 8x2: 70 and 70, 80 and
   none (the second round's first test ran at host load 34), 70 and 70. Below the limit,
-  p99 at the same rate differs by up to 10 ms between the two (139 vs 139 at 40/s,
-  146 vs 154 at 60/s), within the bootstrap intervals.
+  p99 at the same rate is within a few ms between the two (139 vs 139 and 138 vs 137 at
+  40/s; 146 vs 146 and 155 vs 154 at 60/s), inside the bootstrap intervals.
 - **ONNX Runtime's spinning pool helps here.** With `session.intra_op.allow_spinning=0`
   its p50 rises from about 67 ms to 110 to 130 ms at low rates. Its default is the fair
   setting. On the busy host (`../cloud_turin_baseline_int8`) spinning was what hurt it.
