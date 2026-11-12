@@ -64,11 +64,20 @@ rung 0's logits as it goes.
 |---|---|---|
 | Rung 0, PyTorch fp32 | none (p99 415 ms even at 1/s) | 0 |
 | Rung 19, our bf16 matmuls + OpenMP pool | 20/s | 64,000 |
-| TODO-BASELINE PyTorch int8 (dynamic, per channel) | | |
-| TODO-BASELINE ONNX Runtime int8 (dynamic, per channel) | | |
+| PyTorch int8, dynamic, per channel (fails accuracy: 71.1%) | 30 to 40/s | (not usable) |
+| ONNX Runtime int8, dynamic, per channel | 40/s | 129,000 |
+| OpenVINO int8, NNCF static, SmoothQuant | 55 to 60/s (same rounds as rung 28's 60) | 177,000 to 193,000 |
 | Rung 23, int8 with SmoothQuant-style scales | 55/s | 177,000 |
 | Rung 24, int8 with u8 input (VNNI) | 60/s | 193,000 |
-| **Rung 28, + bf16 attention products** | **60 to 65/s** | **193,000 to 209,000** |
+| **Rung 28, + bf16 attention products** | **60 to 70/s** | **193,000 to 225,000** |
+
+The rates move with the host: the same rung 28 build reached 70/s on a quiet host and 60/s
+on a slower one. So each baseline was run in the same rounds as rung 28, and the table
+gives each one's range across those rounds
+([results/bench/cloud_turin_baseline_int8_quiet2/SUMMARY.md](results/bench/cloud_turin_baseline_int8_quiet2/SUMMARY.md)).
+Tier 3 for the baselines: PyTorch's dynamic int8 agrees with rung 0 on 89.1% of examples
+and loses 13.7 points of calibrated accuracy; ONNX Runtime 95.0% and 85.0%; OpenVINO
+98.6% and 86.1%.
 
 Every int8 rung agrees with rung 0 on at least 99% of the 7,600 examples, with calibrated
 accuracy within one point (rung 28: 7565/7600, 84.92% against 84.78%). The way there, and
@@ -78,8 +87,16 @@ What it says:
 
 - **int8 is what makes the budget reachable.** A request at about 90 ms on two cores fits
   eight workers on 16 cores with room for the queue.
-- **The int8 matmuls are now near the hardware.** In a request of about 87 ms they take
-  57 ms, at about 77% of the VNNI peak. The last rungs found 0 to 2 ms each elsewhere.
+- **The int8 matmuls are now near the hardware.** At two threads they take about 57 ms of
+  a request, at about 77% of the VNNI peak. The last rungs found 0 to 3 ms each elsewhere.
+- **Stock OpenVINO comes within one rate step.** Its static int8 (NNCF, SmoothQuant,
+  calibrated on train prompts) is about 4% slower per request than rung 28. An op-by-op
+  profile shows the matmuls tie; OpenVINO wins on a fused GELU gate and loses on layout
+  copies ([results/bench/cloud_turin_profile_openvino/SUMMARY.md](results/bench/cloud_turin_profile_openvino/SUMMARY.md)).
+- **For the lowest latency, give one request all the cores.** Rung 28 as one worker of 16
+  threads answers in about 35 ms (p50) with a p99 of 66 to 79 ms at 5 requests per
+  second, but serves only up to 20/s within 200 ms. Eight workers of two threads serve
+  60 to 70/s with p99 near 140 to 160 ms below their limit.
 - **The cloud host is a noisy neighbour.** A renter's burst can halve the best rate for a
   round, so every comparison here interleaves the two rungs in the same rounds.
 
