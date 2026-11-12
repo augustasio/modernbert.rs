@@ -69,10 +69,11 @@ rung 0's logits as it goes.
 | OpenVINO int8, NNCF static, SmoothQuant | 55 to 60/s (same rounds as rung 28's 60) | 177,000 to 193,000 |
 | Rung 23, int8 with SmoothQuant-style scales | 55/s | 177,000 |
 | Rung 24, int8 with u8 input (VNNI) | 60/s | 193,000 |
-| **Rung 28, + bf16 attention products** | **60 to 70/s** | **193,000 to 225,000** |
+| Rung 28, + bf16 attention products | 60 to 70/s | 193,000 to 225,000 |
+| **Rung 31, + exp and int8 rounding without scalar casts** | **75 to 80/s** (rung 30's 70 in the same rounds) | **241,000 to 257,000** |
 
 The rates move with the host: the same rung 28 build reached 70/s on a quiet host and 60/s
-on a slower one. So each baseline was run in the same rounds as rung 28, and the table
+on a slower one. Rung 31 was measured on a quiet host only. So each baseline was run in the same rounds as rung 28, and the table
 gives each one's range across those rounds
 ([results/bench/cloud_turin_baseline_int8_quiet2/SUMMARY.md](results/bench/cloud_turin_baseline_int8_quiet2/SUMMARY.md)).
 Tier 3 for the baselines: PyTorch's dynamic int8 agrees with rung 0 on 89.1% of examples
@@ -80,7 +81,7 @@ and loses 13.7 points of calibrated accuracy; ONNX Runtime 95.0% and 85.0%; Open
 98.6% and 86.1%.
 
 Every int8 rung agrees with rung 0 on at least 99% of the 7,600 examples, with calibrated
-accuracy within one point (rung 28: 7565/7600, 84.92% against 84.78%). The way there, and
+accuracy within one point (rungs 28 to 31: 7565/7600, 84.92% against 84.78%). The way there, and
 what did not work, is in the changelog in [PLAN.md](PLAN.md).
 
 What it says:
@@ -88,16 +89,20 @@ What it says:
 - **int8 is what makes the budget reachable.** A request at about 90 ms on two cores fits
   eight workers on 16 cores with room for the queue.
 - **The int8 matmuls are now near the hardware.** At two threads they take about 57 ms of
-  a request, at about 77% of the VNNI peak. The last rungs found 0 to 3 ms each elsewhere.
+  a request, at about 77% of the VNNI peak. The last rungs found 0 to 5 ms each elsewhere.
 - **Stock OpenVINO comes within one rate step.** Its static int8 (NNCF, SmoothQuant,
   calibrated on train prompts) is about 4% slower per request than rung 28. An op-by-op
   profile shows the matmuls tie; OpenVINO wins on a fused GELU gate and loses on layout
   copies ([results/bench/cloud_turin_profile_openvino/SUMMARY.md](results/bench/cloud_turin_profile_openvino/SUMMARY.md)).
-- **Rung 30 takes a third off the gate, exactly.** It rounds to int8 by adding 1.5 * 2^23
-  instead of a saturating cast: 5.1 to 1.3 thread-ms per request, logits bit-identical to
-  rung 28 on all 7,600 examples. The layers get about 3% faster, which is under one rate
-  step, so serving reads it as a tie
-  ([results/bench/cloud_turin_serve30/SUMMARY.md](results/bench/cloud_turin_serve30/SUMMARY.md)).
+  Rungs 30 and 31 then closed the gate gap; rung 31 has not yet run against OpenVINO in
+  the same rounds.
+- **Saturating float-to-int casts were the hidden cost.** On x86, Rust's `as i8` and
+  `as i32` compile to scalar code inside an otherwise vector loop. Rung 30 rounds to int8
+  by adding 1.5 * 2^23 instead (gate rounding 5.1 to 1.3 thread-ms, a tie behind the
+  server). Rung 31 builds exp's 2^n the same way: the GELU gate falls from 5.4 to 2.8 ms
+  at two threads, about OpenVINO's 2.5, and the softmax from 9.3 to 4.7 thread-ms. Both
+  keep the logits bit-identical; rung 31 serves 75 to 80/s against rung 30's 70
+  ([results/bench/cloud_turin_serve31/SUMMARY.md](results/bench/cloud_turin_serve31/SUMMARY.md)).
 - **For the lowest latency, give one request all the cores.** Rung 28 as one worker of 16
   threads answers in about 35 ms (p50) with a p99 of 66 to 79 ms at 5 requests per
   second, but serves only up to 20/s within 200 ms. Eight workers of two threads serve
