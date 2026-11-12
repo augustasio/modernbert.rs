@@ -720,6 +720,18 @@ The rounding is the same on the same f32 value. The motive: the second pass read
 writes every one of about 25,000 probabilities per head; at two threads rung 28's `P V`
 takes 4.0 thread-ms with it. The expected gain is small: about 0.5 to 1.5 ms per request.
 
+**Rung 30's bound, set on 2026-11-12 after a 64-example check and before the full run.**
+Rung 30's logits equal rung 28's, bit for bit, over all 7,600 examples, both run on the
+same pod. The design: built on rung 28, not on rung 29. Every int8 input value is rounded
+to nearest even by adding 1.5 * 2^23 in f32 and keeping the low byte, after a clamp to
+[-128, 127], in place of the saturating `round_ties_even() as i8` cast. The two give the
+same integer for every f32 in [-300, 300] (an exhaustive test, 2.27 billion values), and
+the scales keep every value in [-127, 127] up to rounding. The motive: OpenVINO runs the
+GELU gate with its quantize in 2.5 ms at two threads, rung 28 in 7.3
+(`results/bench/cloud_turin_profile_openvino/`), and a split of the gate showed the
+rounding at 5.1 of its 15 thread-ms (`results/bench/cloud_turin_gate_split/`). The
+expected gain is about 3 ms per request at two threads.
+
 **Libraries: the ones PyTorch uses on each platform.** Agreed on 2026-11-08. Each rung
 uses the same matmul library as rung 0 on the same machine, so a comparison never mixes
 libraries:
