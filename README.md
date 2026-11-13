@@ -90,12 +90,15 @@ What it says:
   eight workers on 16 cores with room for the queue.
 - **The int8 matmuls are now near the hardware.** At two threads they take about 57 ms of
   a request, at about 77% of the VNNI peak. The last rungs found 0 to 5 ms each elsewhere.
-- **Stock OpenVINO comes within one rate step.** Its static int8 (NNCF, SmoothQuant,
-  calibrated on train prompts) is about 4% slower per request than rung 28. An op-by-op
+- **Stock OpenVINO was within one rate step of rung 28; rung 31 pulls ahead.** OpenVINO's
+  static int8 (NNCF, SmoothQuant, calibrated on train prompts) was about 4% slower per
+  request than rung 28. In the same rounds as rung 31 it is about 15% slower per request
+  (worker p50 90 ms against 75 at 8x2), and its 1x16 p99 at 10/s is about twice rung
+  31's ([results/bench/cloud_turin_r31_openvino/SUMMARY.md](results/bench/cloud_turin_r31_openvino/SUMMARY.md)).
+  Rung 28 against OpenVINO: An op-by-op
   profile shows the matmuls tie; OpenVINO wins on a fused GELU gate and loses on layout
   copies ([results/bench/cloud_turin_profile_openvino/SUMMARY.md](results/bench/cloud_turin_profile_openvino/SUMMARY.md)).
-  Rungs 30 and 31 then closed the gate gap; rung 31 has not yet run against OpenVINO in
-  the same rounds.
+  Rungs 30 and 31 then closed the gate gap.
 - **Saturating float-to-int casts were the hidden cost.** On x86, Rust's `as i8` and
   `as i32` compile to scalar code inside an otherwise vector loop. Rung 30 rounds to int8
   by adding 1.5 * 2^23 instead (gate rounding 5.1 to 1.3 thread-ms, a tie behind the
@@ -103,9 +106,9 @@ What it says:
   at two threads, about OpenVINO's 2.5, and the softmax from 9.3 to 4.7 thread-ms. Both
   keep the logits bit-identical; rung 31 serves 75 to 80/s against rung 30's 70
   ([results/bench/cloud_turin_serve31/SUMMARY.md](results/bench/cloud_turin_serve31/SUMMARY.md)).
-- **For the lowest latency, give one request all the cores.** Rung 28 as one worker of 16
-  threads answers in about 35 ms (p50) with a p99 of 66 to 79 ms at 5 requests per
-  second, but serves only up to 20/s within 200 ms. Eight workers of two threads serve
+- **For the lowest latency, give one request all the cores.** Rungs 28 and 31 as one
+  worker of 16 threads answer in about 35 ms (p50) with a p99 of 64 to 108 ms at 5
+  requests per second (OpenVINO: 46 to 49 ms and 116 to 133 ms), but serves only up to 20/s within 200 ms. Eight workers of two threads serve
   60 to 70/s with p99 near 140 to 160 ms below their limit.
 - **The cloud host is a noisy neighbour.** A renter's burst can halve the best rate for a
   round, so every comparison here interleaves the two rungs in the same rounds.
