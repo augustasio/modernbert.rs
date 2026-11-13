@@ -1088,4 +1088,10 @@ Changes to the plan made after seeing data, with the reason.
   4.7 thread-ms, the layers from 77.4 to 72.5 ms. Behind the server at 8x2 it held 75,
   75 and 80/s against rung 30's 70, 70 and 70, on a quiet host. Rung 31 is the new best
   rung.
+- **Rung 31 against OpenVINO, same rounds** (2026-11-12, `results/bench/cloud_turin_r31_openvino/`).
+  A busy host (load up to 133), so the reading leans on matched-load tests and worker
+  time. At 8x2 and quiet load, rung 31 held 65/s against OpenVINO's 60, with a worker p50
+  of 75 ms against 90 (about 15% faster per request). At 1x16, rung 31's p50 is about 35
+  ms against 47, and its p99 at 10/s 83 to 89 ms against 174 to 222. The lead over stock
+  int8 is now clear at both layouts, not within the noise.
 
